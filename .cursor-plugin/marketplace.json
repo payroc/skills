@@ -1,0 +1,11 @@
+{
+  "name": "payroc-skills",
+  "description": "Cursor plugins for developers integrating with Payroc payment APIs",
+  "author": { "name": "Payroc" },
+  "plugins": [
+    { "name": "boarding",    "source": "./plugins/payroc/boarding",    "description": "Skills for merchant boarding and onboarding flows",  "version": "0.1.0" },
+    { "name": "transaction", "source": "./plugins/payroc/transaction", "description": "Skills for payment transaction integration",         "version": "0.1.0" },
+    { "name": "funding",     "source": "./plugins/payroc/funding",     "description": "Skills for funding and settlement integration",      "version": "0.1.0" },
+    { "name": "reporting",   "source": "./plugins/payroc/reporting",   "description": "Skills for reporting and analytics integration",     "version": "0.1.0" }
+  ]
+}

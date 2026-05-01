@@ -1,0 +1,6 @@
+{
+  "name": "boarding",
+  "description": "Skills for merchant boarding and onboarding flows",
+  "version": "0.1.0",
+  "author": { "name": "Payroc" }
+}
