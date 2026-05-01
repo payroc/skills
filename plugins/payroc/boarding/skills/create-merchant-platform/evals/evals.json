@@ -1,0 +1,49 @@
+{
+  "skill_name": "create-merchant-platform",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to board a new retail merchant through the Payroc API. It's a clothing boutique called 'Thread & Needle' in Chicago, IL. They're an LLC, EIN 45-6789012, started the business in 2021. The owner is Maria Rossi, DOB 1979-08-14, SSN 234-56-7890, who lives at 55 Lakeview Dr, Chicago IL 60614. She's the sole owner (100%) and will be both control prong and authorized signatory. The store does about $75 average transaction, $800 peak, roughly $25k/month average. Almost all card-present (90%), rest is e-commerce. They bank at Chase — routing 021000021, account 1122334455. Use a pricing intent ID of PI-RETAIL-STD. Send the contract to sign via email. Can you build the full API request for this?",
+      "expected_output": "A complete, valid JSON request body for POST /v1/merchant-platforms with all required fields populated based on the provided details, plus the correct curl command or code showing the Authorization Bearer and Idempotency-Key headers. The request body should include business object with the LLC org type and correct EIN, a processingAccounts array with one entry covering all the provided details, the owner with isControlProng and isAuthorizedSignatory both true, volumeBreakdown summing to 100, amounts in cents, pricing with type:intent, and signature type:requestedViaEmail.",
+      "files": [],
+      "assertions": [
+        "The response includes a complete JSON request body for POST /v1/merchant-platforms",
+        "The business object has organizationType set to privateLlc",
+        "The business taxId is 45-6789012",
+        "The owners array has isControlProng: true and isAuthorizedSignatory: true",
+        "volumeBreakdown values sum to exactly 100 (cardPresent: 90, ecommerce: 10 or similar)",
+        "transactionAmounts are expressed in cents (e.g. average: 7500 for $75)",
+        "The pricing object has type: intent and pricingIntentId: PI-RETAIL-STD",
+        "The signature object has type: requestedViaEmail",
+        "The response shows or mentions the Authorization: Bearer and Idempotency-Key headers"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We're integrating the Payroc boarding API and I'm getting a 400 error when I submit. Here's the error response: {\"status\":400,\"title\":\"Bad request\",\"errors\":[{\"parameter\":\"processingAccounts[0].owners\",\"issue\":\"noControlProng\",\"message\":\"At least one owner must be designated as the control prong\"},{\"parameter\":\"processingAccounts[0].processing.volumeBreakdown\",\"issue\":\"invalidValue\",\"message\":\"Volume percentages must sum to 100\"},{\"parameter\":\"processingAccounts[0].processing.transactionAmounts.average\",\"issue\":\"invalidValue\",\"message\":\"Value must be an integer in cents\"}]. Can you explain what each of these errors means and how to fix them?",
+      "expected_output": "A clear explanation of all three errors with specific fixes: 1) The owners array needs at least one entry with relationship.isControlProng: true (and ideally isAuthorizedSignatory: true); 2) cardPresent + mailOrTelephone + ecommerce must add up to exactly 100; 3) transaction amounts are integers in cents, not dollars (e.g. use 5000 for $50.00). Should include corrected code snippets for each fix.",
+      "files": [],
+      "assertions": [
+        "The response explains the noControlProng error and how to add isControlProng: true to an owner",
+        "The response explains that volumeBreakdown values must sum to 100",
+        "The response explains that transactionAmounts are in cents, not dollars",
+        "The response provides corrected JSON snippets or examples for each error",
+        "The response mentions that the same Idempotency-Key can be reused when resubmitting the corrected payload"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to create a merchant platform for an e-commerce client using the Payroc API. They sell software subscriptions online — SaaS company called 'CloudStack Inc', a private corporation. I don't have all the details right now. What's the minimum information I need to collect before I can make this API call? And once I have it, what does the request look like?",
+      "expected_output": "A clear checklist of all information required to make the API call — covering business fields (legal name, EIN, org type, address, email), processing account fields (DBA, MCC, business type, start date, timezone), owner fields (name, DOB, SSN, address, email, equity %, control prong designation), processing volumes (average and peak transaction amounts and monthly volumes, volume breakdown %), funding account (routing/account number, bank account type), and pricing info (intent ID or manual pricing). Should also mention that businessType should be 'internet' for an e-commerce SaaS company, and provide a skeleton request structure.",
+      "files": [],
+      "assertions": [
+        "The response lists business information requirements (name, taxId, organizationType, address, email)",
+        "The response lists owner information requirements including SSN/national ID and control prong designation",
+        "The response lists processing volume requirements including the cents-based amounts",
+        "The response lists funding account requirements (routing number, account number)",
+        "The response mentions businessType: internet as appropriate for e-commerce",
+        "The response provides a skeleton or template of the request body structure"
+      ]
+    }
+  ]
+}

@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Skill eval workspaces (ephemeral test output)
+*-workspace/
