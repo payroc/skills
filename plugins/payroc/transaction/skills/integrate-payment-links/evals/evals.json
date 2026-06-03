@@ -1,0 +1,412 @@
+{
+  "skill_name": "integrate-payment-links",
+  "evals": [
+    {
+      "id": 0,
+      "name": "codereview-wrong-enums-csharp",
+      "type": "dialog",
+      "description": "Developer pastes a draft C# PaymentLinkService that contains four subtle wrongnesses (snake_case enum values for type/authType/paymentMethods and a wrong field name for expiresOn). Tests whether the skill reads the local reference before reviewing and catches all four.",
+      "turns": [
+        {
+          "user": "Here's my C# PaymentLinkService — is this correct before I deploy to UAT?\n\n```csharp\npublic class PaymentLinkService\n{\n    private readonly HttpClient _http;\n    private readonly string _terminalId;\n\n    public PaymentLinkService(HttpClient http)\n    {\n        _http = http;\n        _terminalId = Environment.GetEnvironmentVariable(\"PAYROC_TERMINAL_ID\");\n    }\n\n    public async Task<string> CreateAsync(string orderId, long amountCents, string customerEmail)\n    {\n        var token = await GetBearerTokenAsync();\n        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(\"Bearer\", token);\n        _http.DefaultRequestHeaders.Add(\"Idempotency-Key\", Guid.NewGuid().ToString());\n\n        var body = new\n        {\n            Type = \"single_use\",\n            AuthType = \"pre_authorization\",\n            PaymentMethods = new[] { \"bank_transfer\" },\n            ExpiryDate = \"2026-12-31\",\n            Order = new\n            {\n                OrderId = orderId,\n                Charge = new\n                {\n                    Preset = new { Amount = amountCents, Currency = \"USD\" }\n                }\n            }\n        };\n\n        var resp = await _http.PostAsJsonAsync(\n            $\"https://api.uat.payroc.com/v1/processing-terminals/{_terminalId}/payment-links\",\n            body);\n        resp.EnsureSuccessStatusCode();\n        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();\n        return json.GetProperty(\"paymentLinkId\").GetString();\n    }\n}\n```",
+          "assert_after": [
+            {
+              "id": "reference_read_before_review",
+              "text": "reference_read_before_review: Skill read references/api-schema.md before issuing its review verdict",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if the skill READS the local reference references/api-schema.md BEFORE it states a verdict on whether the code is correct or lists the problems. FAIL if the verdict is given without any preceding read of references/api-schema.md."
+            },
+            {
+              "id": "flags_single_use_casing",
+              "text": "flags_single_use_casing: Skill flags that Type = \"single_use\" should be \"singleUse\"",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly identifies that \"single_use\" is the wrong format and the correct spec value is \"singleUse\" (camelCase). FAIL if the skill missed this or only mentioned casing in general without naming the field."
+            },
+            {
+              "id": "flags_pre_auth_casing",
+              "text": "flags_pre_auth_casing: Skill flags that AuthType = \"pre_authorization\" should be \"preAuthorization\"",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly identifies \"pre_authorization\" as the wrong value and gives the correct spec value \"preAuthorization\" (camelCase). FAIL if the skill missed this."
+            },
+            {
+              "id": "flags_bank_transfer_casing",
+              "text": "flags_bank_transfer_casing: Skill flags that PaymentMethods contains \"bank_transfer\" and should be \"bankTransfer\"",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly identifies \"bank_transfer\" as wrong and gives the correct spec value \"bankTransfer\" (camelCase). FAIL if missed."
+            },
+            {
+              "id": "flags_wrong_field_name",
+              "text": "flags_wrong_field_name: Skill flags that ExpiryDate is the wrong field name and the spec uses expiresOn",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly identifies that ExpiryDate (or expiryDate) is not the documented field name and the correct field is expiresOn. FAIL if the skill missed this — it is the most subtle of the four errors."
+            },
+            {
+              "id": "corrected_example_flat_charge",
+              "text": "corrected_example_flat_charge: Skill's corrected code uses a flat charge object (type + sibling amount/currency), not the developer's nested Preset wrapper",
+              "type": "grader",
+              "description": "The developer's draft nests the charge as `Charge = new { Preset = new { Amount, Currency } }`. Read the skill's corrected C# request body and any charge guidance. PASS if the skill either (a) explicitly flags the nested `Preset` wrapper as wrong, or (b) produces a corrected charge that is flat — a single charge object with a `type` discriminator ('preset') and `amount`/`currency` as siblings. FAIL if the skill's corrected example reproduces the nested `Preset = new { ... }` (or `preset: { ... }`) wrapper without correcting it — handing the developer back code that still has the structural bug."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "enum-combo-multi-use-bank-transfer-go",
+      "prompt": "Write a Go module that uses Payroc's Payment Links API (UAT environment) to: (1) authenticate against the identity service, (2) create a multi-use bank-transfer payment link with pre-authorization for £100 GBP (10000 minor units), (3) share it by email to customer@example.com. Credentials in env vars PAYROC_API_KEY and PAYROC_TERMINAL_ID. Save output files to /tmp/pl-eval-2/outputs/.",
+      "expected_output": "A Go module that creates a multi-use, bank-transfer, pre-authorization payment link and then shares it by email. The type value must be 'multiUse', authType must be 'preAuthorization', and paymentMethods must contain 'bankTransfer' — all in exact camelCase from the schema reference. The transcript must show the skill reading references/api-schema.md before these values are emitted. Each POST has a fresh Idempotency-Key (UUID); credentials are read from env vars only.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_read_before_enums",
+          "text": "reference_read_before_enums: Transcript shows the skill reading references/api-schema.md before the Go file containing enum values is written",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS only if the skill READS the local reference references/api-schema.md BEFORE the Go file containing type, authType, and paymentMethods is written. FAIL if those values were emitted with no preceding read of references/api-schema.md."
+        },
+        {
+          "id": "type_multiuse_correct_case",
+          "text": "type_multiuse_correct_case: The type value is \"multiUse\" as a Go string literal — not in a comment, not 'multi-use', 'multi_use', or 'MultiUse'",
+          "type": "regex",
+          "pattern": "\"multiUse\"",
+          "files": ["*.go"]
+        },
+        {
+          "id": "auth_type_correct_case",
+          "text": "auth_type_correct_case: The authType value is \"preAuthorization\" as a Go string literal — not in a comment, not 'pre-auth', 'pre_authorization', or 'preauth'",
+          "type": "regex",
+          "pattern": "\"preAuthorization\"",
+          "files": ["*.go"]
+        },
+        {
+          "id": "payment_method_bank_transfer_correct_case",
+          "text": "payment_method_bank_transfer_correct_case: The paymentMethods array contains \"bankTransfer\" as a Go string literal — not in a comment, not 'bank_transfer', 'bank-transfer', or 'BankTransfer'",
+          "type": "regex",
+          "pattern": "\"bankTransfer\"",
+          "files": ["*.go"]
+        },
+        {
+          "id": "idempotency_key_fresh_per_post",
+          "text": "idempotency_key_fresh_per_post: The creation POST and the sharing-events POST each use a freshly-generated Idempotency-Key UUID",
+          "type": "grader",
+          "description": "Read the Go module. PASS if a fresh UUID is generated for each POST (creation and sharing-events) — they must not share the same key variable. FAIL if the same UUID is reused or if either POST is missing the Idempotency-Key header."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: API key and terminal ID are read from environment variables only, never hardcoded",
+          "type": "grader",
+          "description": "Scan the Go output. PASS if both PAYROC_API_KEY and PAYROC_TERMINAL_ID are read via os.Getenv (or equivalent) and never appear as string literals. FAIL if either value is inlined."
+        },
+        {
+          "id": "amount_currency_correct",
+          "text": "amount_currency_correct: The payment link creation request uses amount 10000 (minor units for £100) and currency \"GBP\"",
+          "type": "grader",
+          "description": "Read the Go module. PASS if the charge amount is 10000 (integer, minor units) and the currency string is \"GBP\" in the payment link creation body. FAIL if the amount is 100 (major units), the currency is wrong, or either value is absent from the struct/map literal."
+        },
+        {
+          "id": "uat_host_used",
+          "text": "uat_host_used: The API base URL uses the UAT host (api.uat.payroc.com), not the production host (api.payroc.com)",
+          "type": "grader",
+          "description": "Read the Go module. PASS if the payment-links endpoint URL contains api.uat.payroc.com. FAIL if the production host api.payroc.com is used instead, or if the host is constructed from an env var without a UAT default visible in the code."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "missing-idempotency-key",
+      "type": "dialog",
+      "description": "Developer shares their draft code that omits the Idempotency-Key header. Tests whether the skill flags this as an error before the developer tries to run it.",
+      "turns": [
+        {
+          "user": "Here's my code to create a payment link in Python. Can you review it before I test it?\n\n```python\nimport requests\nimport os\n\ndef get_token():\n    resp = requests.post('https://identity.payroc.com/authorize',\n        headers={'x-api-key': os.environ['PAYROC_API_KEY']})\n    return resp.json()['access_token']\n\ndef create_payment_link(order_id, amount_cents):\n    token = get_token()\n    resp = requests.post(\n        f'https://api.uat.payroc.com/v1/processing-terminals/{os.environ[\"PAYROC_TERMINAL_ID\"]}/payment-links',\n        headers={\n            'Authorization': f'Bearer {token}',\n            'Content-Type': 'application/json'\n        },\n        json={\n            'type': 'singleUse',\n            'authType': 'sale',\n            'paymentMethods': ['card'],\n            'order': {'orderId': order_id, 'charge': {'preset': {'amount': amount_cents, 'currency': 'USD'}}},\n            'expiresOn': '2026-12-31'\n        }\n    )\n    return resp.json()\n```",
+          "assert_after": [
+            {
+              "id": "idempotency_key_flagged",
+              "text": "idempotency_key_flagged: Skill identified the missing Idempotency-Key header as an error that needs to be fixed before the code is deployed or tested",
+              "type": "grader",
+              "description": "Read the full skill response. PASS if the skill explicitly called out that the Idempotency-Key header is missing from the POST request and explained that it is required (not optional). FAIL if the skill approved the code without noting the missing header, or if it only mentioned idempotency as a nice-to-have."
+            },
+            {
+              "id": "uuid_v4_specified",
+              "text": "uuid_v4_specified: Skill specified that the Idempotency-Key value must be a UUID v4 (not just any unique string)",
+              "type": "grader",
+              "description": "Read the skill's feedback on the missing header. PASS if the response specifies that the value must be a UUID (v4 or just 'UUID' is sufficient — exact version mention not required but the format must be clear). FAIL if the skill says 'add any unique string' without specifying UUID format."
+            },
+            {
+              "id": "reference_read_before_review",
+              "text": "reference_read_before_review: Skill read references/api-schema.md before issuing its review verdict",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if the skill READS the local reference references/api-schema.md BEFORE it states a verdict on whether the code is correct or lists the problems. FAIL if the verdict is given without any preceding read of references/api-schema.md."
+            },
+            {
+              "id": "charge_nested_preset_flagged",
+              "text": "charge_nested_preset_flagged: Skill explicitly names the developer's nested order.charge.preset wrapper as the error that must be removed",
+              "type": "grader",
+              "description": "Read the skill response. PASS only if the skill explicitly identifies that the developer's nested `preset` key (order.charge.preset.{amount, currency}) is wrong and must be removed — naming the erroneous wrapper, not merely showing a correct example. FAIL if the skill silently produces a corrected body without naming the nested-preset wrapper as the problem, or only mentions the missing idempotency key."
+            },
+            {
+              "id": "charge_flat_structure_provided",
+              "text": "charge_flat_structure_provided: Skill provides/affirms the correct flat charge object (type, amount, currency as siblings)",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill shows or affirms the correct flat charge structure — a single charge object with type: 'preset' and amount/currency as siblings of type (no nested preset/prompt wrapper). FAIL if the corrected structure still nests fields under a preset/prompt key or the correct shape is never shown."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "deactivate-irreversibility-warning",
+      "type": "dialog",
+      "description": "Developer asks the skill to write deactivation code. Tests whether the skill warns about permanent irreversibility BEFORE writing the code.",
+      "turns": [
+        {
+          "user": "I need to add a 'Cancel payment link' button to my admin panel. When clicked, it should call Payroc's API to deactivate the payment link. Can you write the C# method for this?",
+          "assert_after": [
+            {
+              "id": "irreversibility_warning_before_code",
+              "text": "irreversibility_warning_before_code: Skill explicitly warned that deactivation is permanent and irreversible BEFORE writing any deactivation code",
+              "type": "grader",
+              "description": "Read the full skill response. PASS if the skill stated (before writing any code) that deactivating a link is permanent, cannot be undone, and the link cannot be reactivated. FAIL if the skill wrote deactivation code without first warning about irreversibility, or if the warning only appeared as a comment inside the code."
+            },
+            {
+              "id": "confirmation_requested",
+              "text": "confirmation_requested: Skill asked the developer to confirm they want permanent deactivation (not just update the expiry date) before writing the code",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill asked the developer to confirm their intent or mentioned that updating the expiry date might be a reversible alternative — and did this BEFORE writing the deactivation method. FAIL if the skill wrote the method without seeking any confirmation."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "json-patch-update",
+      "type": "dialog",
+      "description": "Developer wants to extend a payment link's expiry date. Tests whether the skill uses RFC 6902 JSON Patch format rather than a PUT/POST body.",
+      "turns": [
+        {
+          "user": "I have a multi-use payment link (ID: JZURRJBUPS) that's about to expire. I need to extend the expiry date to 2027-06-30. Can you write the code to update it?",
+          "assert_after": [
+            {
+              "id": "patch_method_used",
+              "text": "patch_method_used: Skill uses HTTP PATCH (not PUT or POST) to update the payment link",
+              "type": "grader",
+              "description": "Read the skill's code or explanation. PASS if the HTTP method is PATCH for the update operation. FAIL if the skill uses PUT or POST with a full replacement body."
+            },
+            {
+              "id": "json_patch_array_format",
+              "text": "json_patch_array_format: The request body is a JSON Patch array with op/path/value structure — not a flat JSON object",
+              "type": "grader",
+              "description": "Read the request body shown in the skill's response. PASS if it is a JSON array containing an object with 'op', 'path', and 'value' fields (RFC 6902 format). FAIL if the body is a flat JSON object like {\"expiresOn\": \"...\"}."
+            },
+            {
+              "id": "idempotency_key_on_patch",
+              "text": "idempotency_key_on_patch: Skill includes an Idempotency-Key header on the PATCH request",
+              "type": "grader",
+              "description": "Read the code or curl example in the skill's response. PASS if an Idempotency-Key header is included on the PATCH request. FAIL if it is absent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "single-use-missing-fields",
+      "type": "dialog",
+      "description": "Developer creates a single-use payment link request without orderId or expiresOn. Tests whether the skill catches the missing required fields.",
+      "turns": [
+        {
+          "user": "I want to create a single-use Payroc payment link for $25 USD card payment. Here's my request body — is this correct?\n\n```json\n{\n  \"type\": \"singleUse\",\n  \"authType\": \"sale\",\n  \"paymentMethods\": [\"card\"],\n  \"order\": {\n    \"charge\": {\n      \"preset\": {\n        \"amount\": 2500,\n        \"currency\": \"USD\"\n      }\n    }\n  }\n}\n```",
+          "assert_after": [
+            {
+              "id": "missing_order_id_flagged",
+              "text": "missing_order_id_flagged: Skill identified that orderId is missing from the order object — required for single-use links",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly calls out that orderId is required in the order object for single-use links and is missing from the provided body. FAIL if the skill approves the body without noting the missing orderId."
+            },
+            {
+              "id": "missing_expires_on_flagged",
+              "text": "missing_expires_on_flagged: Skill identified that expiresOn is missing — required for single-use links",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly calls out that expiresOn is required for single-use links and is missing from the provided body. FAIL if the skill approves the body without noting the missing expiresOn."
+            },
+            {
+              "id": "missing_merchant_reference_flagged",
+              "text": "missing_merchant_reference_flagged: Skill identified that merchantReference is missing from the root of the request body — it is a required field",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly calls out that merchantReference is a required root-level field and is absent from the provided body. FAIL if the skill approves the body or only lists orderId and expiresOn without mentioning the missing merchantReference."
+            },
+            {
+              "id": "charge_nested_preset_flagged",
+              "text": "charge_nested_preset_flagged: Skill explicitly names the developer's nested order.charge.preset wrapper as the error that must be removed",
+              "type": "grader",
+              "description": "Read the skill response. PASS only if the skill explicitly identifies that the developer's nested `preset` key (order.charge.preset.{amount, currency}) is wrong and must be removed — naming the erroneous wrapper, not merely showing a correct example or only adding a missing `type` field. FAIL if the skill silently reproduces or accepts the nested-preset structure, or shows a corrected body without naming the wrapper as the problem."
+            },
+            {
+              "id": "charge_flat_structure_provided",
+              "text": "charge_flat_structure_provided: Skill provides/affirms the correct flat charge object (type, amount, currency as siblings)",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill shows or affirms the correct flat charge structure — a single charge object with type: 'preset' and amount/currency as siblings of type (no nested preset/prompt wrapper). FAIL if the corrected structure still nests fields under a preset/prompt key or the correct shape is never shown."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "reference-check-finds-and-corrects",
+      "type": "dialog",
+      "description": "Developer pastes draft TypeScript code containing wrong enum values (single-use, pre-auth, bank_transfer) and asks the skill to validate it against the local reference and fix it. Tests whether the skill consults references/api-schema.md, catches the mismatches, and corrects them in the file.",
+      "turns": [
+        {
+          "user": "Here's my draft TypeScript module for creating a single-use Payroc payment link. Before I run it, please validate it against the live spec and fix anything wrong — follow your verification step end-to-end. Save the corrected file to /tmp/pl-eval-7/outputs/create-link.ts.\n\n```typescript\nimport axios from 'axios';\nimport { v4 as uuidv4 } from 'uuid';\n\nconst API_KEY = process.env.PAYROC_API_KEY!;\nconst TERMINAL_ID = process.env.PAYROC_TERMINAL_ID!;\n\nasync function getToken(): Promise<string> {\n  const resp = await axios.post('https://identity.payroc.com/authorize', null, {\n    headers: { 'x-api-key': API_KEY }\n  });\n  return resp.data.access_token;\n}\n\nasync function createLink(orderId: string, amountMinor: number): Promise<string> {\n  const token = await getToken();\n  const resp = await axios.post(\n    `https://api.uat.payroc.com/v1/processing-terminals/${TERMINAL_ID}/payment-links`,\n    {\n      type: 'single-use',\n      authType: 'pre-auth',\n      paymentMethods: ['bank_transfer'],\n      order: {\n        orderId,\n        charge: { preset: { amount: amountMinor, currency: 'GBP' } }\n      },\n      expiresOn: '2026-12-31'\n    },\n    {\n      headers: {\n        Authorization: `Bearer ${token}`,\n        'Content-Type': 'application/json',\n        'Idempotency-Key': uuidv4()\n      }\n    }\n  );\n  return resp.data.paymentUrl;\n}\n```",
+          "assert_after": [
+            {
+              "id": "reference_consulted_before_verdict",
+              "text": "reference_consulted_before_verdict: Skill read references/api-schema.md before issuing its verdict on the draft",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if the transcript shows the skill reading references/api-schema.md BEFORE it issues its verdict on the draft. FAIL if the skill issued its verdict with no preceding read of references/api-schema.md."
+            },
+            {
+              "id": "wrong_values_caught_and_corrected",
+              "text": "wrong_values_caught_and_corrected: The draft's wrong values were detected and corrected by checking them against references/api-schema.md",
+              "type": "grader",
+              "description": "The draft contains 'single-use', 'pre-auth', 'bank_transfer', and a nested charge.preset wrapper — all invalid. Read the transcript. PASS if the skill detected these by checking the values against references/api-schema.md and then corrected them. FAIL if any wrong value was neither flagged nor corrected."
+            },
+            {
+              "id": "mismatches_remediated",
+              "text": "mismatches_remediated: The final TypeScript output file contains the correct spec values (singleUse, preAuthorization, bankTransfer)",
+              "type": "grader",
+              "description": "Read the final TypeScript file the skill wrote (at /tmp/pl-eval-7/outputs/create-link.ts or wherever the skill saved it). PASS if all three corrected values are present: 'singleUse' (not 'single-use'), 'preAuthorization' (not 'pre-auth'), and 'bankTransfer' (not 'bank_transfer'). FAIL if any of the three original wrong values remain in the final file."
+            },
+            {
+              "id": "final_values_match_reference",
+              "text": "final_values_match_reference: The corrected values in the final file match the enums in references/api-schema.md",
+              "type": "grader",
+              "description": "Read the final corrected file and compare its enum values against references/api-schema.md. PASS if the corrected values match the documented enums (e.g. 'multiUse'/'singleUse', 'preAuthorization', 'bankTransfer'). FAIL if any wrong value (e.g. 'single-use', 'pre-auth', 'bank_transfer') remains."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "charge-nesting-isolated",
+      "type": "codegen",
+      "description": "Clean create-link codegen task where the ONLY trap is the natural temptation to nest amount/currency under a preset key. Everything else (enums, idempotency, env vars, UAT host) is unambiguous. Isolates the charge-structure behaviour so the assertion is fully discriminating rather than bundled with other issues.",
+      "prompt": "Write a single Python function using the requests library that creates a Payroc payment link in the UAT environment. It should be a multi-use, card-only, sale link with a preset amount of $50.00 USD (5000 minor units). Read PAYROC_API_KEY and PAYROC_TERMINAL_ID from environment variables, generate a Bearer token from the identity service first, and include all required headers. Save the file to /tmp/pl-eval-7/outputs/create_link.py.",
+      "expected_output": "A Python function that POSTs a create-link request whose body contains a FLAT charge object: charge = {\"type\": \"preset\", \"amount\": 5000, \"currency\": \"USD\"}, with type/amount/currency as siblings. No nested 'preset' or 'prompt' key. The transcript shows the skill reading references/api-schema.md before the body is written. A fresh UUID Idempotency-Key is on the POST, credentials come from env vars, and the UAT host (api.uat.payroc.com) is used.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_read_before_body",
+          "text": "reference_read_before_body: Transcript shows the skill reading references/api-schema.md before the create-link request body is written",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS if the skill READS the local reference references/api-schema.md BEFORE the Python file containing the request body is written. FAIL if the body was emitted with no preceding read of references/api-schema.md."
+        },
+        {
+          "id": "charge_is_flat_not_nested",
+          "text": "charge_is_flat_not_nested: The emitted charge object is flat (type + sibling amount/currency); there is no nested preset/prompt wrapper key",
+          "type": "grader",
+          "description": "Read the create_link.py file (verifiable with the workspace/tools/check_charge_structure.py script). PASS if the charge object is a single flat dict/object with a 'type' key set to 'preset' and 'amount'/'currency' as siblings of type. FAIL if amount/currency are nested under a 'preset' or 'prompt' key (e.g. charge['preset'] = {...}), or if 'type' is absent."
+        },
+        {
+          "id": "charge_type_preset_correct",
+          "text": "charge_type_preset_correct: The charge type discriminator value is the string \"preset\" with amount 5000 and currency \"USD\"",
+          "type": "grader",
+          "description": "Read create_link.py. PASS if charge.type == 'preset', amount == 5000 (integer minor units), and currency == 'USD'. FAIL if the amount is 50 (major units), the type value is wrong/missing, or the currency is wrong."
+        },
+        {
+          "id": "idempotency_key_uuid_on_post",
+          "text": "idempotency_key_uuid_on_post: The create POST includes an Idempotency-Key header set to a freshly generated UUID",
+          "type": "grader",
+          "description": "Read create_link.py. PASS if the POST sets an Idempotency-Key header to a generated UUID (e.g. uuid.uuid4()). FAIL if the header is absent or set to a non-UUID constant."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: API key and terminal ID are read from environment variables, never hardcoded",
+          "type": "grader",
+          "description": "Read create_link.py. PASS if PAYROC_API_KEY and PAYROC_TERMINAL_ID are read via os.environ/os.getenv and never appear as string literals. FAIL if either is inlined."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "prompt-charge-correctness",
+      "type": "dialog",
+      "description": "Customer-entered-amount (prompt) link. The developer's draft both nests fields under a 'prompt' key AND includes a stray amount — which is invalid for a prompt charge (the customer enters the amount). Tests whether the skill knows a prompt charge is type+currency only (no amount) and flags both the nesting and the stray amount, after fetching the spec.",
+      "turns": [
+        {
+          "user": "I'm building a 'pay what you want' donation link where the donor types in their own amount. Here's my Payroc create-link body — does the charge part look right?\n\n```json\n{\n  \"type\": \"multiUse\",\n  \"merchantReference\": \"DONATE-2026\",\n  \"authType\": \"sale\",\n  \"paymentMethods\": [\"card\"],\n  \"order\": {\n    \"description\": \"General fund donation\",\n    \"charge\": {\n      \"prompt\": {\n        \"amount\": 0,\n        \"currency\": \"USD\"\n      }\n    }\n  }\n}\n```",
+          "assert_after": [
+            {
+              "id": "reference_read_before_review",
+              "text": "reference_read_before_review: Skill read references/api-schema.md before issuing its verdict on the charge structure",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if the skill READS the local reference references/api-schema.md BEFORE it states its verdict on whether the charge is correct. FAIL if the verdict is given with no preceding read of references/api-schema.md."
+            },
+            {
+              "id": "prompt_nesting_flagged",
+              "text": "prompt_nesting_flagged: Skill names the nested 'prompt' wrapper key as wrong — fields must be flat with type: 'prompt'",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly identifies that wrapping fields under a 'prompt' key (charge.prompt.{...}) is wrong, and that the correct shape is a flat charge object with type: 'prompt'. FAIL if the skill accepts the nested structure or only addresses the amount without naming the nesting."
+            },
+            {
+              "id": "stray_amount_flagged",
+              "text": "stray_amount_flagged: Skill identifies that a prompt charge must not include an amount — the customer enters it",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the skill explicitly states that a prompt-type charge has only type and currency (no amount field), because the customer enters the amount at payment time, and that the amount: 0 should be removed. FAIL if the skill keeps an amount field in the prompt charge or doesn't mention that amount is invalid for prompt."
+            },
+            {
+              "id": "correct_prompt_charge_shown",
+              "text": "correct_prompt_charge_shown: Skill shows the correct flat prompt charge — { type: 'prompt', currency: 'USD' } with no amount and no wrapper",
+              "type": "grader",
+              "description": "Read the skill response. PASS if the corrected charge is a flat object {\"type\": \"prompt\", \"currency\": \"USD\"} with no amount field and no nested prompt/preset wrapper. FAIL if the corrected example still nests fields, retains amount, or is never shown."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "full-codegen-structural-validity",
+      "type": "codegen",
+      "description": "Full create + share-by-email build in TypeScript. Graded partly by a script that parses the emitted create-link body and asserts the charge object is structurally flat and valid — catching 'corrected' or freshly-written examples that are still structurally broken, independent of prose. Exercises the end-to-end happy path with structural rigour.",
+      "prompt": "Write a TypeScript module (using axios) that integrates Payroc Payment Links in UAT: (1) authenticate against the identity service, (2) create a single-use, card, sale payment link for £75.00 GBP (7500 minor units) with order id 'INV-9001' expiring 2026-12-31, (3) share it by email to donor@example.com. Read PAYROC_API_KEY and PAYROC_TERMINAL_ID from env vars. Save the module to /tmp/pl-eval-9/outputs/payment-link.ts.",
+      "expected_output": "A TypeScript module that creates a single-use card sale link and shares it by email. The create-link body must contain a flat charge object: { type: 'preset', amount: 7500, currency: 'GBP' } with type/amount/currency as siblings (no nested preset wrapper), plus a top-level merchantReference, order.orderId 'INV-9001', and expiresOn '2026-12-31'. The transcript shows the skill reading references/api-schema.md before enum/charge values are emitted. Each POST (create + share) has its own fresh UUID Idempotency-Key, credentials come from env vars, and the UAT host is used.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_read_before_enums",
+          "text": "reference_read_before_enums: Transcript shows the skill reading references/api-schema.md before the module's enum and charge values are written",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS if the skill READS the local reference references/api-schema.md BEFORE the TypeScript file containing type/authType/paymentMethods/charge is written. FAIL if those values were emitted with no preceding read of references/api-schema.md."
+        },
+        {
+          "id": "charge_structurally_flat_and_valid",
+          "text": "charge_structurally_flat_and_valid: The emitted create-link charge object is flat and valid — type 'preset' with sibling amount 7500 and currency 'GBP', no nested wrapper (script-verified)",
+          "type": "grader",
+          "description": "Run workspace/tools/check_charge_structure.py against payment-link.ts (and read the file to confirm). PASS if the charge object has type == 'preset', amount == 7500, currency == 'GBP' as siblings, with no nested preset/prompt key. FAIL if the script reports nesting, a missing type discriminator, or wrong amount/currency."
+        },
+        {
+          "id": "single_use_required_fields_present",
+          "text": "single_use_required_fields_present: merchantReference, order.orderId 'INV-9001', and expiresOn '2026-12-31' are all present",
+          "type": "grader",
+          "description": "Read payment-link.ts. PASS if the create-link body includes a top-level merchantReference, order.orderId set to 'INV-9001', and expiresOn '2026-12-31'. FAIL if any of these required single-use fields is absent."
+        },
+        {
+          "id": "fresh_idempotency_key_per_post",
+          "text": "fresh_idempotency_key_per_post: The create POST and the share POST each generate their own fresh UUID Idempotency-Key",
+          "type": "grader",
+          "description": "Read payment-link.ts. PASS if a fresh UUID is generated for each POST (create and sharing-events) — not the same key reused. FAIL if the same key is shared across both, or either POST omits the header."
+        },
+        {
+          "id": "env_vars_and_uat_host",
+          "text": "env_vars_and_uat_host: Credentials read from env vars and the UAT host (api.uat.payroc.com) is used",
+          "type": "grader",
+          "description": "Read payment-link.ts. PASS if PAYROC_API_KEY and PAYROC_TERMINAL_ID are read from process.env (never inlined) and the payment-links endpoint uses api.uat.payroc.com. FAIL if credentials are hardcoded or the production host is used."
+        }
+      ]
+    }
+  ]
+}

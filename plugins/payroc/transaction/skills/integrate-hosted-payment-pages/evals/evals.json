@@ -1,0 +1,434 @@
+{
+  "skill_name": "integrate-hosted-payment-pages",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I need to add Payroc Hosted Pages payment processing to the Meadow Shop ASP.NET Core Razor Pages app. Clone the source code from the pyrc-ghe-engineering org:\n  GH_TOKEN=\"\" gh repo clone pyrc-ghe-engineering/dev_exp-test-ai-integration /tmp/meadow-shop\n\nLook at the checkout flow (MeadowShop/Pages/Checkout.cshtml and Checkout.cshtml.cs) and implement a full Payroc Hosted Pages integration:\n  - Auth hash generation function\n  - Checkout page handler that builds and POSTs to the Payroc UAT HPP endpoint\n  - Receipt page handler (MeadowShop/Pages/Confirmation.cshtml.cs) that verifies the response hash, captures UNIQUEREF, and branches on RESPONSECODE\n\nCredentials are in env vars: TERMINAL_ID_NO_AVS (terminal ID) and PAYROC_API_KEY_PAYMENTS (terminal secret).\nReceipt URL for testing: https://payroc.com/fake-hp-webhook (placeholder).\n\nSave all new and modified .cs and .cshtml files to the outputs directory.",
+      "expected_output": "C# files implementing: (1) HMAC-SHA512 hash function for Payroc auth, (2) modified Checkout.cshtml.cs that builds and POSTs to the correct Payroc UAT HPP endpoint (payments.uat.payroc.com/merchant/paymentpage), (3) modified Confirmation.cshtml.cs that verifies the response hash, captures UNIQUEREF, and branches on RESPONSECODE. Credentials must come from env vars, never hardcoded.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "correct_hash_algorithm",
+          "text": "correct_hash_algorithm: Code uses SHA-512 (HMACSHA512 or SHA512) — not MD5, not SHA256",
+          "type": "regex",
+          "pattern": "HMACSHA512|SHA512",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "correct_uat_endpoint",
+          "text": "correct_uat_endpoint: Checkout posts to payments.uat.payroc.com/merchant/paymentpage — not any other URL",
+          "type": "regex",
+          "pattern": "payments\\.uat\\.payroc\\.com/merchant/paymentpage",
+          "files": ["*.cs", "*.cshtml"]
+        },
+        {
+          "id": "datetime_utc",
+          "text": "datetime_utc: DateTime handling uses UTC explicitly (DateTime.UtcNow or equivalent)",
+          "type": "regex",
+          "pattern": "UtcNow",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "correct_request_field_order",
+          "text": "correct_request_field_order: Request hash string contains TERMINALID, ORDERID, AMOUNT, DATETIME in that documented order",
+          "type": "grader",
+          "description": "Read the checkout handler (Checkout.cshtml.cs or equivalent). Find the hash input string construction. Confirm the fields appear in the order: TERMINALID, ORDERID, AMOUNT, DATETIME (per Payroc docs). This assertion passes only if all four fields are present AND in that documented order."
+        },
+        {
+          "id": "callback_all_fields_extracted",
+          "text": "callback_all_fields_extracted: Receipt handler extracts UNIQUEREF, RESPONSECODE, RESPONSETEXT, ORDERID, AMOUNT, DATETIME, and HASH from POST body",
+          "type": "grader",
+          "description": "Read the receipt/confirmation handler. Check that it reads all seven of these fields from the POST body: UNIQUEREF, RESPONSECODE, RESPONSETEXT, ORDERID, AMOUNT, DATETIME, HASH. Passes if all seven appear as Request.Form reads or equivalent POST body parsing."
+        },
+        {
+          "id": "uniqueref_stored_persistently",
+          "text": "uniqueref_stored_persistently: UNIQUEREF stored on the order model property (not only a local variable)",
+          "type": "grader",
+          "description": "Read the receipt handler. Check that UNIQUEREF is not just stored in a local variable but is also assigned to a model/entity property (e.g., order.PaymentUniqueRef = ...). Passes if there is an assignment of the UNIQUEREF value to an object property or database field."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: No literal terminal ID value or secret string appears hardcoded in any output file",
+          "type": "grader",
+          "description": "Scan all output files for any hardcoded terminal IDs (e.g., numeric strings in quotes that look like terminal IDs) or API key literals. Passes if credentials are only read from IConfiguration, environment variables, or equivalent — never inlined as string literals."
+        },
+        {
+          "id": "env_vars_used",
+          "text": "env_vars_used: TERMINAL_ID_NO_AVS or PAYROC_API_KEY_PAYMENTS referenced in the output code",
+          "type": "regex",
+          "pattern": "TERMINAL_ID_NO_AVS|PAYROC_API_KEY_PAYMENTS",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "response_hash_verified",
+          "text": "response_hash_verified: Receipt handler verifies a response hash before trusting RESPONSECODE",
+          "type": "grader",
+          "description": "Read the receipt handler. Check that hash verification is performed BEFORE the code branches on RESPONSECODE. Passes if there is a hash check and if it fails, the code rejects the request (redirects to error, returns error, etc.) before reading RESPONSECODE."
+        },
+        {
+          "id": "responsecode_branched",
+          "text": "responsecode_branched: Receipt handler has conditional logic branching on RESPONSECODE value 'A' for approved vs other",
+          "type": "grader",
+          "description": "Read the receipt handler. Check that there is an if/else or switch branching on RESPONSECODE == 'A' (or string.Equals(responsecode, 'A')). Passes if approved vs declined/other paths are distinct."
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "I'm building a .NET 10 ASP.NET Core Razor Pages e-commerce app and I need to add Payroc payment processing to the checkout page. I have a UAT terminal ID in env var TERMINAL_ID_NO_AVS and a terminal secret in env var PAYROC_API_KEY_PAYMENTS. Can you help me get this set up?",
+      "expected_output": "The assistant asks a clarifying question about integration type (Hosted Pages vs Hosted Fields) before writing any implementation code.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "asks_integration_type_question",
+          "text": "asks_integration_type_question: The response asks a clarifying question about Hosted Pages vs Hosted Fields (or equivalent integration approach) before writing any code",
+          "type": "grader",
+          "description": "Read the full assistant response. The assertion passes if: (1) the assistant asks a question about whether the user wants Hosted Pages (customer redirects to Payroc's page) vs Hosted Fields (Payroc-hosted card widgets embedded in the app's own form), or an equivalent clarification about integration approach, AND (2) this question appears BEFORE any implementation code is written. Fails if the assistant immediately starts writing code without asking, or writes code first and then asks."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "dialog",
+      "name": "hash-mismatch-secret-in-input",
+      "description": "Developer has SECRET in the hash input string — a common mistake. Tests whether the skill's error taxonomy diagnoses this correctly rather than just saying 'try again'.",
+      "turns": [
+        {
+          "user": "I'm adding Payroc Hosted Pages to my ASP.NET Core checkout. I've set up my hash generation and I'm computing the HMAC-SHA512 over the string: TERMINALID + \":\" + SECRET + \":\" + ORDERID + \":\" + CURRENCY + \":\" + AMOUNT + \":\" + DATETIME. Can you help me verify this is right before I go further?",
+          "assert_after": null
+        },
+        {
+          "user": "The hash I'm generating doesn't match the example hash in the Payroc docs. I've double-checked my terminal ID and my secret key — they're definitely correct. What could be causing the mismatch?",
+          "assert_after": [
+            {
+              "id": "diagnostic_question_asked",
+              "text": "Skill asked at least one diagnostic question about the hash construction — specifically about what fields are being hashed, the field order, or the AMOUNT format. It did not just say 'check your credentials' or 'try again' without investigating the hash input string specifically.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "I'm definitely using SHA-512. The exact string I'm hashing is: TERMINALID:SECRET:ORDERID:CURRENCY:AMOUNT:DATETIME — with each field separated by colons.",
+          "assert_after": [
+            {
+              "id": "secret_identified_as_bug",
+              "text": "Skill identified both bugs in the developer's hash string: (1) SECRET is in the wrong position — it must be LAST (5th field), not 2nd; and (2) CURRENCY must be removed — it is not part of the hash at all. The correct format is TERMINALID:ORDERID:AMOUNT:DATETIME:SECRET. The skill must not say to remove SECRET entirely.",
+              "type": "grader"
+            },
+            {
+              "id": "correct_hash_fields_provided",
+              "text": "After diagnosing the bugs, skill stated the correct 5-field hash input string: TERMINALID:ORDERID:AMOUNT:DATETIME:SECRET. It did not just name the bugs without showing the corrected format.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "dialog",
+      "name": "callback-never-received",
+      "description": "Developer completed a test payment but the receipt page handler never fired. Tests whether the skill correctly understands the delivery mechanism (browser GET redirect with query params) and gives accurate localhost guidance.",
+      "turns": [
+        {
+          "user": "I've implemented Payroc Hosted Pages on my checkout. The payment form redirects to Payroc's UAT page, the customer can enter card details, and Payroc shows a success screen. But my receipt page handler (the one that reads RESPONSECODE, UNIQUEREF, etc.) never gets called. The Payroc payment goes through but my app never knows about it.",
+          "assert_after": [
+            {
+              "id": "delivery_mechanism_correct",
+              "text": "In Turn 1, the skill correctly described how Payroc delivers the payment result to the merchant: the customer's browser is redirected to the registered receipt URL with transaction details appended as query parameters (a browser GET redirect). The receipt page handler reads query params, not a POST body. FAIL if the skill describes the receipt callback as a server-side POST from Payroc's servers to the merchant's receipt URL. Note: the Background Validation webhook IS a server-side POST, but that is a separate optional URL — not the receipt page. A response that conflates Background Validation with the receipt redirect also FAILS.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "I'm running the app locally. My receipt URL is set to http://localhost:5000/confirmation.",
+          "assert_after": [
+            {
+              "id": "localhost_confirmed_ok",
+              "text": "Skill confirmed that localhost is a valid receipt URL for the receipt redirect — no tunnel required — because the redirect is triggered by the customer's browser, not from Payroc's servers. FAIL if the skill tells the developer they need ngrok, Dev Tunnels, webhook.site, or any other public URL mechanism just to receive the receipt page redirect.",
+              "type": "grader"
+            },
+            {
+              "id": "registration_check_suggested",
+              "text": "Skill identified that the most likely cause is the receipt URL not being registered (or registered incorrectly) in the Self-Care Portal for the UAT terminal. The skill asked the developer to verify the Self-Care Portal registration, or explained that Payroc only redirects to the URL that is registered in the portal.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "I've logged into the Self-Care Portal for my UAT terminal and `http://localhost:5000/confirmation` is listed there exactly as I typed it. I ran another test — Payroc's page shows the payment going through — but my receipt handler still never fires.",
+          "assert_after": [
+            {
+              "id": "asks_diagnostic_beyond_registration",
+              "text": "Having established that the portal registration is correct, the skill directed the developer to a new diagnostic path rather than repeating 'check the URL.' PASS if the skill suggests ANY of: (a) inspecting the browser network tab to observe the 302 redirect from Payroc's page, (b) directly visiting http://localhost:5000/confirmation in the browser to verify the handler returns a valid response rather than an error, (c) checking server-side logs for the confirmation route for exceptions during the test payment. FAIL if the skill only says 're-check the URL' or 'try registering again' without opening a new diagnostic direction.",
+              "type": "grader"
+            },
+            {
+              "id": "responsecode_or_app_error_raised",
+              "text": "Skill raised the possibility that the issue may be in the developer's receipt handler or the app itself — not just the Payroc portal configuration. PASS if the skill asked what RESPONSECODE appeared on Payroc's confirmation screen, OR noted that the handler might be throwing an unhandled exception, OR asked whether the receipt URL route is registered/mapped in the app. FAIL if the skill only focuses on the Payroc portal configuration side without suggesting any investigation of the app's own receipt handler.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "dialog",
+      "name": "missing-receipt-url",
+      "description": "Developer wants to start HPP integration but hasn't mentioned a receipt URL. Tests whether the skill's prerequisite gate asks for it before writing any code.",
+      "turns": [
+        {
+          "user": "I want to add Payroc Hosted Pages to my .NET checkout. I have my terminal ID in TERMINAL_ID_NO_AVS and my terminal secret in PAYROC_API_KEY_PAYMENTS. I'd like to get started — what's the first step?",
+          "assert_after": [
+            {
+              "id": "receipt_url_requested",
+              "text": "Skill asked for the receipt page URL (the callback URL where Payroc will POST the payment result) before writing any implementation code. It did not write a hash function or checkout handler without first confirming where the receipt callback will go.",
+              "type": "grader"
+            },
+            {
+              "id": "receipt_url_is_primary_ask",
+              "text": "The skill framed the receipt URL as the primary or first-listed missing prerequisite — it was explicitly identified as the item blocking implementation, not buried as one of three or more equal questions.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "dialog",
+      "name": "credential-mismatch-hosted-fields-request",
+      "description": "Developer says they want Hosted Fields but their env var names reveal they have HPP credentials. Tests whether the skill's intake gate catches the integration-type mismatch.",
+      "turns": [
+        {
+          "user": "I'd like to add Payroc Hosted Fields to my checkout page so I can embed the card entry form directly in my site. Can you help me get started?",
+          "assert_after": null
+        },
+        {
+          "user": "My Payroc credentials are in env vars TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS. I got them from our Payroc account manager last week.",
+          "assert_after": [
+            {
+              "id": "credential_type_clarified",
+              "text": "Skill recognised that TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS are Hosted Pages (HPP) credentials, not Hosted Fields credentials. It flagged the possible mismatch between the developer's stated goal (Hosted Fields) and the credentials they have (HPP), and asked them to confirm which integration they actually want before proceeding.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "dialog",
+      "name": "uniqueref-stored-in-session",
+      "description": "Developer stores UNIQUEREF in TempData/Session after receiving the receipt callback. Tests whether the skill's checkpoint catches that ephemeral storage is insufficient.",
+      "turns": [
+        {
+          "user": "I've finished implementing the receipt handler for my Payroc HPP integration. After Payroc POSTs to my confirmation page, I verify the response hash and then read RESPONSECODE. If it's 'A', I store the UNIQUEREF in TempData so I can display it on the next page. Is this approach correct?",
+          "assert_after": [
+            {
+              "id": "uniqueref_storage_flagged",
+              "text": "Skill flagged that TempData (or Session) is ephemeral storage and is not sufficient for UNIQUEREF. UNIQUEREF is Payroc's transaction reference and must be persisted to a database or durable store so it can be used for refunds, chargebacks, and transaction lookups. The skill recommended persisting it to an Order entity, database record, or equivalent durable storage.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "dialog",
+      "name": "responsecode-D-after-test",
+      "description": "Developer ran a UAT test transaction and got RESPONSECODE=D. Tests whether the skill references the error taxonomy and asks for RESPONSETEXT rather than just saying 'try again'.",
+      "turns": [
+        {
+          "user": "I've implemented Payroc HPP and ran my first test transaction using the UAT test card. The payment went through Payroc's payment page and I was redirected back to my confirmation page. But RESPONSECODE is 'D'. What does this mean and how do I fix it?",
+          "assert_after": [
+            {
+              "id": "responsetext_requested",
+              "text": "Skill asked for the RESPONSETEXT value (or instructed the developer to check it) before diagnosing the decline. RESPONSETEXT contains the specific decline reason and is necessary to narrow down the cause. The skill did not just list every possible cause without asking for RESPONSETEXT first.",
+              "type": "grader"
+            },
+            {
+              "id": "not_just_try_again",
+              "text": "Skill provided a structured diagnostic response — either asking for more information or explaining specific categories of decline reasons (test card number, expiry date format, CVV, amount limits). It did not just say 'try again' or 'check your credentials' without engaging with the specifics of a declined transaction.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "dialog",
+      "name": "full-validation-checklist",
+      "description": "Developer claims they are done with their HPP integration and asks for a final review. Tests whether the skill runs through the documented validation checklist systematically rather than giving a generic 'looks good'.",
+      "turns": [
+        {
+          "user": "I've finished my Payroc Hosted Pages integration. I have: a hash function using SHA-512, a checkout handler that POSTs to the UAT endpoint, and a receipt handler that reads RESPONSECODE and UNIQUEREF. I think I'm done — can you do a final review and tell me what to check before I go live?",
+          "assert_after": [
+            {
+              "id": "checklist_is_systematic",
+              "text": "Skill provided a structured checklist covering at least 5 of the following 7 items: (1) hash algorithm is SHA-512, (2) correct UAT endpoint URL, (3) DATETIME is UTC, (4) response hash verified before reading RESPONSECODE, (5) UNIQUEREF persisted to durable storage, (6) no hardcoded credentials, (7) test with UAT test card to get RESPONSECODE=A. The response was organised as a checklist or numbered list, not a single paragraph.",
+              "type": "grader"
+            },
+            {
+              "id": "not_generic_approval",
+              "text": "Skill did not give a generic 'sounds good, you're ready!' response. It explicitly named specific items to verify, not just paraphrased back what the developer said they had done.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "dialog",
+      "name": "preauth-intake-and-endpoint",
+      "description": "Developer wants to implement pre-auth HPP. Tests whether the skill asks about eligibility/scope during intake and then directs to the correct preauthpage endpoint.",
+      "turns": [
+        {
+          "user": "I need to add Payroc pre-authorization to our checkout — we hold the card when the order is placed and capture it when we ship.",
+          "assert_after": [
+            {
+              "id": "preauth_intake_question",
+              "text": "Skill acknowledged the pre-auth requirement and asked at least one scoping or eligibility question (e.g. whether dual pricing or surcharging is in use, or confirming the merchant account supports pre-auth) before writing any implementation code.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "We don't use surcharging or dual pricing.",
+          "assert_after": [
+            {
+              "id": "correct_preauth_endpoint",
+              "text": "Skill specified the preauthpage endpoint — either `https://payments.uat.payroc.com/merchant/preauthpage` or `/merchant/preauthpage` — rather than the sale endpoint `/merchant/paymentpage`. The skill must not direct the developer to the sale endpoint for a pre-auth integration.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "dialog",
+      "name": "capture-flow-guidance",
+      "description": "Developer has completed pre-auth and needs to implement the capture step. Tests whether the skill correctly explains that capture uses Bearer token auth (not HMAC hash) and gives the correct endpoint with UNIQUEREF as the path parameter.",
+      "turns": [
+        {
+          "user": "I've completed my Payroc pre-auth integration. The pre-auth goes through and I get UNIQUEREF back from the receipt page. Now I need to implement the capture step — how do I do that?",
+          "assert_after": [
+            {
+              "id": "capture_auth_is_bearer",
+              "text": "Skill explicitly contrasted the capture API's authentication (Bearer token from identity.payroc.com) with the HMAC-SHA512 hash used for HPP form submission. PASS if the skill states both mechanisms and explains they are different. FAIL if the skill explains Bearer token auth correctly but does not mention the HMAC hash or does not note the distinction between the two auth approaches.",
+              "type": "grader"
+            },
+            {
+              "id": "uniqueref_as_payment_id",
+              "text": "Skill explicitly named UNIQUEREF as the paymentId path parameter in the capture call — not just a vague reference to 'the unique transaction reference' or 'the reference you received.' PASS if the response contains something equivalent to 'UNIQUEREF is the paymentId' or 'use the UNIQUEREF value as {paymentId}'. FAIL if the skill only says 'corresponds to' or 'refers to' without naming UNIQUEREF directly as the path parameter value.",
+              "type": "grader"
+            },
+            {
+              "id": "capture_endpoint_correct",
+              "text": "Skill provided the correct capture endpoint structure: POST to /v1/payments/{paymentId}/capture on api.uat.payroc.com (or api.payroc.com for production). The endpoint must include the paymentId path parameter and use the /v1/payments/ prefix.",
+              "type": "grader"
+            },
+            {
+              "id": "uniqueref_persistence_warned",
+              "text": "Skill advised the developer to persist UNIQUEREF to durable storage (database or equivalent) before performing the capture, since capture is a time-delayed operation initiated later (e.g. at fulfilment time). PASS if the response warns that session, TempData, or in-memory state is not sufficient for UNIQUEREF. FAIL if there is no guidance about where to store UNIQUEREF between the pre-auth receipt and the later capture call.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "dialog",
+      "name": "responsecode-success-set-from-reference",
+      "description": "Developer reports a real approval that their app misclassified because RESPONSECODE was 'E' rather than 'A'. Tests whether the skill identifies E as approval, reads the local build-receipt-page reference copy for the full enum, and reframes the success branch around the full set rather than a memorised subset.",
+      "turns": [
+        {
+          "user": "I've had a customer service ticket where the customer says they were charged but our app shows the order as failed. I dug into the logs and the receipt callback came back with RESPONSECODE=E. My code is `if (responsecode == \"A\") { markPaid(); } else { markFailed(); }`. Is E a real approval code? I thought A, D, R, C was the full list.",
+          "assert_after": [
+            {
+              "id": "e_identified_as_approval",
+              "text": "e_identified_as_approval: Skill identified E as a real approval code (not as a decline, referral, or unknown state). FAIL if the skill says E is a non-approval value, or hedges on whether the customer was actually charged.",
+              "type": "grader"
+            },
+            {
+              "id": "build_receipt_page_read",
+              "text": "build_receipt_page_read: Either a visible Read of the local build-receipt-page reference copy appears in the transcript, OR the assistant's response explicitly cites references/build-receipt-page.md (or references/sale.md / references/pre-auth.md, which point at it) as the source it consulted, before naming the RESPONSECODE approval values.",
+              "type": "grader",
+              "description": "Read the full agent transcript. Dialog evals capture only assistant turn text — tool calls are not always recorded — so in-response citation of the local reference is acceptable evidence. PASS if EITHER (a) a Read of references/build-receipt-page.md appears in the transcript, OR (b) the response explicitly cites references/build-receipt-page.md (or references/sale.md / references/pre-auth.md, which route to it) in the assistant's text as the source consulted, before naming the approval values. FAIL only if values were named from memory with neither a read nor a citation."
+            },
+            {
+              "id": "branch_on_full_enum_recommended",
+              "text": "branch_on_full_enum_recommended: Skill recommended branching on the full RESPONSECODE enum from references/build-receipt-page.md rather than a memorised subset (e.g. 'just A and E'), and explicitly pointed the developer at the local reference copy as the source of truth. FAIL if the skill suggests adding only E to a hardcoded list without recommending the developer read the full enum from the reference.",
+              "type": "grader"
+            },
+            {
+              "id": "meta_mistake_acknowledged",
+              "text": "meta_mistake_acknowledged: Skill framed the underlying issue as 'reasoning about the enum from memory instead of reading the local reference', not just 'forgot to handle E'. The fix is the discipline change, not adding one more value to a hardcoded list. FAIL if the skill's recommendation is purely 'add E to your switch statement' without any discipline framing.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "amount-format-from-spec-hpp",
+      "prompt": "I'm adding Payroc Hosted Pages to a Node.js/Express checkout flow. Write the server-side handler that: (1) reads TERMINAL_ID_NO_AVS and PAYROC_HPP_SECRET from env vars, (2) generates the HMAC-SHA-512 hash per the live Payroc HPP authenticate-your-requests docs, (3) constructs the POST body (including TERMINALID, ORDERID, CURRENCY, AMOUNT, DATETIME, HASH and any other required fields), (4) returns the form HTML that auto-submits to the Payroc UAT endpoint. The total is USD $10.00. Save the handler to /tmp/hpp-amount-eval/outputs/checkout-hpp.js.",
+      "expected_output": "A Node.js handler that constructs the HPP POST body for a sale. The AMOUNT value must be formatted exactly as documented in the local load-hosted-payment-page reference copy — a decimal dollars-and-cents string such as \"10.00\" for a $10.00 USD sale. Plausible-but-wrong representations such as minor-units integer \"1000\", bare integer \"10\", or scientific notation must NOT appear. The transcript must show the skill reading the relevant local reference before AMOUNT is emitted.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_read_before_amount_emission",
+          "text": "reference_read_before_amount_emission: Transcript shows the skill reading the local references/load-hosted-payment-page.md reference copy (which documents the HPP AMOUNT format; references/sale.md points at it) before the POST body containing AMOUNT is written.",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS only if a Read of references/load-hosted-payment-page.md (or references/sale.md, which routes to it) occurs BEFORE the file containing the AMOUNT field is written. FAIL if the value was emitted with no preceding read of the local reference."
+        },
+        {
+          "id": "amount_format_matches_reference",
+          "text": "amount_format_matches_reference: The AMOUNT value emitted in the POST body is formatted as documented for the HPP AMOUNT field in references/load-hosted-payment-page.md — a decimal dollars-and-cents string like \"10.00\" for a $10 USD sale (two digits after the decimal point).",
+          "type": "grader",
+          "description": "Read the local references/load-hosted-payment-page.md reference copy. PASS if the emitted AMOUNT matches the documented format (decimal, two places after the point, e.g. \"10.00\"). FAIL if it does not match — for example, minor-units integer \"1000\", bare integer \"10\", or scientific notation."
+        },
+        {
+          "id": "no_minor_units_amount",
+          "text": "no_minor_units_amount: The emitted AMOUNT value is not the plausible-but-wrong minor-units representation (\"1000\" for a $10 sale, or any other integer-cents form).",
+          "type": "grader",
+          "description": "Scan the output for the AMOUNT field for a $10 USD sale. FAIL if its value is `1000`, `\"1000\"`, or any integer-cents representation. This is the documented-as-wrong cousin models emit by defaulting to the modern REST-API convention (minor units), which is NOT what the HPP form-POST surface uses."
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "catches-responsecode-and-channel-against-references",
+      "prompt": "I need to add Payroc Hosted Pages to a small Python / Flask checkout app. Implement the HMAC-SHA-512 auth hash function, the checkout handler that POSTs the form to Payroc's UAT HPP endpoint, and the receipt handler that verifies the response hash and branches on RESPONSECODE. Credentials in env vars TERMINAL_ID_NO_AVS and PAYROC_HPP_SECRET. Follow the skill end-to-end — including the 'Verify against sources' step before declaring complete. Save output to /tmp/hpp-verifier-eval/outputs/.",
+      "expected_output": "A complete HPP integration in Python / Flask. The skill must consult the local references — the HPP narrative copies (references/authenticate-your-requests.md, references/load-hosted-payment-page.md, references/build-receipt-page.md) for the hash field order, AMOUNT/DATETIME formats, the channel/PAYMENTMETHOD enum, and the full RESPONSECODE enum, and references/api-schema.md for any REST transactionResult values. The receipt handler's RESPONSECODE branch must cover the FULL approval set per references/build-receipt-page.md — not just `A`. Any wrong or partial values (e.g. an invalid channel value, a partial RESPONSECODE success branch) must be caught and corrected against the references before the verdict. Final state: corrected values match the local references.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_consulted_before_verdict",
+          "text": "reference_consulted_before_verdict: The transcript shows the skill reading the relevant local reference(s) before its verdict — references/build-receipt-page.md for the RESPONSECODE enum, references/load-hosted-payment-page.md for the channel/PAYMENTMETHOD enum, and references/api-schema.md for any transactionResult values.",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS if, before declaring the integration complete, the skill reads the relevant local references (references/build-receipt-page.md and references/load-hosted-payment-page.md for the HPP form-POST and receipt-callback enums; references/api-schema.md for any REST transactionResult values; references/sale.md / references/pre-auth.md count as routing reads to those). FAIL if the skill advanced to its verdict without reading the relevant local reference(s)."
+        },
+        {
+          "id": "wrong_values_caught_and_corrected",
+          "text": "wrong_values_caught_and_corrected: If the integration contains a wrong or partial value — a partial RESPONSECODE success branch (e.g. only `A`) or a wrong channel value (e.g. a plausible-but-invalid cousin like `internet`/`online`/`ecommerce`) — the skill catches it and corrects it by checking against references/api-schema.md and the build-receipt-page narrative copy (references/build-receipt-page.md), plus references/load-hosted-payment-page.md for the channel value.",
+          "type": "grader",
+          "description": "Read the output files and transcript. If the receipt handler's success branch only includes RESPONSECODE=='A', or the form POST emits a channel value not in references/load-hosted-payment-page.md, PASS only if the skill caught the wrong/partial value and corrected it against the local references (references/build-receipt-page.md for the RESPONSECODE enum, references/load-hosted-payment-page.md for the channel value, references/api-schema.md for any transactionResult value). FAIL if a wrong/partial value was left in place uncorrected. If the integration already used the correct full sets, this assertion is automatically PASS."
+        },
+        {
+          "id": "final_values_match_reference",
+          "text": "final_values_match_reference: The corrected values in the final output match the local references — the RESPONSECODE success branch covers the full approval set documented in references/build-receipt-page.md, and the channel value is the correct one from references/load-hosted-payment-page.md.",
+          "type": "grader",
+          "description": "Read the final output files and compare against the local references. PASS if the RESPONSECODE success branch covers the full approval set per references/build-receipt-page.md and the channel value matches references/load-hosted-payment-page.md (and any transactionResult branch matches references/api-schema.md). FAIL if any wrong or partial value (e.g. a RESPONSECODE branch of only `A`, or an invalid channel value) remains in the final files."
+        }
+      ]
+    }
+  ]
+}

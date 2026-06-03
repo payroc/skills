@@ -1,0 +1,1342 @@
+{
+  "skill_name": "integrate-hosted-fields",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I need to add Payroc Hosted Fields payment processing to the Meadow Shop ASP.NET Core Razor Pages app. Clone the source code from the pyrc-ghe-engineering org:\n  GH_TOKEN=\"\" gh repo clone pyrc-ghe-engineering/dev_exp-test-ai-integration /tmp/meadow-shop-hf\n\nLook at the checkout flow (MeadowShop/Pages/Checkout.cshtml and Checkout.cshtml.cs) and implement a full Payroc Hosted Fields integration:\n  - Server-side: Bearer token fetch from the identity service, session token generation (POST to the hosted-fields-sessions endpoint), and a page handler that passes the session token to the view\n  - Server-side: Payment processing handler that accepts the single-use token from the client and POSTs to the Payroc payments API\n  - Client-side: Load the Payroc JS library from CDN (fetch the current version from the docs), add container divs for card fields, initialise the hosted fields form with the session token, handle submissionSuccess (send token to server), and handle errors\n\nCredentials are in env vars: TERMINAL_ID_NO_AVS (terminal ID) and PAYROC_API_KEY_PAYMENTS (API key for Bearer token auth).\n\nSave all new and modified .cs, .cshtml, and .js files to the outputs directory.",
+      "expected_output": "C# and Razor files implementing: (1) server-side Bearer token fetch from identity.uat.payroc.com, (2) server-side session token generation via POST to /v1/processing-terminals/{id}/hosted-fields-sessions, (3) modified Checkout.cshtml.cs passing session token to the view, (4) modified Checkout.cshtml with container divs and a script section loading the current Payroc JS library CDN URL and initialising the hosted fields form, (5) submissionSuccess handler that POSTs the single-use token to a server endpoint, (6) server-side payment handler POSTing to api.uat.payroc.com/v1/payments with the single-use token. Credentials from env vars only.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "correct_bearer_auth",
+          "text": "correct_bearer_auth: Code calls the Payroc identity service (identity.uat.payroc.com or identity.payroc.com) to obtain a Bearer token — not an HMAC hash function",
+          "type": "grader",
+          "description": "Scan all output files. The assertion passes if there is a server-side call to an identity service URL (identity.uat.payroc.com/authorize or identity.payroc.com/authorize) to obtain a Bearer token. FAIL if the only auth mechanism is HMAC/SHA-512 hashing (that is the HPP approach, not Hosted Fields)."
+        },
+        {
+          "id": "correct_session_endpoint",
+          "text": "correct_session_endpoint: Code POSTs to the hosted-fields-sessions endpoint to generate a session token",
+          "type": "regex",
+          "pattern": "hosted-fields-sessions",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "session_token_passed_to_view",
+          "text": "session_token_passed_to_view: The session token is passed from the server-side handler to the Razor view (e.g. via ViewData, a page model property, or a data- attribute)",
+          "type": "grader",
+          "description": "Read the Checkout.cshtml.cs and Checkout.cshtml output files. Check that the session token value (obtained from the hosted-fields-sessions API call) is passed into the view — via a ViewData entry, a page model property, or rendered as a data attribute or JS variable in the HTML. FAIL if the session token is never referenced in the .cshtml file."
+        },
+        {
+          "id": "no_hardcoded_lib_version",
+          "text": "no_hardcoded_lib_version: No literal Payroc JS library version string (e.g. 1.7.0.261457 or similar) appears hardcoded in the script src URL in the output files",
+          "type": "grader",
+          "description": "Scan all output .cshtml and .js files. Look for the Payroc hosted-fields CDN script tag. The assertion PASSES if the CDN URL was read from references/create-a-payment-form.md / references/hosted-fields-sdk.js (it will contain a real current version string). The assertion FAILS if the version segment looks like a placeholder (e.g. {version} or VERSION) — meaning the skill failed to read the version from the local reference. NOTE: a real version string read from the local reference is ACCEPTABLE — the goal is that it came from references/hosted-fields-sdk.js, not from training data. If the version string present matches a plausible CDN format (digits.digits.digits.digits), treat it as passing."
+        },
+        {
+          "id": "lib_version_is_four_part",
+          "text": "lib_version_is_four_part: The libVersion value (in the session token request body and in the CDN URL) is a four-part dotted string (e.g. 1.7.0.261471) — not a three-part string (e.g. 1.7.0)",
+          "type": "grader",
+          "description": "Scan all output files for the libVersion value and the hosted-fields CDN script src URL. Both must contain a four-part dotted version string matching the regex \\d+\\.\\d+\\.\\d+\\.\\d+ (e.g. 1.7.0.261471). FAIL if either appears as a three-part version (e.g. 1.7.0) — that pattern means the skill truncated the build number, which is a documented past failure. Both values should agree (the CDN URL embeds the same version that goes in the request body)."
+        },
+        {
+          "id": "schema_reference_read_before_schema_values",
+          "text": "schema_reference_read_before_schema_values: Transcript shows the skill read references/api-schema.md (and references/hosted-fields-sdk.js for libVersion) before emitting schema-dependent values (libVersion, enum values like channel/scenario/type, request body shape)",
+          "type": "grader",
+          "description": "Read the full agent transcript for this run (the Read tool calls, not just the final output). PASS if there is at least one Read of references/api-schema.md (and, for libVersion, references/hosted-fields-sdk.js or references/create-a-payment-form.md) that occurs BEFORE the final code is written. FAIL if the skill produced schema-dependent values without ever reading the local references — that means values came from training data, not the local snapshot, even if they happen to be correct."
+        },
+        {
+          "id": "form_container_divs_present",
+          "text": "form_container_divs_present: Checkout.cshtml contains container elements (div or span) for at least cardNumber and one other card field",
+          "type": "grader",
+          "description": "Read the Checkout.cshtml output. Check that there are at least two container elements (div or span with id or class attributes) intended as targets for the Payroc hosted card fields — at minimum a card number container and one other field (expiry, CVV, or cardholder name). FAIL if the page has no containers and relies only on a generic form without Payroc field targets."
+        },
+        {
+          "id": "single_use_token_in_payment",
+          "text": "single_use_token_in_payment: Payment API request uses paymentMethod.type singleUseToken with the token from submissionSuccess",
+          "type": "grader",
+          "description": "Read the server-side payment handler. Check that the request body sent to the Payroc payments API includes a paymentMethod with type 'singleUseToken' and a token value sourced from the client (not hardcoded). FAIL if the payment body omits paymentMethod or uses a different type."
+        },
+        {
+          "id": "correct_payment_endpoint",
+          "text": "correct_payment_endpoint: Payment API call targets api.uat.payroc.com/v1/payments",
+          "type": "regex",
+          "pattern": "api\\.uat\\.payroc\\.com/v1/payments",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "idempotency_key_present",
+          "text": "idempotency_key_present: Payment API request includes an Idempotency-Key header set to a generated unique value",
+          "type": "grader",
+          "description": "Read the server-side payment handler. Check that an Idempotency-Key header is added to the payment API request, and that it is set to a generated value (e.g. Guid.NewGuid().ToString() or equivalent) — not a hardcoded string. FAIL if Idempotency-Key is absent from the payment API call."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: No literal API key or terminal ID value appears hardcoded in any output file",
+          "type": "grader",
+          "description": "Scan all output files for hardcoded API keys or terminal IDs — numeric or alphanumeric strings in quotes that look like credentials. PASS if credentials are only read from IConfiguration, environment variables, or equivalent. FAIL if any credential literal appears inline as a string constant."
+        },
+        {
+          "id": "env_vars_used",
+          "text": "env_vars_used: PAYROC_API_KEY_PAYMENTS or TERMINAL_ID_NO_AVS referenced in the output code",
+          "type": "regex",
+          "pattern": "PAYROC_API_KEY_PAYMENTS|TERMINAL_ID_NO_AVS",
+          "files": ["*.cs"]
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "I'm building a .NET 10 ASP.NET Core Razor Pages e-commerce app and I need to add Payroc payment processing to the checkout page. I have a UAT terminal ID in env var TERMINAL_ID_NO_AVS and an API key in env var PAYROC_API_KEY_PAYMENTS. Can you help me get this set up?",
+      "expected_output": "The assistant asks a clarifying question about integration type (Hosted Fields vs Hosted Payment Pages) before writing any implementation code.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "asks_integration_type_question",
+          "text": "asks_integration_type_question: The response asks a clarifying question about Hosted Fields vs Hosted Payment Pages (or equivalent integration approach) before writing any code",
+          "type": "grader",
+          "description": "Read the full assistant response. The assertion passes if: (1) the assistant asks a question about whether the user wants Hosted Fields (Payroc card widgets embedded in the app's own form, customer stays on the page) vs Hosted Payment Pages (customer redirected to Payroc's hosted page), or an equivalent clarification about integration approach, AND (2) this question appears BEFORE any implementation code is written. FAIL if the assistant immediately starts writing code without asking, or writes code first and then asks."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "dialog",
+      "name": "session-token-expiry",
+      "description": "Developer's Hosted Fields form fails intermittently — card fields stop rendering after some time. Root cause is the 10-minute session token expiry. Tests whether the skill correctly diagnoses the expiry pattern and explains the per-session generation requirement.",
+      "turns": [
+        {
+          "user": "I've implemented Payroc Hosted Fields on our checkout page. It works fine when I first load the page, but after a while the card fields just stop appearing — the divs are empty. If I refresh the page they come back. This is happening on the live site too, not just locally. What could cause this?",
+          "assert_after": [
+            {
+              "id": "session_token_expiry_identified",
+              "text": "Skill identified session token expiry as the likely cause. The session token has a 10-minute expiry; if the page is loaded and the user doesn't complete checkout before the token expires, the form will fail to render or stop accepting input. The skill should mention the expiry window and connect it to the intermittent failure pattern.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "We're generating the session token once when the app starts and storing it in a static variable. Could that be the problem?",
+          "assert_after": [
+            {
+              "id": "static_token_flagged",
+              "text": "Skill explicitly flagged that storing the session token in a static variable (or caching it across users/sessions) is incorrect. The session token must be generated per checkout page load — not once at startup. The skill recommended generating a fresh token in the OnGet handler (or equivalent) for the checkout page.",
+              "type": "grader"
+            },
+            {
+              "id": "per_session_generation_explained",
+              "text": "Skill explained that a new session token should be generated for each checkout page load (or each user session), and that it is short-lived by design to scope the card entry window. FAIL if the skill only says 'regenerate the token' without explaining that it should happen on each page request.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "dialog",
+      "name": "single-use-token-reuse",
+      "description": "Developer tries to retry a failed payment using the same single-use token. Tests whether the skill correctly explains the one-time, 30-minute constraint and the correct retry pattern.",
+      "turns": [
+        {
+          "user": "Our checkout has a retry button — if a payment fails, the customer can click 'Try again' without re-entering their card details. I'm storing the single-use token from submissionSuccess and resubmitting it on retry. It worked once in testing, but now retries always fail with a 400 error. Is this a bug?",
+          "assert_after": [
+            {
+              "id": "single_use_constraint_explained",
+              "text": "Skill correctly explained that single-use tokens from submissionSuccess can only be used once and expire after 30 minutes. Resubmitting a previously used (or expired) token will always fail. This is by design — the 'single-use' name is literal.",
+              "type": "grader"
+            },
+            {
+              "id": "correct_retry_pattern",
+              "text": "Skill described the correct retry pattern: when a payment fails and the customer wants to retry, the server must generate a new session token and the client must re-initialise the Hosted Fields form so the customer can re-enter (or re-submit) their card details. FAIL if the skill suggests any approach that reuses the original single-use token.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "dialog",
+      "name": "hardcoded-library-version",
+      "description": "Developer copied a CDN URL from an old tutorial and hardcoded a specific version string. Tests whether the skill flags the version-pinning risk and explains that the URL must come from the local references.",
+      "turns": [
+        {
+          "user": "I found the Payroc hosted fields JS library on a blog post and I'm loading it like this:\n\n<script src=\"https://cdn.uat.payroc.com/js/hosted-fields/hosted-fields-1.5.0.200000.js\"></script>\n\nThe form worked in my local test. Should I use this URL in production too?",
+          "assert_after": [
+            {
+              "id": "hardcoded_version_flagged",
+              "text": "Skill flagged that hardcoding a specific version string in the CDN URL is risky — the version in the URL must match the libVersion sent to the session token endpoint, and Payroc updates these versions regularly. A hardcoded old version may stop working when Payroc deprecates it.",
+              "type": "grader"
+            },
+            {
+              "id": "reference_read_recommended",
+              "text": "reference_read_recommended: Skill recommended reading the current CDN URL (and the matching libVersion value) from the local references — specifically references/create-a-payment-form.md (and references/hosted-fields-sdk.js) — rather than using a URL from a tutorial or blog post. FAIL if the skill simply validates the hardcoded URL without recommending that it be read from the local references.",
+              "type": "grader"
+            },
+            {
+              "id": "libversion_mismatch_risk_mentioned",
+              "text": "Skill mentioned that the libVersion field in the session token request body must match the version of the loaded JS library. A mismatch between the CDN URL version and the libVersion parameter will cause errors. FAIL if the skill only addresses the CDN URL without mentioning this linkage.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "dialog",
+      "name": "hpp-credential-confusion",
+      "description": "Developer has TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS — which are HPP credentials — but wants Hosted Fields. Tests whether the skill correctly explains that PAYROC_API_KEY_PAYMENTS is in fact the right credential for Hosted Fields Bearer token auth, not a mismatch.",
+      "turns": [
+        {
+          "user": "I'd like to add Payroc Hosted Fields to our checkout. We already have Hosted Pages integrated. Our HPP credentials are in TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS.",
+          "assert_after": null
+        },
+        {
+          "user": "Do I need to get new credentials from Payroc for Hosted Fields, or can I reuse these?",
+          "assert_after": [
+            {
+              "id": "credential_reuse_clarified",
+              "text": "Skill correctly explained that PAYROC_API_KEY_PAYMENTS is the API key used for Bearer token authentication in Hosted Fields — the same credential works for both HPP and Hosted Fields. The developer does not need new credentials for Hosted Fields if they already have a working PAYROC_API_KEY_PAYMENTS and TERMINAL_ID_NO_AVS. FAIL if the skill says they need entirely new credentials or that HPP credentials are incompatible with Hosted Fields.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "dialog",
+      "name": "idempotency-conflict",
+      "description": "Developer gets a 409 Conflict from the Payroc payments API. Tests whether the skill correctly diagnoses idempotency key reuse as the cause.",
+      "turns": [
+        {
+          "user": "I'm getting a 409 Conflict error from the Payroc payments API. The payment request looks correct — I have the right Bearer token, the single-use token from submissionSuccess, and the right endpoint. What does 409 mean here and how do I fix it?",
+          "assert_after": [
+            {
+              "id": "idempotency_reuse_diagnosed",
+              "text": "Skill identified that 409 Conflict from the Payroc payments API means the Idempotency-Key header value has already been used for a previous request. The API rejects requests with duplicate idempotency keys to prevent double charges. The fix is to generate a fresh unique value (e.g. a new UUID v4) for the Idempotency-Key on each payment attempt.",
+              "type": "grader"
+            },
+            {
+              "id": "uuid_per_request_recommended",
+              "text": "Skill recommended generating a new UUID v4 (or equivalent unique value) for the Idempotency-Key on every payment request — not reusing a session ID, order ID, or any other static value across multiple attempts. FAIL if the skill explains 409 without giving the correct fix.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "dialog",
+      "name": "tokenization-flow",
+      "description": "Developer wants to save card details for future charges. Tests whether the skill correctly explains the tokenization scenario, the secure-tokens endpoint, and what the developer receives back.",
+      "turns": [
+        {
+          "user": "We want to let customers save their card for future purchases — so they don't have to re-enter it every time. How do I do that with Hosted Fields?",
+          "assert_after": [
+            {
+              "id": "tokenization_scenario_introduced",
+              "text": "Skill introduced the tokenization scenario: instead of scenario: 'payment' in the session token request, use scenario: 'tokenization'. This initialises the Hosted Fields form in tokenization mode rather than payment mode.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "OK, so I switch to scenario: 'tokenization' when generating the session token. What happens after the customer submits the form?",
+          "assert_after": [
+            {
+              "id": "secure_tokens_endpoint_mentioned",
+              "text": "Skill explained that in tokenization mode, after submissionSuccess fires (giving a single-use token), the server calls the secure-tokens endpoint (POST to /v1/processing-terminals/{id}/secure-tokens) with the single-use token to create a durable secure token. The secure token is what gets stored for future charges.",
+              "type": "grader"
+            },
+            {
+              "id": "secure_token_vs_single_use_distinguished",
+              "text": "Skill distinguished between the single-use token (from submissionSuccess — 30-min expiry, one-time) and the secure token (from the secure-tokens endpoint — durable, reusable for future charges). FAIL if the skill conflates the two or implies the submissionSuccess token itself can be stored and reused.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "dialog",
+      "name": "full-validation-checklist",
+      "description": "Developer claims their Hosted Fields integration is done and asks for a final review. Tests whether the skill runs through the documented validation checklist systematically.",
+      "turns": [
+        {
+          "user": "I've finished my Payroc Hosted Fields integration. I have: server-side Bearer token fetching, session token generation, the Payroc JS library loaded, the card form initialised, and a payment handler that posts the single-use token to the payments API. I think I'm done — can you do a final review and tell me what to check before I go live?",
+          "assert_after": [
+            {
+              "id": "checklist_is_systematic",
+              "text": "Skill provided a structured checklist covering at least 7 of the following 8 items: (1) credentials sourced from env vars, not hardcoded, (2) Bearer token generated server-side only, (3) session token generated per checkout page load, not cached, (4) JS library CDN URL read from references/create-a-payment-form.md, (5) libVersion in session token request matches CDN URL version, (6) Idempotency-Key is a fresh UUID per payment, (7) HTTP 201 confirmed in UAT with a test card, (8) single-use token not logged or persisted. The response was organised as a checklist or numbered list, not a single paragraph.",
+              "type": "grader"
+            },
+            {
+              "id": "not_generic_approval",
+              "text": "Skill did not give a generic 'sounds good, you're ready!' response. It explicitly named specific items to verify, not just paraphrased back what the developer said they had done.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I'm building a Node.js/Express e-commerce app and need to add Payroc Hosted Fields to the checkout. My app structure:\n  - routes/checkout.js — existing checkout route (GET /checkout renders the form, POST /checkout handles form submission)\n  - public/checkout.html — the checkout page template\n  - .env — credentials: TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS\n\nImplement a full Hosted Fields integration:\n  - Server-side (routes/checkout.js): fetch a Bearer token from Payroc's identity service, generate a session token (POST to hosted-fields-sessions), return it to the front end; add a POST /payment endpoint that accepts a single-use token from the client and calls the Payroc payments API\n  - Client-side (public/checkout.html): load the Payroc JS library from CDN (fetch the current URL from docs), add container divs for card fields, initialise the hosted fields form with the session token, handle submissionSuccess and errors\n\nCreate the output directory at /tmp/hf-node-eval/outputs/ and save all new/modified .js and .html files there.",
+      "expected_output": "Node.js and HTML files implementing: (1) server-side Bearer token fetch from identity.uat.payroc.com using fetch or axios (not HttpClient), (2) session token generation via POST to hosted-fields-sessions, (3) session token passed to client via JSON response or template rendering, (4) checkout.html with CDN script tag (current URL from docs), container divs for card fields, hostedFields initialisation with session token, submissionSuccess handler, (5) POST /payment endpoint POSTing single-use token to api.uat.payroc.com/v1/payments with Idempotency-Key. Credentials via process.env only. No C# or .NET patterns.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "uses_node_http_or_fetch",
+          "text": "uses_node_http_or_fetch: Server-side HTTP calls use fetch, axios, node-fetch, or node:https — not .NET HttpClient or WebClient",
+          "type": "grader",
+          "description": "Read the output .js files. Check that HTTP calls to Payroc APIs (identity service, session token endpoint, payments API) use a Node.js-appropriate HTTP client: fetch (native or node-fetch), axios, got, or node:https. FAIL if the code uses C# HttpClient, WebClient, or any .NET HTTP pattern."
+        },
+        {
+          "id": "no_csharp_syntax",
+          "text": "no_csharp_syntax: Output files contain no C# or .NET patterns (no 'using', 'async Task', '.cshtml', 'IConfiguration', 'HttpClient', etc.)",
+          "type": "grader",
+          "description": "Scan all output files. FAIL if any of the following appear: C# 'using' statements (namespace imports), 'async Task', 'IConfiguration', 'HttpClient', 'appsettings.json', '.cshtml' references, or other .NET-specific syntax. Node.js 'require' and ES module 'import' are fine."
+        },
+        {
+          "id": "correct_bearer_auth",
+          "text": "correct_bearer_auth: Code calls the Payroc identity service (identity.uat.payroc.com) to obtain a Bearer token — not HMAC",
+          "type": "grader",
+          "description": "Scan all output .js files. The assertion passes if there is a server-side HTTP POST to an identity service URL (identity.uat.payroc.com or identity.payroc.com) to obtain a Bearer token. FAIL if the only auth mechanism is HMAC/SHA-512 hashing."
+        },
+        {
+          "id": "correct_session_endpoint",
+          "text": "correct_session_endpoint: Code POSTs to the hosted-fields-sessions endpoint",
+          "type": "regex",
+          "pattern": "hosted-fields-sessions",
+          "files": ["*.js"]
+        },
+        {
+          "id": "single_use_token_in_payment",
+          "text": "single_use_token_in_payment: Payment API request uses paymentMethod.type singleUseToken",
+          "type": "grader",
+          "description": "Read the server-side payment handler in the output .js files. Check that the request body sent to the Payroc payments API includes a paymentMethod with type 'singleUseToken' and a token value from the client. FAIL if paymentMethod is missing or uses a different type."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: Credentials are read from process.env, not hardcoded as string literals",
+          "type": "grader",
+          "description": "Scan all output files for hardcoded API keys or terminal IDs. PASS if credentials are only accessed via process.env.PAYROC_API_KEY_PAYMENTS, process.env.TERMINAL_ID_NO_AVS, or dotenv-loaded equivalents. FAIL if any credential value appears inline as a string constant."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "dialog",
+      "name": "production-cutover",
+      "description": "Developer has a working UAT integration and wants to know what to change to go live. Tests whether the skill covers both endpoint swaps and at least one non-obvious production consideration.",
+      "turns": [
+        {
+          "user": "Our Hosted Fields integration is fully working in UAT — I've got HTTP 201 back from the payments API with a test card. We're planning to go live next week. What do I need to change to switch from UAT to production?",
+          "assert_after": [
+            {
+              "id": "identity_endpoint_mentioned",
+              "text": "identity_endpoint_mentioned: Skill mentioned swapping the identity service endpoint from identity.uat.payroc.com to identity.payroc.com (or equivalent UAT-to-production URL change for the Bearer token auth step)",
+              "type": "grader"
+            },
+            {
+              "id": "payments_endpoint_mentioned",
+              "text": "payments_endpoint_mentioned: Skill mentioned swapping the payments API endpoint from api.uat.payroc.com to api.payroc.com (or equivalent UAT-to-production URL change)",
+              "type": "grader"
+            },
+            {
+              "id": "credential_swap_mentioned",
+              "text": "credential_swap_mentioned: Skill noted that production requires different credentials — a production terminal ID and production API key, distinct from the UAT ones. FAIL if the skill implies UAT credentials work in production.",
+              "type": "grader"
+            },
+            {
+              "id": "not_just_endpoint_swap",
+              "text": "not_just_endpoint_swap: Beyond endpoint and credential changes, the skill raised at least one non-obvious production consideration — e.g. test cards don't work in production (real cards only), production terminals are provisioned separately by the Payroc Integrations team, the CDN URL may differ between UAT and production, or the need to verify live transaction monitoring. FAIL if the response only lists endpoint and credential swaps with no additional consideration.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    }
+  ,
+    {
+      "id": 11,
+      "type": "dialog",
+      "name": "recurring-billing-setup",
+      "description": "Developer has tokenization working and wants monthly recurring charges. Tests standing instructions guidance: first vs subsequent charge, what to persist, secureToken on subsequent charges.",
+      "turns": [
+        {
+          "user": "I've got Hosted Fields working with tokenization — customers' cards are saved as secure tokens. Now I want to charge them automatically each month. How do I tell Payroc this is a recurring charge?",
+          "assert_after": [
+            {
+              "id": "standing_instructions_introduced",
+              "text": "Skill introduced standingInstructions in the payments API request and explained it distinguishes recurring/standing-instruction payments from one-off charges.",
+              "type": "grader"
+            },
+            {
+              "id": "sequence_first_explained",
+              "text": "Skill explained the first charge must use standingInstructions.sequence: 'first' with a processingModel (e.g. 'recurring'), and that this request shape differs from subsequent charges.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "OK, the first charge uses standingInstructions.sequence: 'first'. What do I persist from that response, and how do I format the monthly charges after that?",
+          "assert_after": [
+            {
+              "id": "persist_ids_explained",
+              "text": "Skill explained that paymentId, the durable secureToken, and cardSchemeReferenceId must be persisted from the first charge response — all three are required for subsequent charges.",
+              "type": "grader"
+            },
+            {
+              "id": "response_paths_named_correctly",
+              "text": "response_paths_named_correctly: Skill explicitly named the correct response paths — card.secureToken.token (for the durable token) and transactionResult.cardSchemeReferenceId (for the scheme reference). FAIL if the skill claims cardSchemeReferenceId or the secure token lives 'inside the paymentMethod' of the response, or hedges with phrasing like 'may be nested inside paymentMethod' — the response has no paymentMethod field.",
+              "type": "grader"
+            },
+            {
+              "id": "response_no_payment_method_callout",
+              "text": "response_no_payment_method_callout: Skill called out (in prose or a note) that the response shape differs from the request — the response has no paymentMethod field; it uses card (retrievedCard shape) and transactionResult. FAIL if the skill silently assumes the response mirrors the request body.",
+              "type": "grader"
+            },
+            {
+              "id": "subsequent_charge_pattern",
+              "text": "Skill explained that subsequent charges use paymentMethod.type: 'secureToken' (not singleUseToken), standingInstructions.sequence: 'subsequent', and referenceDataOfFirstTxn with the stored paymentId and cardSchemeReferenceId. FAIL if the skill suggests reusing a singleUseToken for subsequent charges.",
+              "type": "grader"
+            },
+            {
+              "id": "schema_reference_read_before_schema_values",
+              "text": "schema_reference_read_before_schema_values: Transcript shows the skill read references/api-schema.md — specifically the paymentRequest, payment (response), transactionResult, card, secureTokenSummary, standingInstructions, or firstTxnReferenceData schemas — before emitting field names and response paths.",
+              "type": "grader",
+              "description": "Read the full transcript across both dialog turns. PASS if there is at least one Read of references/api-schema.md before the skill describes response paths or enum values. FAIL if the skill produced schema-dependent values (e.g. 'transactionResult.cardSchemeReferenceId', 'card.secureToken.token', enum values like 'subsequent' / 'recurring') without ever reading the local schema reference. references/api-schema.md is the source of truth for these specific paths."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "dialog",
+      "name": "recurring-billing-first-charge-and-tokenize",
+      "description": "Developer wants the first recurring charge to also tokenize the card in one shot. Tests whether the skill produces a paymentRequest with BOTH credentialOnFile.tokenize: true at the top level AND standingInstructions.sequence: 'first' inside order, and explains why both are needed.",
+      "turns": [
+        {
+          "user": "I want to set up a subscription where the customer's first month is charged AND we save the card for future months — all in one Hosted Fields submission. Can I do both in the same API call?",
+          "assert_after": [
+            {
+              "id": "combined_flow_confirmed",
+              "text": "Skill confirmed that a single paymentRequest CAN charge the customer and tokenize the card in one transaction — and that this is the standard pattern for setting up a subscription with a paid first month. FAIL if the skill says you have to charge first and tokenize separately, or treats them as mutually exclusive.",
+              "type": "grader"
+            },
+            {
+              "id": "scenario_payment_explained",
+              "text": "scenario_payment_explained: Skill mentioned that the session token request must use scenario: 'payment' (not 'tokenization') for the combined flow — and ideally referenced the HostedFieldsCreateSessionRequestScenario enum description in references/api-schema.md which explicitly covers 'run a sale or run a sale and tokenize in the same transaction'.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "Got it. Show me the exact request body — what do I send to /v1/payments?",
+          "assert_after": [
+            {
+              "id": "credential_on_file_top_level",
+              "text": "credential_on_file_top_level: The example paymentRequest body includes credentialOnFile.tokenize: true at the TOP LEVEL of the request — sibling to paymentMethod and order, NOT nested inside order or paymentMethod. FAIL if credentialOnFile is missing entirely, or if tokenize: true is shown nested inside another object.",
+              "type": "grader"
+            },
+            {
+              "id": "standing_instructions_inside_order",
+              "text": "standing_instructions_inside_order: The example also includes standingInstructions inside the order object with sequence: 'first' and a processingModel (recurring / installment / unscheduled). FAIL if standingInstructions appears at the top level alongside credentialOnFile, or is omitted.",
+              "type": "grader"
+            },
+            {
+              "id": "why_both_needed_explained",
+              "text": "why_both_needed_explained: Skill explained WHY both fields are needed — credentialOnFile.tokenize is what tells the gateway to save the card and return a reusable secureToken, while standingInstructions.sequence: 'first' tells the card scheme this is the first charge in a recurring series. FAIL if the skill shows both fields without explaining their distinct purposes — particularly that WITHOUT credentialOnFile.tokenize the response will have no card.secureToken and subsequent charges are impossible.",
+              "type": "grader"
+            },
+            {
+              "id": "schema_reference_read_before_schema_values",
+              "text": "schema_reference_read_before_schema_values: Transcript shows the skill read references/api-schema.md — specifically paymentRequest, schemas-credentialOnFile, standingInstructions, or HostedFieldsCreateSessionRequestScenario — before emitting field placements and enum values.",
+              "type": "grader",
+              "description": "Read the full transcript across both dialog turns. PASS if there is at least one Read of references/api-schema.md before the skill writes the example request body or names the scenario enum value. FAIL if the skill produced these values without ever reading the local schema reference — even if the values happen to be correct, that's luck rather than verification."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "ach-payment-form",
+      "prompt": "I need to add Payroc Hosted Fields **ACH (bank account) payment processing** — not card — to the Meadow Shop ASP.NET Core Razor Pages app. Clone the source code:\n  GH_TOKEN=\"\" gh repo clone pyrc-ghe-engineering/dev_exp-test-ai-integration /tmp/meadow-shop-ach\n\nLook at the checkout flow (MeadowShop/Pages/Checkout.cshtml and Checkout.cshtml.cs) and implement a full Payroc Hosted Fields ACH integration:\n  - Server-side: Bearer token fetch from the identity service, session token generation (POST to hosted-fields-sessions) configured for ACH, payment processing handler that POSTs to /v1/payments with the ACH-appropriate paymentMethod type and the single-use token\n  - Client-side: Load the Payroc JS library from CDN (fetch the current version from docs), add container divs for ACH fields (account number, routing number, account holder name — NOT card number / CVV / expiry), initialise the hosted fields form configured for ACH, handle submissionSuccess and errors\n\nIMPORTANT: This is ACH, not card. Use the Payroc OpenAPI spec at https://docs.payroc.com/openapi.yml to find the correct ACH-related values for: (a) the `scenario` enum on hosted-fields-sessions, (b) the field configuration options on the JS library for ACH, (c) the `paymentMethod.type` enum on the payments request. Do not assume card values transfer to ACH.\n\nWORKFLOW — after implementing, open a PR:\n  1. Create branch: `eval-13-ach-payment-form-iter5-<configuration>-run<N>` (replace placeholders based on whether you're running with-skill or old-skill, and the run number)\n  2. Commit your changes with message `INFOARCH-2639 Eval 13: ACH payment form (iter5)`\n  3. Push the branch: `git push -u origin <branch-name>`\n  4. Open PR: `gh pr create --title \"INFOARCH-2639 Eval 13: ACH payment form (<configuration> run<N>)\" --body \"<eval prompt + assertion list + link to workspace dir>\"` — use the GH_TOKEN env var that's already set (no need to override)\n  5. Capture the returned PR URL in your final response\n\nCredentials are in env vars: TERMINAL_ID_NO_AVS (terminal ID) and PAYROC_API_KEY_PAYMENTS (API key). Save all new and modified files to the outputs directory in addition to committing them on the branch.",
+      "expected_output": "C# and Razor files implementing: (1) server-side Bearer token fetch from identity.uat.payroc.com, (2) server-side session token generation via POST to /v1/processing-terminals/{id}/hosted-fields-sessions with the ACH scenario value, (3) modified Checkout.cshtml.cs passing session token to the view, (4) modified Checkout.cshtml with container divs for ACH fields (no card number, no CVV, no expiry) and a script section loading the current Payroc JS library CDN URL configured for ACH, (5) submissionSuccess handler that POSTs the single-use token to a server endpoint, (6) server-side payment handler POSTing to api.uat.payroc.com/v1/payments with the ACH-appropriate paymentMethod.type. Credentials from env vars only. PR opened on pyrc-ghe-engineering/dev_exp-test-ai-integration with the eval-13 branch.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "schema_reference_read_before_ach_values",
+          "text": "schema_reference_read_before_ach_values: Transcript shows the skill read references/api-schema.md before emitting any ACH-specific schema values (scenario enum, paymentMethod.type, secCode, accountType). SDK field config keys are read from references/hosted-fields-sdk.js.",
+          "type": "grader",
+          "description": "Read the full transcript. PASS if there is at least one Read of references/api-schema.md that occurs BEFORE the final code is written and the ACH scenario / paymentMethod.type / secCode / accountType values are emitted (and references/hosted-fields-sdk.js read before the SDK field config keys). FAIL if the skill produced ACH-specific values without ever reading the local references — even if those values happen to be correct."
+        },
+        {
+          "id": "no_card_fields_in_form",
+          "text": "no_card_fields_in_form: Checkout.cshtml does not contain container elements for card-only fields (cardNumber, cvv, expiry).",
+          "type": "grader",
+          "description": "Read the Checkout.cshtml output. PASS if the form contains container elements appropriate for ACH (e.g. account number, routing number, account holder name, account type) and does NOT contain container elements for cardNumber, cvv, or expiry. FAIL if card-only fields are present alongside or instead of ACH fields — this means the skill copied card patterns without confirming ACH requirements."
+        },
+        {
+          "id": "ach_sibling_fields_present",
+          "text": "ach_sibling_fields_present: The payment API request body includes ACH-specific sibling fields on the paymentMethod object — at minimum accountType (checking/savings) and secCode (e.g. web/tel/ccd/ppd) — confirmed against references/api-schema.md.",
+          "type": "grader",
+          "description": "Read the server-side payment handler. Check the request body to /v1/payments. PASS if the paymentMethod object includes ACH-specific sibling fields (accountType with checking/savings value, secCode with one of web/tel/ccd/ppd). The grader should consult references/api-schema.md to confirm the exact required ACH fields. FAIL if the paymentMethod object only carries a token value with no ACH-specific siblings — this means the skill submitted an ACH single-use token wrapped in a card-shaped paymentMethod, which the gateway will reject. Note: paymentMethod.type may still be 'singleUseToken' (shared between card and ACH) — the discriminator is the presence of accountType/secCode siblings, NOT a different type enum value."
+        },
+        {
+          "id": "libversion_matches_cdn_url",
+          "text": "libversion_matches_cdn_url: The libVersion value in the session token request body matches the version embedded in the Payroc JS library CDN URL.",
+          "type": "grader",
+          "description": "Scan all output files for (a) the libVersion field in the body POSTed to hosted-fields-sessions (typically in a .cs file) and (b) the version segment of the script src URL for hosted-fields-<version>.js (typically in a .cshtml file). PASS if both four-part dotted version strings are identical. FAIL if they differ — even by the last segment (build number). A mismatch is a real bug found in iteration-5 PR #12: PaymentService.cs used 1.7.0.261471 but Checkout.cshtml loaded 1.7.0.261457. The library will refuse to initialise when the version embedded in the script differs from the libVersion handed to the session-token endpoint."
+        },
+        {
+          "id": "correct_session_endpoint",
+          "text": "correct_session_endpoint: Code POSTs to the hosted-fields-sessions endpoint to generate a session token.",
+          "type": "regex",
+          "pattern": "hosted-fields-sessions",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "correct_payment_endpoint",
+          "text": "correct_payment_endpoint: Payment API call targets api.uat.payroc.com/v1/payments.",
+          "type": "regex",
+          "pattern": "api\\.uat\\.payroc\\.com/v1/payments",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "env_vars_used",
+          "text": "env_vars_used: PAYROC_API_KEY_PAYMENTS or TERMINAL_ID_NO_AVS referenced in the output code.",
+          "type": "regex",
+          "pattern": "PAYROC_API_KEY_PAYMENTS|TERMINAL_ID_NO_AVS",
+          "files": ["*.cs"]
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: No literal API key or terminal ID value appears hardcoded in any output file.",
+          "type": "grader",
+          "description": "Scan all output files for hardcoded API keys or terminal IDs. PASS if credentials are only read from IConfiguration, environment variables, or equivalent. FAIL if any credential literal appears inline as a string constant."
+        },
+        {
+          "id": "pr_opened",
+          "text": "pr_opened: The subagent successfully opened a PR on pyrc-ghe-engineering/dev_exp-test-ai-integration with the eval-13 branch.",
+          "type": "grader",
+          "description": "Read the subagent's final response and any captured PR URL. PASS if a non-empty `https://github.com/pyrc-ghe-engineering/dev_exp-test-ai-integration/pull/<N>` URL is reported AND the branch name matches the eval-13 naming convention. FAIL if no PR URL was captured, the URL points at the wrong repo, or the gh pr create call errored."
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "dialog",
+      "name": "styling-and-custom-fields",
+      "description": "Developer wants to (a) style the Hosted Fields card inputs to match their design system and (b) collect an extra non-card field (billing zip). Tests whether the skill consults the styling and custom-fields extension docs rather than guessing.",
+      "turns": [
+        {
+          "user": "How do I style the card fields to match my checkout's design system? Our design uses a specific font and the inputs have rounded corners and a particular border colour on focus.",
+          "assert_after": [
+            {
+              "id": "styling_doc_read",
+              "text": "styling_doc_read: Skill read the style-your-fields extension reference (references/style-your-fields.md) before answering, rather than improvising CSS from training data.",
+              "type": "grader"
+            },
+            {
+              "id": "iframe_styling_limits_explained",
+              "text": "iframe_styling_limits_explained: Skill explained that the card input fields render inside iFrames and cannot be styled with page-level CSS directly — styles must be passed to the library via its configuration option (per the styling docs). FAIL if the skill suggests writing CSS rules in the page stylesheet that target the iframe inputs directly.",
+              "type": "grader"
+            },
+            {
+              "id": "styles_config_named",
+              "text": "styles_config_named: Skill named the actual library configuration option for styles as documented in references/style-your-fields.md (whatever the field is called — e.g. `styles`, `fieldStyles`, etc.). FAIL if the skill made up a property name without citing the local reference.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "I also need to collect a billing zip code on the same form, alongside the card details. What's the right way to wire that up?",
+          "assert_after": [
+            {
+              "id": "custom_fields_doc_read",
+              "text": "custom_fields_doc_read: Skill read the add-your-own-fields extension reference (references/add-your-own-fields.md) before answering turn 2.",
+              "type": "grader"
+            },
+            {
+              "id": "onpresubmit_or_equivalent_named",
+              "text": "onpresubmit_or_equivalent_named: Skill named the actual library hook for custom-field validation/inclusion as documented in references/add-your-own-fields.md (e.g. `onPreSubmit` — or whatever the reference currently calls it). FAIL if the skill described a generic 'just add an input' answer without naming the documented integration point, or invented a hook name.",
+              "type": "grader"
+            },
+            {
+              "id": "custom_fields_outside_iframe_explained",
+              "text": "custom_fields_outside_iframe_explained: Skill called out that custom fields (like a zip code input) live in the developer's own form HTML — outside the Payroc iFrames — and the library hook lets the developer's data ride along when the card form submits. FAIL if the skill conflates custom fields with the iFrame-rendered card fields.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "dialog",
+      "name": "close-session-cleanup",
+      "description": "Developer wants to explicitly tear down the Hosted Fields form when the customer cancels. Tests whether the skill consults the close-a-session extension doc and explains the cleanup method.",
+      "turns": [
+        {
+          "user": "Our checkout has a cancel button — if the customer clicks it I want to clean up the Hosted Fields form before navigating away. How do I tear it down properly?",
+          "assert_after": [
+            {
+              "id": "close_session_doc_read",
+              "text": "close_session_doc_read: Skill read the close-a-session extension reference (references/close-a-session.md) before answering.",
+              "type": "grader"
+            },
+            {
+              "id": "cleanup_method_named",
+              "text": "cleanup_method_named: Skill named the actual cleanup / close method from references/close-a-session.md and references/hosted-fields-sdk.js (whatever it is — e.g. `close()`, `destroy()`, `closeSession()`). FAIL if the skill invented a method name without consulting the local references, or suggested only DOM removal without the library's own teardown call.",
+              "type": "grader"
+            },
+            {
+              "id": "session_lifecycle_explained",
+              "text": "session_lifecycle_explained: Skill distinguished the explicit close call (developer-triggered) from the 10-minute auto-expiry (time-based). FAIL if the skill conflates the two or implies waiting for expiry is equivalent to an explicit close.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "dialog",
+      "name": "update-saved-card",
+      "description": "Subscription customer's saved card is expired and they want to provide new card details without making a charge. Tests whether the skill consults the update-payment-details extension doc and correctly distinguishes update from initial tokenization.",
+      "turns": [
+        {
+          "user": "One of our subscription customers has a new card — same person, expired old card. How do I update the saved secureToken so future monthly charges use the new card details?",
+          "assert_after": [
+            {
+              "id": "update_doc_read",
+              "text": "update_doc_read: Skill read the update-a-customers-payment-details extension reference (references/update-a-customers-payment-details.md) before answering.",
+              "type": "grader"
+            },
+            {
+              "id": "tokenization_scenario_used",
+              "text": "tokenization_scenario_used: Skill explained that the session token must be created with scenario: 'tokenization' (not 'payment') for the update flow. FAIL if the skill suggests scenario: 'payment' or doesn't mention the scenario value at all.",
+              "type": "grader"
+            },
+            {
+              "id": "update_vs_replace_clarified",
+              "text": "update_vs_replace_clarified: Skill explicitly quoted (or close-paraphrased and cited) references/update-a-customers-payment-details.md when describing the update semantics, rather than making a confident standalone claim about whether the secureToken value persists or is replaced. The reference is ambiguous on whether the token string literally persists vs. is regenerated — it says only 'update the payment details linked to a secure token'. The skill must mirror that ambiguity by quoting the reference, NOT over-claim token-string persistence as a guaranteed fact. FAIL if the skill stated 'the secure token value is preserved' (or equivalent) as a flat assertion without quoting/citing the reference, or if it guessed in the opposite direction (claimed the token is replaced) without reference evidence.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "Do I have to charge them a token amount, or can the update happen without any transaction at all?",
+          "assert_after": [
+            {
+              "id": "no_charge_required_explained",
+              "text": "no_charge_required_explained: Skill confirmed the update flow is non-transactional — no charge is required to update saved payment details. FAIL if the skill says a token charge or zero-auth is required (unless references/update-a-customers-payment-details.md explicitly states otherwise — grader should cross-check).",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "dialog",
+      "name": "form-not-rendering-debug",
+      "description": "Developer's Hosted Fields form silently fails — empty divs, no visible console errors. Root cause is Content Security Policy blocking the CDN script. Tests systematic triage: error event subscription, session token state, network/CSP layer.",
+      "turns": [
+        {
+          "user": "My Hosted Fields form isn't rendering — just empty divs on the page. No console errors that I can see. Already double-checked the session token is being generated server-side and passed to the view. What now?",
+          "assert_after": [
+            {
+              "id": "asks_about_error_subscription",
+              "text": "asks_about_error_subscription: Within the first response, the skill asked whether the developer has subscribed to the library's `error` event — and pointed out that silent failures usually mean either no error listener is attached OR the script itself never loaded.",
+              "type": "grader"
+            },
+            {
+              "id": "csp_considered_or_network_layer",
+              "text": "csp_considered_or_network_layer: Within the first response, the skill considered a non-JS-runtime cause — i.e. Content Security Policy, network blocking, ad-blocker, or the script tag failing to load. FAIL if the skill only enumerated JS-runtime causes (session token, initialize call, config) and never raised the script-load possibility.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "Yes I'm listening for the `error` event. Nothing fires. I don't even see the library's namespace defined on window — it's like the script never loaded at all.",
+          "assert_after": [
+            {
+              "id": "narrows_to_script_load_failure",
+              "text": "narrows_to_script_load_failure: Given the new evidence (library namespace not on window), the skill identified that the CDN script itself didn't load and proposed checking the browser Network tab AND the Content Security Policy (or other request-blocking layer). FAIL if the skill kept enumerating JS-runtime causes after the developer said the library namespace was missing.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "You're right — I checked and my Content Security Policy is blocking `cdn.uat.payroc.com`. Is that the actual cause, and what directives do I need to allow?",
+          "assert_after": [
+            {
+              "id": "confirms_csp_fix",
+              "text": "confirms_csp_fix: Skill confirmed that a CSP blocking the CDN host explains the symptom (no script load → no namespace → no error event from the library). FAIL if the skill hedged or denied the connection.",
+              "type": "grader"
+            },
+            {
+              "id": "csp_directives_named",
+              "text": "csp_directives_named: Skill named ALL THREE Payroc-specific CSP directives required for the form to function — `script-src` (the JS file), `frame-src` (or `child-src`, for the iFrames the library injects), AND `connect-src` (for the tokenization XHRs from inside the iFrames to the Payroc API). FAIL if the skill named only `script-src` and `frame-src` and omitted `connect-src` — without `connect-src`, the form will render but the submission will silently fail. Generic CSP advice that doesn't enumerate all three is insufficient.",
+              "type": "grader"
+            },
+            {
+              "id": "uat_prod_host_swap_called_out",
+              "text": "uat_prod_host_swap_called_out: Skill named the specific Payroc CDN host (`cdn.uat.payroc.com` in UAT, `cdn.payroc.com` in production) — NOT a generic `*.payroc.com` wildcard — and called out that the host must be swapped between UAT and production. FAIL if the skill suggested allowlisting a generic Payroc domain without specifying the exact CDN host, or omitted the UAT/prod swap.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "dialog",
+      "name": "decline-vs-error",
+      "description": "Developer is confused by an HTTP 201 response from /v1/payments where the customer claims the card was declined. Tests whether the skill correctly separates transport-level status from payment outcome.",
+      "turns": [
+        {
+          "user": "I got HTTP 201 back from the Payroc payments API, but my customer says their card was declined. Is 201 a success or not? I'm confused.",
+          "assert_after": [
+            {
+              "id": "http_201_disambiguated",
+              "text": "http_201_disambiguated: Skill explained that HTTP 201 means the payments request was accepted and processed by Payroc — it does NOT by itself mean the card was approved. The approval/decline outcome lives in the response body. FAIL if the skill says 201 always means approval, or treats the developer's confusion as a coding bug rather than a semantic distinction.",
+              "type": "grader"
+            },
+            {
+              "id": "schema_reference_read",
+              "text": "schema_reference_read: Skill read references/api-schema.md to look up the response shape — specifically where the approval/decline status lives — before naming the field.",
+              "type": "grader"
+            },
+            {
+              "id": "decline_field_named",
+              "text": "decline_field_named: Skill named the actual response field that carries decline information, as defined in references/api-schema.md (most likely something under `transactionResult` — the grader should cross-check against references/api-schema.md). FAIL if the skill named a field that doesn't exist in the response schema, or hedged with 'something like a status field' without specifics.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "dialog",
+      "name": "3ds-sca-question",
+      "description": "Developer asks about 3D Secure / SCA support for UK customers. Tests whether the skill consults the spec/docs to give an accurate answer rather than producing a confident-but-fabricated response from training data.",
+      "turns": [
+        {
+          "user": "Our UK customers need to complete 3D Secure / SCA challenges for their card payments. Does Payroc Hosted Fields handle 3DS natively, or do I need to integrate a separate 3DS provider on top?",
+          "assert_after": [
+            {
+              "id": "references_consulted_before_answering",
+              "text": "references_consulted_before_answering: Skill read at least one of (a) references/api-schema.md, (b) references/3-d-secure.md, or (c) references/run-a-sale-with-3-d-secure.md before claiming anything specific about 3DS support. FAIL if the skill answered confidently with no read — that means the answer came from training data.",
+              "type": "grader"
+            },
+            {
+              "id": "answer_grounded_in_references",
+              "text": "answer_grounded_in_references: The skill's answer about 3DS support matches what the local Payroc references actually say. The grader should also read references/3-d-secure.md and references/run-a-sale-with-3-d-secure.md to verify. PASS if the answer aligns with the references — whether 3DS is built-in, requires extra config, is a separate product, or isn't covered. FAIL if the answer contradicts the references.",
+              "type": "grader"
+            },
+            {
+              "id": "no_hallucinated_3ds_fields",
+              "text": "no_hallucinated_3ds_fields: Skill did not invent field names, request shapes, or enum values for 3DS that don't appear in references/api-schema.md or the 3DS references. If the skill names specific fields (e.g. `threeDSecure`, `authentication`, etc.) the grader should verify they exist in references/api-schema.md. FAIL on invented field names.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "dialog",
+      "name": "hpp-to-hf-migration",
+      "description": "Developer has a working HPP integration and wants to migrate to Hosted Fields. Tests whether the skill articulates the architectural diff (HMAC form post vs Bearer token API call, redirect vs iframe) and confirms parallel operation is possible.",
+      "turns": [
+        {
+          "user": "We have a working HPP integration with a redirectUrl, HMAC-signed form posts, and a receipt handler. Now we want to migrate to Hosted Fields so customers stay on our checkout page. What actually changes between the two — apart from credentials?",
+          "assert_after": [
+            {
+              "id": "architecture_diff_explained",
+              "text": "architecture_diff_explained: Skill named at least two architectural shifts: (1) HPP's HTML form POST → HF's Bearer-token-authenticated JSON API call, and (2) HPP's browser redirect (customer leaves your site) → HF's library-rendered iFrames (customer stays on page). FAIL if the skill only mentioned credential reuse or didn't articulate the request mechanism change.",
+              "type": "grader"
+            },
+            {
+              "id": "hmac_vs_bearer_called_out",
+              "text": "hmac_vs_bearer_called_out: Skill explicitly contrasted HPP's HMAC signing (signed form parameters) with Hosted Fields' Bearer token authentication (Authorization header on JSON API calls). FAIL if the skill omits this auth-mechanism shift.",
+              "type": "grader"
+            },
+            {
+              "id": "no_receipt_url_in_hf",
+              "text": "no_receipt_url_in_hf: Skill called out that Hosted Fields does not use a receipt-URL / webhook pattern — the payment outcome comes back directly in the /v1/payments response body, server-to-server. FAIL if the skill implies HF also needs a receipt URL configured in the Self-Care Portal.",
+              "type": "grader"
+            },
+            {
+              "id": "credential_reuse_confirmed",
+              "text": "credential_reuse_confirmed: Skill confirmed the same PAYROC_API_KEY_PAYMENTS and TERMINAL_ID_NO_AVS values work for both HPP and Hosted Fields, AND explained WHY they work (the API key is exchanged at the identity service for a Bearer token; the terminal ID identifies the same merchant terminal regardless of integration path). FAIL if the skill simply parroted back the env var names from the prompt without explaining the credential mechanism — that's a non-discriminating echo that the baseline can produce equally well.",
+              "type": "grader"
+            },
+            {
+              "id": "specific_hf_endpoints_named",
+              "text": "specific_hf_endpoints_named: Skill named at least two specific Hosted Fields endpoints that replace HPP equivalents — for example `/v1/processing-terminals/{id}/hosted-fields-sessions` (session token) and `/v1/payments` (payment), with the `api.uat.payroc.com` host. FAIL if the skill described the change in purely abstract terms ('an API call instead of a form post') without naming any concrete path or host — a Payroc-specific answer requires Payroc-specific endpoints.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "Can both HPP and Hosted Fields run side by side during the migration — e.g. some product pages on HPP, others on HF — or do I have to cut over everything at once?",
+          "assert_after": [
+            {
+              "id": "parallel_operation_possible",
+              "text": "parallel_operation_possible: Skill confirmed parallel operation is possible — different routes / pages can use HPP while others use HF, since both auth against the same terminal with the same credentials, and the two flows don't interfere. FAIL if the skill says they're mutually exclusive or requires a hard cutover.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "dialog",
+      "name": "test-cards-uat",
+      "description": "Developer asks for UAT test card numbers. Tests whether the skill points to Payroc's documented test-card list rather than fabricating card numbers from memory.",
+      "turns": [
+        {
+          "user": "What test card numbers can I use in the Payroc UAT environment to verify approvals, declines, and AVS responses?",
+          "assert_after": [
+            {
+              "id": "references_read_for_test_cards",
+              "text": "references_read_for_test_cards: Skill actually read the relevant local references (references/run-a-sale.md and references/api-schema.md) in this turn (or in an earlier turn whose content the skill is now drawing from) for the UAT test-card / amount-suffix guidance. Merely citing a file path without reading it is INSUFFICIENT — the developer needs the numbers, and the skill must ground them in the local references. FAIL if the skill only handed over a URL or path with a 'consult the docs' deflection.",
+              "type": "grader"
+            },
+            {
+              "id": "approval_and_decline_pan_provided",
+              "text": "approval_and_decline_pan_provided: Skill provided AT LEAST one specific approval PAN and AT LEAST one specific decline PAN in its response, with each PAN traceable to the local reference content shown in the transcript. FAIL if the skill hedged with 'check the docs for current numbers' instead of actually providing PANs after reading the references, OR if PANs appeared without a corresponding read in the transcript (= training-data hallucination).",
+              "type": "grader"
+            },
+            {
+              "id": "amount_suffix_rule_mentioned",
+              "text": "amount_suffix_rule_mentioned: Skill mentioned the Payroc UAT amount-suffix convention for forcing specific responses — e.g. amounts ending in `.01` force one outcome, `.02` forces another (the exact mapping is in references/run-a-sale.md and the grader should cross-check). FAIL if the skill provided test PANs without explaining how to drive specific approval/decline/AVS outcomes via the transaction amount, which is the documented Payroc UAT pattern.",
+              "type": "grader"
+            },
+            {
+              "id": "no_hallucinated_card_numbers",
+              "text": "no_hallucinated_card_numbers: Every specific card number in the skill's response must appear in a local reference read within the transcript. The grader should diff the PANs in the response against the PANs that came back from any Read of the references. FAIL if any PAN in the response is not present in any read reference — that's a training-data hallucination, the exact failure mode this eval is designed to catch.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "dialog",
+      "name": "3ds-implementation",
+      "description": "Developer has a working basic Hosted Fields integration and now needs to add 3DS for UK customers. Tests whether the skill covers the prerequisites, the MPI call flow, webhook handling, and the threeDSecure block on the payment request — by fetching the 3DS docs rather than guessing.",
+      "turns": [
+        {
+          "user": "I've got the basic Hosted Fields card integration working in UAT. My acquirer has just told me I need 3DS for my UK customers. How do I add it?",
+          "assert_after": [
+            {
+              "id": "3ds_prerequisites_called_out",
+              "text": "3ds_prerequisites_called_out: Skill mentions BOTH prerequisites that must be in place before 3DS can be tested end-to-end: (1) the processing terminal must be enabled for 3DS by Payroc support, and (2) a webhook URL must be registered with Payroc support (cs@payroc.com). FAIL if either prerequisite is omitted — a developer who skips either will get MPI failures with no clear explanation.",
+              "type": "grader"
+            },
+            {
+              "id": "3ds_doc_read",
+              "text": "3ds_doc_read: Skill read the 3DS run-a-sale reference (references/run-a-sale-with-3-d-secure.md or references/3-d-secure.md) before describing the flow. FAIL if the skill described the 3DS integration from training data without reading the local reference.",
+              "type": "grader"
+            },
+            {
+              "id": "mpi_call_position_explained",
+              "text": "mpi_call_position_explained: Skill explained that the MPI call is a server-side step that happens AFTER submissionSuccess fires (after the single-use token is obtained) and BEFORE the payment API call — it inserts an extra round-trip between those two steps. FAIL if the skill implies the MPI call happens before or at the same time as submissionSuccess.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "OK, I've emailed cs@payroc.com to get the terminal enabled and the webhook registered. Can you show me the server-side code flow — the MPI call, what I do with the webhook result, and how it changes my payment request body?",
+          "assert_after": [
+            {
+              "id": "mpi_call_described",
+              "text": "mpi_call_described: Skill describes or shows code for the MPI GET call to /merchant/mpi (on the payments host, not identity), including the required parameters: the single-use token, amount, currency, orderId, and processingTerminalId. FAIL if any of these are missing from the description/code, or if the skill uses a POST instead of GET.",
+              "type": "grader"
+            },
+            {
+              "id": "webhook_handling_described",
+              "text": "webhook_handling_described: Skill explains that Payroc POSTs the MPI result to the registered webhook URL, and that the developer must persist the mpiReference from the webhook payload (keyed by orderId or equivalent) so it can be used in the subsequent payment request. FAIL if the skill omits webhook persistence or implies the mpiReference comes directly from the MPI GET response.",
+              "type": "grader"
+            },
+            {
+              "id": "three_d_secure_block_correct",
+              "text": "three_d_secure_block_correct: Skill shows the threeDSecure block added to the payment request body, containing serviceProvider: 'gateway' and mpiReference: (the value from the webhook). FAIL if the serviceProvider value is wrong, if mpiReference is missing, or if the skill invents field names not present in the Payroc 3DS docs.",
+              "type": "grader"
+            },
+            {
+              "id": "schema_reference_read",
+              "text": "schema_reference_read: Transcript shows the skill read references/api-schema.md — specifically to verify the threeDSecure block schema on the paymentRequest — before naming field values in the payment request body. FAIL if field names were emitted without reading the local schema reference.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "dialog",
+      "name": "bearer-token-401-during-payment",
+      "description": "Developer gets a 401 from the payments API after the Hosted Fields form rendered and submitted successfully. Tests whether the skill distinguishes Bearer token expiry (payments API credential) from session token expiry (form credential) — two separate token lifecycles that developers often conflate.",
+      "turns": [
+        {
+          "user": "I'm getting 401 Unauthorized from the Payroc payments API (api.uat.payroc.com/v1/payments). The session token generated fine and the Hosted Fields form rendered — the customer submitted successfully and I got a single-use token back from submissionSuccess. But then the payment POST returns 401. What's happening?",
+          "assert_after": [
+            {
+              "id": "bearer_vs_session_token_distinguished",
+              "text": "bearer_vs_session_token_distinguished: Skill explained that a 401 on the payments API indicates the Bearer token (Authorization header) is expired or invalid — NOT the session token. The two tokens have separate lifecycles: the session token scopes the form; the Bearer token authenticates server-side API calls. FAIL if the skill conflates the two or treats this 401 as a session token issue.",
+              "type": "grader"
+            },
+            {
+              "id": "re_fetch_bearer_token_recommended",
+              "text": "re_fetch_bearer_token_recommended: Skill recommended re-fetching a fresh Bearer token from the identity service (identity.uat.payroc.com) and retrying the payment request with the new token. FAIL if the skill only names the problem without giving the fix, or if it says 'contact Payroc support' as the primary remedy.",
+              "type": "grader"
+            },
+            {
+              "id": "not_blamed_on_session_token",
+              "text": "not_blamed_on_session_token: Skill did NOT tell the developer to regenerate the session token and re-initialize the Hosted Fields form as the fix for this 401. That's the fix for a different problem (form not rendering). FAIL if the skill's primary recommendation is to regenerate the session token.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "dialog",
+      "name": "declined-first-recurring-charge",
+      "description": "Developer uses the combined first-charge-and-tokenize pattern and gets a decline back on the first payment. Tests whether the skill correctly explains that tokenization doesn't succeed on a decline, the single-use token is consumed, and the customer must restart the form flow.",
+      "turns": [
+        {
+          "user": "I'm using the combined first-charge-and-tokenize pattern for recurring billing — scenario: 'payment', credentialOnFile.tokenize: true, and standingInstructions.sequence: 'first'. The customer submitted the form and I got a single-use token. I called /v1/payments and got back HTTP 201 — but transactionResult.status says declined. Was the card tokenized anyway, or do I need to start over?",
+          "assert_after": [
+            {
+              "id": "decline_means_no_secure_token",
+              "text": "decline_means_no_secure_token: Skill correctly stated that a declined transaction does NOT produce a usable secureToken. The tokenization (credentialOnFile.tokenize: true) is tied to authorization success — if the issuer declines, no card.secureToken is returned in the response and the recurring billing setup has not been established. FAIL if the skill suggests the card may have been tokenized even on a decline.",
+              "type": "grader"
+            },
+            {
+              "id": "customer_must_reenter",
+              "text": "customer_must_reenter: Skill explained that the customer must re-enter their card details — either because they used a card the issuer declined, or to try a different card. The developer cannot proceed with recurring billing using the information from this declined transaction. FAIL if the skill suggests retrying the same payment without the customer providing card details again.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "So the customer needs to re-enter their card. Do I need a new session token, or can I reuse the one I already have?",
+          "assert_after": [
+            {
+              "id": "new_session_token_required",
+              "text": "new_session_token_required: Skill confirmed that a new session token is required to re-initialise the Hosted Fields form for the retry. The existing session token may have expired (10-minute window) or the form state is no longer valid after the submission attempt. FAIL if the skill says the existing session token can be reused.",
+              "type": "grader"
+            },
+            {
+              "id": "single_use_token_consumed",
+              "text": "single_use_token_consumed: Skill noted that the single-use token from the declined submission is one-time only and cannot be reused — the customer must go through the Hosted Fields form again to generate a fresh single-use token. FAIL if the skill implies the original single-use token can be resubmitted.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "name": "python-flask-code-gen",
+      "prompt": "I'm building a Python/Flask e-commerce app and need to add Payroc Hosted Fields to the checkout. My app structure:\n  - app.py — main Flask app with routes\n  - templates/checkout.html — checkout page template\n  - .env — credentials: TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS\n\nImplement a full Hosted Fields integration:\n  - Server-side (app.py): a GET /checkout route that fetches a Bearer token from Payroc's identity service, generates a session token (POST to hosted-fields-sessions), and passes it to the template; a POST /payment route that accepts a single-use token from the client and calls the Payroc payments API\n  - Client-side (templates/checkout.html): load the Payroc JS library from CDN (fetch the current URL from the docs), add container divs for card fields, initialise the hosted fields form with the session token, handle submissionSuccess and errors\n\nUse the requests library for HTTP calls. Create the output directory at /tmp/hf-python-eval/outputs/ and save all new/modified .py and .html files there.",
+      "expected_output": "Python and HTML files implementing: (1) server-side Bearer token fetch from identity.uat.payroc.com using the requests library, (2) session token generation via POST to hosted-fields-sessions, (3) session token passed to template via render_template context, (4) checkout.html with CDN script tag (current URL from docs), container divs for card fields, hostedFields initialisation with session token, submissionSuccess handler, (5) POST /payment route POSTing single-use token to api.uat.payroc.com/v1/payments with Idempotency-Key. Credentials via os.environ only. No C# or Node.js patterns.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "uses_python_http_client",
+          "text": "uses_python_http_client: Server-side HTTP calls use the Python requests library (or httpx/urllib) — not Node.js fetch/axios or C# HttpClient",
+          "type": "grader",
+          "description": "Read the output .py files. Check that HTTP calls to Payroc APIs use requests.get/post/request, httpx, or urllib — Python-native HTTP clients. FAIL if the code uses JavaScript fetch, axios, or C# HttpClient / WebClient patterns."
+        },
+        {
+          "id": "no_non_python_patterns",
+          "text": "no_non_python_patterns: Output files contain no C# patterns (no 'using', 'async Task', 'IConfiguration', 'HttpClient') and no Node.js patterns (no require(), no res.json(), no app.use())",
+          "type": "grader",
+          "description": "Scan all output files. FAIL if any C# namespace imports ('using System'), async Task, IConfiguration, or .NET-specific constructs appear. Also FAIL if Node.js/Express patterns appear: require(), module.exports, res.json(), app.use(), app.listen(). Python 'import' statements and Flask patterns (app.route, render_template, request.json) are expected and fine."
+        },
+        {
+          "id": "correct_bearer_auth",
+          "text": "correct_bearer_auth: Code calls the Payroc identity service (identity.uat.payroc.com) to obtain a Bearer token — not HMAC",
+          "type": "grader",
+          "description": "Scan all output .py files. The assertion passes if there is a server-side HTTP POST to an identity service URL (identity.uat.payroc.com/authorize or identity.payroc.com/authorize) to obtain a Bearer token. FAIL if the only auth mechanism is HMAC/SHA-512 hashing."
+        },
+        {
+          "id": "correct_session_endpoint",
+          "text": "correct_session_endpoint: Code POSTs to the full hosted-fields-sessions path — /v1/processing-terminals/{id}/hosted-fields-sessions — not a shortened path that omits the processing-terminals segment",
+          "type": "grader",
+          "description": "Read the session token generation code in the output .py files. PASS if the URL used to POST for a session token includes both 'processing-terminals' and 'hosted-fields-sessions' in the path (e.g., api.uat.payroc.com/v1/processing-terminals/{terminal_id}/hosted-fields-sessions). FAIL if the URL uses a shortened path such as /v1/hosted-fields-sessions without the processing-terminals segment — that path does not exist in the Payroc API."
+        },
+        {
+          "id": "no_hardcoded_credentials",
+          "text": "no_hardcoded_credentials: Credentials are read from os.environ (or python-dotenv), not hardcoded as string literals",
+          "type": "grader",
+          "description": "Scan all output files for hardcoded API keys or terminal IDs. PASS if credentials are only accessed via os.environ.get(), os.getenv(), or dotenv-loaded equivalents. FAIL if any credential value appears inline as a Python string constant."
+        },
+        {
+          "id": "single_use_token_in_payment",
+          "text": "single_use_token_in_payment: Payment API request uses paymentMethod.type singleUseToken with the token from the client",
+          "type": "grader",
+          "description": "Read the server-side payment route in the output .py files. Check that the request body sent to the Payroc payments API includes a paymentMethod with type 'singleUseToken' and a token value received from the client. FAIL if paymentMethod is missing or uses a different type."
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "dialog",
+      "name": "pci-scope-question",
+      "description": "Developer asks whether Hosted Fields reduces their PCI DSS compliance scope. Tests whether the skill consults docs before answering (not training-data claims), explains the iFrame model accurately, and avoids unhedged compliance guarantees.",
+      "turns": [
+        {
+          "user": "Does integrating Payroc Hosted Fields reduce our PCI DSS compliance scope? We're currently on SAQ D — would we drop to SAQ A?",
+          "assert_after": [
+            {
+              "id": "references_read_before_answering",
+              "text": "references_read_before_answering: Skill read at least one Payroc reference (references/api-schema.md or a narrative reference such as references/create-a-payment-form.md) before making any claim about PCI scope. FAIL if the skill answered entirely from training data without any read — PCI scope guidance is compliance-sensitive and must be grounded in the local references.",
+              "type": "grader"
+            },
+            {
+              "id": "iframe_model_explained",
+              "text": "iframe_model_explained: Skill explained the technical basis for any scope reduction — specifically that Hosted Fields renders card input inside Payroc-hosted iFrames, so raw card data (PAN, CVV, expiry) is never transmitted to or stored on the merchant's server. FAIL if the skill claims scope reduction without explaining the iFrame mechanism that makes it possible.",
+              "type": "grader"
+            },
+            {
+              "id": "no_unqualified_compliance_guarantee",
+              "text": "no_unqualified_compliance_guarantee: Skill did NOT make a flat, unhedged compliance guarantee — e.g. 'you will be on SAQ A' or 'this reduces your scope to SAQ A-EP' stated as a certainty. PCI scope assessments depend on the merchant's full environment and must be confirmed by a QSA. The skill should acknowledge this — recommending the developer confirm their SAQ eligibility with a QSA or Payroc's compliance team. FAIL if the response contains an authoritative SAQ classification with no qualification.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "dialog",
+      "name": "silent-no-iframe-script-load-order",
+      "description": "Developer has visible styled field containers but no iframes inside them, cannot interact with the fields, and sees no console errors. Tests whether the skill diagnoses script load order as the root cause, explains the silent-failure mechanism, and gives a concrete fix.",
+      "turns": [
+        {
+          "user": "I'm integrating Hosted Fields into an ASP.NET Core Razor Pages app. The checkout page loads, I can see the card field containers (they have the right CSS styling and borders), but I can't click into them — there are no iframes inside the divs. I've checked the browser console and there are no JavaScript errors at all. The session token is definitely valid (I checked the network tab — the POST to hosted-fields-sessions returned 201). What's going wrong?",
+          "assert_after": [
+            {
+              "id": "diagnoses_script_load_order",
+              "text": "diagnoses_script_load_order: Skill identified script load order as the likely root cause — specifically that the Hosted Fields init code (new Payroc.hostedFields(...) or equivalent) is executing before the Payroc SDK script has loaded, causing Payroc to be undefined at runtime. FAIL if the skill does not mention script load order as a likely cause.",
+              "type": "grader"
+            },
+            {
+              "id": "explains_silent_failure",
+              "text": "explains_silent_failure: Skill explained why there are no console errors — because cardForm is never created when the SDK is not loaded, so the .on('error', ...) handler is never wired up, meaning the ReferenceError is silently swallowed. FAIL if the skill says there should be a visible console error, or does not explain the silent-failure mechanism.",
+              "type": "grader"
+            },
+            {
+              "id": "fix_sdk_before_init",
+              "text": "fix_sdk_before_init: Skill provided a concrete fix — ensure the Payroc SDK <script> tag is rendered and executed before the init code runs. For Razor Pages or server-side templating engines where body and deferred script sections are separate, both the SDK tag and the init block must be placed in the same deferred/bottom-of-body location, with the SDK tag first. FAIL if the skill does not give actionable guidance on fixing the load order.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "dialog",
+      "name": "cvv-wrapper-config-error",
+      "description": "Developer is getting an immediate SDK config error about a missing CVV wrapper, but has already set wrapper: false in their config. Tests whether the skill identifies the correct property name (wrapperTarget, not wrapper) and explains that the wrong key is silently ignored.",
+      "turns": [
+        {
+          "user": "When my checkout page loads, the SDK immediately fires an error: \"CVV wrapper is required for card forms. If you do not have a wrapper, please provide false.\" I've already set wrapper: false in my cvv field config — here's what I have:\n\n```js\nconst cardForm = new Payroc.hostedFields(sessionToken, {\n  fields: {\n    cardNumber: { target: '#card-number' },\n    expiryDate: { target: '#expiry-date' },\n    cvv: { target: '#cvv', wrapper: false }\n  }\n});\n```\n\nI already set wrapper to false like the error message says. Why is it still complaining?",
+          "assert_after": [
+            {
+              "id": "identifies_wrong_property_name",
+              "text": "identifies_wrong_property_name: Skill identified that the correct property name is wrapperTarget, not wrapper. The developer is using the wrong key. FAIL if the skill suggests any fix that does not involve renaming the property from wrapper to wrapperTarget.",
+              "type": "grader"
+            },
+            {
+              "id": "explains_silent_ignore",
+              "text": "explains_silent_ignore: Skill explained that wrapper: false is silently ignored by the SDK — the SDK does not recognise the wrapper key, so wrapperTarget remains unset, which is what triggers the config validation error. FAIL if the skill implies that wrapper: false causes its own error, or that the SDK rejects the unknown key explicitly rather than ignoring it.",
+              "type": "grader"
+            },
+            {
+              "id": "gives_correct_fix",
+              "text": "gives_correct_fix: Skill provided the correct fix — change wrapper: false to wrapperTarget: false in the cvv field config. FAIL if the fix provided is anything other than renaming the property to wrapperTarget (e.g., suggesting a different configuration structure or workaround).",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "dialog",
+      "name": "libversion-environment-specific",
+      "description": "Developer cutting over from UAT to production wants to know whether they can reuse the libVersion + CDN URL + SRI hash triplet they recorded from the UAT docs. Tests whether the skill explains that libVersion is environment-specific and the production triplet must be re-read from the live production docs.",
+      "turns": [
+        {
+          "user": "I've got Hosted Fields working in UAT. I read the libVersion from the docs (1.7.0.261457) and pinned it as a constant alongside the CDN URL `https://cdn.uat.payroc.com/js/hosted-fields/hosted-fields-1.7.0.261457.js` and the SRI hash. I'm doing the production cutover now and swapping identity.uat.payroc.com → identity.payroc.com and api.uat.payroc.com → api.payroc.com. Do I keep the same libVersion + CDN URL + SRI hash for production, or do I need to change those too?",
+          "assert_after": [
+            {
+              "id": "libversion_is_environment_specific",
+              "text": "libversion_is_environment_specific: Skill stated that libVersion is environment-specific — UAT and production may publish different four-part versions, and a UAT value cannot be assumed to work in production. FAIL if the skill implies the same libVersion works in both environments by default, or treats UAT and production as carrying identical version metadata.",
+              "type": "grader"
+            },
+            {
+              "id": "refetch_all_three_from_prod_docs",
+              "text": "refetch_all_three_from_prod_docs: Skill instructed the developer to re-read all three values (libVersion, CDN URL, SRI hash) for the production environment from references/create-a-payment-form.md (and references/hosted-fields-sdk.js) before cutover — not just swap the host portion of the CDN URL. FAIL if the skill suggests only swapping the UAT CDN host for the production host in the URL without re-reading the version + SRI for the production environment, or if it only mentions one of the three values.",
+              "type": "grader"
+            },
+            {
+              "id": "values_must_match_within_env",
+              "text": "values_must_match_within_env: Skill reiterated that libVersion in the session-token request body must match the version embedded in the CDN URL — that constraint is intra-environment and applies separately to UAT and production. FAIL if the skill loses this point and gives the impression that any libVersion + CDN URL pairing is fine post-cutover.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "dialog",
+      "name": "antiforgery-csrf-on-ajax-handler",
+      "description": "Developer implementing Hosted Fields on ASP.NET Core Razor Pages gets a 400 / antiforgery rejection when the submissionSuccess callback POSTs the single-use token to a page handler. Tests whether the skill recognises the framework-default CSRF / antiforgery requirement on AJAX POSTs, offers both 'thread the token through' and 'disable on this handler' approaches, and surfaces the .NET-specific MVC1001 gotcha around class-level [IgnoreAntiforgeryToken].",
+      "turns": [
+        {
+          "user": "I'm wiring up the submissionSuccess handler on a Razor Pages app. When I get the single-use token, my JS calls `fetch('?handler=ProcessPayment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ singleUseToken: evt.token, ... }) })`. The request comes back as 400 Bad Request and the server logs say 'antiforgery token validation failed'. The handler is `public async Task<IActionResult> OnPostProcessPaymentAsync([FromBody] ProcessPaymentRequest input)`. What's going wrong?",
+          "assert_after": [
+            {
+              "id": "identifies_csrf_root_cause",
+              "text": "identifies_csrf_root_cause: Skill identified that the failure is ASP.NET Core's default antiforgery validation rejecting the AJAX POST because the request didn't carry the antiforgery token — the same protection that normally rides on hidden form fields for traditional form submits. FAIL if the skill suggests the root cause is a Content-Type problem, a [FromBody] binding issue, a CORS issue, or anything other than antiforgery / CSRF.",
+              "type": "grader"
+            },
+            {
+              "id": "offers_two_remediation_paths",
+              "text": "offers_two_remediation_paths: Skill offered both remediation paths — (1) thread the antiforgery token through by rendering @Html.AntiForgeryToken() in the form and sending the __RequestVerificationToken value as the RequestVerificationToken header from the fetch call, and (2) disable antiforgery on this one handler (acceptable for demos / internal-only). FAIL if the skill only offers one option without acknowledging the other, or recommends globally disabling antiforgery framework-wide.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "I'd rather just disable antiforgery on this single handler for now since this is a demo. I tried adding `[IgnoreAntiforgeryToken]` directly to the OnPostProcessPaymentAsync method but I'm getting build error MVC1001. What does that mean?",
+          "assert_after": [
+            {
+              "id": "explains_class_level_requirement",
+              "text": "explains_class_level_requirement: Skill explained that [IgnoreAntiforgeryToken] must be applied at the PageModel class level — applying it to an individual handler method triggers MVC1001 at build time because the attribute is only valid on the class itself in Razor Pages. FAIL if the skill suggests the attribute should work on a single handler, or recommends a different attribute placement that would not compile.",
+              "type": "grader"
+            },
+            {
+              "id": "shows_correct_attribute_placement",
+              "text": "shows_correct_attribute_placement: Skill showed the correct placement — [IgnoreAntiforgeryToken] decorating the CheckoutModel class itself (e.g. immediately above `public class CheckoutModel(...) : PageModel`). FAIL if the skill suggests placing it on the method, in Program.cs as global configuration, on the IActionResult return value, or anywhere other than the PageModel class.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "dialog",
+      "name": "declined-subsequent-recurring-charge",
+      "description": "Developer's background worker fires a subsequent recurring charge against a saved secureToken and receives a decline. Tests whether the skill classifies the response code, prescribes correct retry mechanics (fresh Idempotency-Key + orderId, not reuse), sketches a spaced dunning cadence, and explains the distinct recovery path for when the saved secureToken itself is no longer valid (card expired) vs a transient issuer decline.",
+      "turns": [
+        {
+          "user": "My background worker just called ExecuteRecurringChargeAsync for a monthly subscription — paymentMethod.type 'secureToken' with the stored token, standingInstructions.sequence 'subsequent' with the persisted paymentId and cardSchemeReferenceId. Got HTTP 201 back but transactionResult.status was 'declined' with responseCode '51'. What should my retry behaviour be? Can I just call again immediately with the same arguments?",
+          "assert_after": [
+            {
+              "id": "classifies_51_as_retry_later",
+              "text": "classifies_51_as_retry_later: Skill classified responseCode 51 (insufficient funds) as a 'retry later' / temporary issuer-state decline rather than a 'customer must intervene' or 'hard decline'. FAIL if the skill treats 51 as a card-no-longer-valid situation, suggests the customer must immediately update payment details, or recommends suspending the subscription on first occurrence.",
+              "type": "grader"
+            },
+            {
+              "id": "fresh_idempotency_and_order_id_on_retry",
+              "text": "fresh_idempotency_and_order_id_on_retry: Skill stated that any retry must use a fresh Idempotency-Key (UUID v4) and a fresh orderId — reusing the same Idempotency-Key returns the original (declined) response rather than running a new charge. FAIL if the skill suggests resubmitting with identical headers / body, or doesn't call out the idempotency-key-replay behaviour.",
+              "type": "grader"
+            },
+            {
+              "id": "spaced_retry_cadence",
+              "text": "spaced_retry_cadence: Skill recommended spacing retries across days (e.g. +1/+3/+7 days) rather than retrying immediately or in tight loops — and capping after N attempts before suspending the subscription / emailing the customer to update payment details. FAIL if the skill recommends immediate retry with no backoff, an unbounded retry loop, or no stop condition.",
+              "type": "grader"
+            }
+          ]
+        },
+        {
+          "user": "Next month the same subscription charge declined again, but this time responseCode is '54' (expired card). I don't think retrying will help. What's the recovery path? And does the saved secureToken still work, or do I need to throw it away?",
+          "assert_after": [
+            {
+              "id": "classifies_54_as_customer_intervene",
+              "text": "classifies_54_as_customer_intervene: Skill classified responseCode 54 (expired card) as 'customer must intervene' — retrying won't help, the customer has to provide new card details. FAIL if the skill suggests retrying with backoff, treats 54 like a transient issuer-state code, or implies the saved secureToken can keep being used unchanged.",
+              "type": "grader"
+            },
+            {
+              "id": "recovery_via_update_card_or_new_series",
+              "text": "recovery_via_update_card_or_new_series: Skill offered both recovery options — (1) update the saved card via the 'Update a customer's saved card' extension (scenario 'tokenization', non-transactional) which preserves the standing instruction series so the existing paymentId + cardSchemeReferenceId can be reused, OR (2) start a new series via a fresh first-charge flow (Hosted Fields session token → submissionSuccess → singleUseToken → credentialOnFile.tokenize: true → sequence 'first') and persist the new triplet. FAIL if the skill only mentions one path without acknowledging the other.",
+              "type": "grader"
+            },
+            {
+              "id": "no_phantom_refresh_api",
+              "text": "no_phantom_refresh_api: Skill did NOT invent a 'refresh secureToken' API call — no such endpoint exists. The only way to recover a no-longer-valid secureToken is to either update the underlying card via tokenization or start a fresh series. FAIL if the skill suggests a refreshToken-style endpoint, a renew call, or any nonexistent mechanism to revive a dead durable token.",
+              "type": "grader"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "name": "channel-enum-from-spec",
+      "prompt": "I'm building a small Node.js/Express script that POSTs a one-off card payment to Payroc's /v1/payments after I've already obtained a single-use token from the Hosted Fields form. Show me the JSON request body I should send. Credentials are in env vars TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS. The single-use token is in a variable named `singleUseToken`. Save the request-body code to /tmp/hf-channel-eval/outputs/payment.js.",
+      "expected_output": "A Node.js file that constructs the /v1/payments request body. The `channel` field must be one of the values listed in references/api-schema.md's `paymentRequest.channel` enum (`web` for in-browser CNP). Plausible-but-wrong values like `internet`, `online`, `ecommerce`, `card-not-present` must NOT appear. The transcript must show the skill reading references/api-schema.md before the body is emitted.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "channel_value_in_current_enum",
+          "text": "channel_value_in_current_enum: The `channel` value emitted in the request body is one of the values listed in references/api-schema.md's `paymentRequest.channel` enum.",
+          "type": "grader",
+          "description": "Read references/api-schema.md. Locate the `paymentRequest.channel` enum (`pos` | `web` | `moto`). PASS if the emitted value matches one of the enum entries. FAIL if it doesn't — even if the value sounds reasonable."
+        },
+        {
+          "id": "no_plausible_wrong_channel_value",
+          "text": "no_plausible_wrong_channel_value: The emitted `channel` value is not one of the documented-as-wrong cousins (`internet`, `online`, `ecommerce`, `card-not-present`).",
+          "type": "grader",
+          "description": "Scan the output for the `channel` field. FAIL if its value is `internet`, `online`, `ecommerce`, or `card-not-present`. These are the plausible-sounding-but-wrong values models have emitted before; the skill should prevent every one of them."
+        },
+        {
+          "id": "schema_reference_read_before_channel_emission",
+          "text": "schema_reference_read_before_channel_emission: Transcript shows the skill read references/api-schema.md before the request body containing `channel` was written.",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS only if a Read of references/api-schema.md occurs BEFORE the file containing the `channel` field is written. FAIL if the value was emitted with no preceding read of the local schema reference — that's the failure mode this eval exists to catch."
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "name": "sdk-config-shape-from-source",
+      "prompt": "I'm adding Payroc Hosted Fields to an ASP.NET Core Razor Pages checkout page. I've already got the server-side session-token endpoint working — `Model.SessionToken` is available in the Razor view. Write a Razor section (script block) that loads the Payroc JS library from the current UAT CDN URL, sets up container divs for cardholder name, card number, expiry date, CVV, and a Pay button, then initialises the hosted fields form and handles `submissionSuccess` by POSTing the single-use token to `/checkout/payment`. Save it to /tmp/hf-sdk-shape-eval/outputs/Checkout.cshtml.",
+      "expected_output": "A Razor view containing: (1) container elements (divs) for each card field plus a pay button target, (2) a `<script>` tag loading the Payroc JS library CDN URL with SRI hash (read from references/create-a-payment-form.md / references/hosted-fields-sdk.js in this turn), (3) a `new Payroc.hostedFields({...})` config where the submit target lives wherever the SDK source accepts it (specifically, inside `fields.card.submit`, not at the top level as `submitButton`), (4) no manual `cardForm.submitFields()` / `cardForm.submit()` / `cardForm.validate()` call — the SDK owns the submit click once `fields.card.submit` is configured. The transcript must show the skill reading references/hosted-fields-sdk.js before the config is emitted.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "submit_target_placed_per_sdk_source",
+          "text": "submit_target_placed_per_sdk_source: The submit target is placed where the SDK source (references/hosted-fields-sdk.js) actually reads it (inside `fields.card.submit`), not at the top level as `submitButton`.",
+          "type": "grader",
+          "description": "Read the Razor output. Locate the `new Payroc.hostedFields({...})` call. PASS if a submit target appears inside `fields.card` (e.g. `fields.card.submit: { target: ... }`). FAIL if a top-level `submitButton: { ... }` or any other top-level submit-shaped property appears, or if no submit target is configured at all."
+        },
+        {
+          "id": "no_hallucinated_cardform_method",
+          "text": "no_hallucinated_cardform_method: The output does not call any non-existent method on `cardForm`. Specifically, `cardForm.submitFields(`, `cardForm.submit(`, `cardForm.validate(` must not appear.",
+          "type": "regex",
+          "pattern": "(?m)^(?!\\s*//).*?cardForm\\.(submitFields|submit|validate)\\s*\\(",
+          "files": ["*.cshtml", "*.html", "*.js"],
+          "expect_match": false
+        },
+        {
+          "id": "sdk_source_read_before_config_emission",
+          "text": "sdk_source_read_before_config_emission: Transcript shows the skill read references/hosted-fields-sdk.js (the SDK JS file) before the config is emitted.",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS if there is a Read of references/hosted-fields-sdk.js (the SDK source as text) BEFORE the Checkout.cshtml output is written. FAIL if the config was emitted with no preceding SDK-source read — the narrative references alone are documented as ambiguous on exact SDK shape, so verification against the SDK source is required."
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "dialog",
+      "name": "ready-is-success-from-spec",
+      "description": "Developer reports HTTP 201 + transactionResult.status='ready' + responseCode='A' + responseMessage='APPROVAL' and asks why their app logged a failure. Tests whether the skill explains that `ready` is approval, recommends branching on the full enum set, and fetches the spec to identify the success set rather than reasoning from memory.",
+      "turns": [
+        {
+          "user": "I'm getting HTTP 201 back from /v1/payments and the response body shows `transactionResult.status: \"ready\"`, `responseCode: \"A\"`, `responseMessage: \"APPROVAL\"`. My code does `if (status == \"approved\") { markPaid(); } else { markFailed(); }` and I just got a customer complaining their card was charged but the order shows as failed. What's going on?",
+          "assert_after": [
+            {
+              "id": "ready_identified_as_approval",
+              "text": "ready_identified_as_approval: Skill identified `ready` as an approval state — specifically, an authorized sale that is queued for capture/settlement. The customer was correctly charged; the app's check is what's wrong. FAIL if the skill treats `ready` as a non-success state or hedges on whether bank approval occurred.",
+              "type": "grader"
+            },
+            {
+              "id": "branch_on_full_enum_recommended",
+              "text": "branch_on_full_enum_recommended: Skill recommended branching on the full `transactionResult.status` approval set (the approval states are `ready` | `complete` | `accepted` — there is NO `approved` value in this enum) rather than on a single remembered value, and pointed the developer at references/api-schema.md's `transactionResult.status` enum as the source of truth. FAIL if the skill just says 'add ready to your list' without naming the reference, doesn't recommend reading the enum, or treats `approved` as a valid status value.",
+              "type": "grader"
+            },
+            {
+              "id": "schema_reference_read_for_status_enum",
+              "text": "schema_reference_read_for_status_enum: Transcript shows the skill read references/api-schema.md to look up the `transactionResult.status` enum before naming the approval values.",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if a Read of references/api-schema.md occurs before the skill names the approval values for `transactionResult.status`. FAIL if the values were named from memory with no read of the local schema reference."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "dialog",
+      "name": "no-hallucinated-cardform-method-dialog",
+      "description": "Developer pastes a manual Pay-button click handler that calls `cardForm.submitFields()` and asks why they get `TypeError: cardForm.submitFields is not a function`. Tests whether the skill identifies the hallucinated method, points at the SDK source to verify the public API, and removes (rather than renames) the manual handler.",
+      "turns": [
+        {
+          "user": "My Hosted Fields form renders fine, but when the customer clicks the Pay button I get `TypeError: cardForm.submitFields is not a function` in the console and nothing happens. Here's my code:\n\n```html\n<button id=\"pay-button\">Pay</button>\n<script>\nconst cardForm = new Payroc.hostedFields({\n  sessionToken: '{{sessionToken}}',\n  mode: 'payment',\n  fields: {\n    card: {\n      cardholderName: { target: '#cardholder-name' },\n      cardNumber: { target: '#card-number' },\n      expiryDate: { target: '#expiry-date' },\n      cvv: { target: '#cvv', wrapperTarget: false },\n      submit: { target: '#pay-button' }\n    }\n  }\n});\ncardForm.initialize();\ndocument.getElementById('pay-button').addEventListener('click', () => cardForm.submitFields());\n</script>\n```\n\nIs the method name wrong? Should it be `submit()` or `validate()`?",
+          "assert_after": [
+            {
+              "id": "manual_handler_removal_recommended",
+              "text": "manual_handler_removal_recommended: Skill recommended REMOVING the manual click handler entirely — not renaming the method. Once `fields.card.submit` is configured, the SDK renders the submit element as an iframe and owns the click. FAIL if the skill suggests `cardForm.submit()`, `cardForm.validate()`, `cardForm.submitFields()`, or any other method on `cardForm` as the fix.",
+              "type": "grader"
+            },
+            {
+              "id": "sdk_source_named_as_verification",
+              "text": "sdk_source_named_as_verification: Skill pointed the developer at the SDK JS file (references/hosted-fields-sdk.js — the same JS loaded in `<script>`) as the way to verify which methods actually exist on the `hostedFields` instance, rather than naming a method from memory. FAIL if the skill only names methods (right or wrong) without explaining where to verify them.",
+              "type": "grader"
+            },
+            {
+              "id": "sdk_source_or_reference_read",
+              "text": "sdk_source_or_reference_read: Transcript shows the skill read references/hosted-fields-sdk.js (the SDK JS file) OR references/create-a-payment-form.md before the answer is given.",
+              "type": "grader",
+              "description": "Read the full agent transcript. PASS if a relevant local Payroc reference was read before the skill's answer (references/hosted-fields-sdk.js preferred; references/create-a-payment-form.md acceptable as a fallback). FAIL if no read occurred — the skill should not be reasoning about SDK method names from memory."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "name": "reference-check-catches-wrong-values",
+      "prompt": "I need to add Payroc Hosted Fields payment processing to a small ASP.NET Core Razor Pages app. The checkout page is at MeadowShop/Pages/Checkout.cshtml and MeadowShop/Pages/Checkout.cshtml.cs. Implement a complete Hosted Fields integration end-to-end:\n- Server-side: Bearer token fetch, session token generation, payment-processing handler that POSTs the single-use token to the Payroc payments API\n- Client-side: load the Payroc JS library from the current CDN URL, set up container divs for the card fields plus a Pay button, initialise the hosted fields form, handle submissionSuccess and error\n- Credentials in env vars TERMINAL_ID_NO_AVS and PAYROC_API_KEY_PAYMENTS\n\nFollow the skill end-to-end — including reading the local references before emitting any enum, SDK config, or method value. Save all output files to /tmp/hf-verifier-eval/outputs/.",
+      "expected_output": "A complete HF integration in C# / Razor. Every enum value (channel, paymentMethod.type, scenario, transactionResult.status, etc.), SDK config property / accepted child key, cardForm method, and the four-part libVersion must match the local references (references/api-schema.md and references/hosted-fields-sdk.js). The transcript must show the skill reading those references before emitting the corresponding values. If the skill initially produces a wrong value (e.g. channel: 'internet', a top-level submitButton, a non-existent cardForm method, status branch on 'approved'), it must catch and correct it by consulting the references. Final state: every emitted value matches the local references.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "reference_consulted_before_verdict",
+          "text": "reference_consulted_before_verdict: The transcript shows the skill read the relevant local references — references/api-schema.md for enum/schema values and references/hosted-fields-sdk.js for SDK config keys and cardForm methods — before emitting those values and before declaring the integration complete.",
+          "type": "grader",
+          "description": "Read the full agent transcript. PASS if, before the final values are emitted and before the skill advances to Completion, it read references/api-schema.md (for the enums and request/response schemas) and references/hosted-fields-sdk.js (for the SDK config shape, accepted child keys, and cardForm method surface). FAIL if the skill emitted enum/SDK/method values without first reading the relevant local reference — that means values came from memory rather than the local snapshot."
+        },
+        {
+          "id": "wrong_values_caught_and_corrected",
+          "text": "wrong_values_caught_and_corrected: Any wrong enum value, SDK config placement, or cardForm method that the skill initially produced is caught and corrected by checking against references/api-schema.md and references/hosted-fields-sdk.js — not left in the final output.",
+          "type": "grader",
+          "description": "Read the transcript and the final output files. PASS if the canonical failure values are absent from (or were corrected to match the references in) the final output: channel must be a value from references/api-schema.md's paymentRequest.channel enum (`web` for in-browser CNP, NOT `internet`/`online`/`ecommerce`/`card-not-present`); the submit target must be inside fields.card per references/hosted-fields-sdk.js (NOT a top-level submitButton); no non-existent cardForm method (submitFields/submit/validate) may be called; the transactionResult.status success branch must use the real approval set (`ready`/`complete`/`accepted` per references/api-schema.md, NOT `approved`, which is not in the enum). FAIL if any wrong value remains in the final output, or if the skill never consulted the references to catch it."
+        },
+        {
+          "id": "final_values_match_reference",
+          "text": "final_values_match_reference: Every enum value, SDK config key, cardForm method, and the four-part libVersion in the final output files matches the local references (references/api-schema.md and references/hosted-fields-sdk.js).",
+          "type": "grader",
+          "description": "Read the final output files and cross-check each emitted value against references/api-schema.md (enums, request/response schemas) and references/hosted-fields-sdk.js (SDK config shape, accepted child keys, cardForm methods, four-part libVersion). PASS if every value matches the local references. FAIL if any wrong value remains (e.g. an enum value not in the schema, an SDK key the SDK ignores, a non-existent cardForm method, a truncated three-part libVersion, or `approved` used as a transactionResult.status)."
+        }
+      ]
+    }
+  ]
+}
