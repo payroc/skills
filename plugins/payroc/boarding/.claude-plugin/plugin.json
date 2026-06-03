@@ -1,1 +1,7 @@
-{ "name": "boarding", "description": "Skills for merchant boarding and onboarding flows" }
+{
+  "name": "boarding",
+  "description": "Skills for merchant boarding and onboarding flows",
+  "skills": [
+    "./skills/create-merchant-platform"
+  ]
+}
