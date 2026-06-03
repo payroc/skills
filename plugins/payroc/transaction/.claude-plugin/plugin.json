@@ -1,1 +1,9 @@
-{ "name": "transaction", "description": "Skills for payment transaction integration" }
+{
+  "name": "transaction",
+  "description": "Skills for payment transaction integration",
+  "skills": [
+    "./skills/integrate-hosted-fields",
+    "./skills/integrate-hosted-payment-pages",
+    "./skills/integrate-payment-links"
+  ]
+}
