@@ -2,6 +2,8 @@
   "name": "transaction",
   "description": "Skills for payment transaction integration",
   "skills": [
+    "./skills/integrate-apple-pay",
+    "./skills/integrate-google-pay",
     "./skills/integrate-hosted-fields",
     "./skills/integrate-hosted-payment-pages",
     "./skills/integrate-payment-links"
