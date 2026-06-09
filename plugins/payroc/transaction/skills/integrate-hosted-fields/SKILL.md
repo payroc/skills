@@ -11,7 +11,7 @@ description: >-
   guidance. Also use it when a developer has HPP working and asks about the
   embedded alternative.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: integration
   status: draft
 ---
@@ -183,7 +183,7 @@ These are needed to **run and test** the integration in UAT — not to write the
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer what's outstanding and how to get it:
 - API key / UAT access → contact the Payroc Integrations team; set the variables before testing. I can keep building in the meantime.
-- If the developer has HPP credentials (`TERMINAL_ID_NO_AVS` and `PAYROC_API_KEY_PAYMENTS`) — note that `PAYROC_API_KEY_PAYMENTS` is the API key used for Bearer token auth in Hosted Fields too. The same terminal ID applies. Flag this explicitly so the developer knows their existing credentials are the right ones.
+- If the developer already has Payroc credentials from an existing HPP integration, the same API key and processing terminal ID work for Hosted Fields too — the API key is what generates the Bearer token here. Flag this explicitly so they know they don't need to request new credentials; whatever they've named their existing environment variables, those are the right ones.
 
 **If the developer answered "yes" to Question 4 (3DS / SCA):** add two more prerequisites that must be in motion before 3DS can be tested end-to-end:
 
