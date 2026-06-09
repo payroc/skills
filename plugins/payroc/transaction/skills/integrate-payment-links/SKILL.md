@@ -12,7 +12,7 @@ description: >-
   "payment links". Also trigger when a developer has a Payroc API key and
   wants to charge customers without embedding a payment form in their site.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   category: integration
   status: draft
 ---
@@ -131,17 +131,21 @@ Use the answers to skip sections that don't apply. If the developer's use case i
 
 ## Prerequisites
 
-Before writing any code, confirm the developer has all three:
+These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
 
 1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team along with UAT access.
 2. **Processing terminal ID** — the `processingTerminalId` used in the create-link endpoint path. The developer should know this from their UAT setup.
 3. **UAT environment** — Payroc's test environment. There is no self-serve signup; UAT terminals are provisioned manually by the Payroc Integrations team.
 
-If anything is missing, stop and help the developer resolve it before continuing.
+**If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer plainly:
+
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal and API key to actually run or test this — contact the Payroc Integrations team to get them, and set the variables before testing. I can keep building in the meantime.
+
+Offer to help them obtain what's missing, and continue with development if they want to.
 
 ### Checkpoint
 
-API key, terminal ID, and UAT access all confirmed? If not, stay here.
+Either the credentials are confirmed, or the developer knows what's outstanding, how to obtain it, and which environment variables the code reads it from — and has chosen to proceed. Don't leave missing items unstated, but don't block on them either.
 
 ---
 

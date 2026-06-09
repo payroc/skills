@@ -9,7 +9,7 @@ description: >-
   gateway — even if they don't explicitly mention "integration" or ask for
   step-by-step guidance.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   category: integration
   status: draft
 ---
@@ -159,19 +159,21 @@ Google Pay for production requires a Google Merchant ID (assigned by Google when
 
 ## Prerequisites
 
-Before writing any code, confirm the developer has:
+These are needed to **run and test** Google Pay — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can supply the real values before they test.
 
 1. **API key** — used to obtain a Bearer token from Payroc's identity service. Same credential used for Hosted Fields; the Payroc Integrations team provisions it.
 2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team. Also used to derive the `gatewayMerchantId` (terminal ID minus the last three characters).
-3. **Google Merchant ID** — for UAT, a test value can be used. For production, obtained by registering with Google.
+3. **Google Merchant ID** — for UAT, a test value can be used, so this never blocks development. For production, obtained by registering with Google (see Step 4); the code can read it from a variable like `GOOGLE_MERCHANT_ID`.
 
-If anything is missing:
-- API key / terminal ID / UAT access → contact the Payroc Integrations team
-- Google Merchant ID for production → register your integration at the Google Pay Business Console
+**If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY`, `PAYROC_TERMINAL_ID`, and `GOOGLE_MERCHANT_ID`. Write the code to read those values from the environment, then tell the developer plainly:
+
+> ⚠️ I've wired this to read your API key, terminal ID, and Google Merchant ID from `<VAR names>`. To run or test in UAT you'll need a Payroc UAT terminal and API key (contact the Payroc Integrations team); a test Google Merchant ID is fine for UAT, and a real one (from the Google Pay Business Console) is needed for production (Step 4). I can keep building in the meantime.
+
+Offer to help them obtain what's missing, and continue with development if they want to.
 
 ### Checkpoint
 
-API key and terminal ID confirmed? If not, stay here and help resolve what's missing before continuing.
+Either the credentials are confirmed, or the developer knows what's outstanding, how to obtain it, and which environment variables the code reads it from — and has chosen to proceed. Don't leave missing items unstated, but don't block on them either.
 
 ---
 

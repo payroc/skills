@@ -14,7 +14,7 @@ description: >-
   merchant-initiated transactions on Payroc — even if they don't explicitly
   mention "integration" or ask for step-by-step guidance.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
   category: integration
   status: draft
 ---
@@ -189,24 +189,24 @@ Once all three are in scope, continue to Prerequisites.
 
 ## Prerequisites
 
-Before writing any code, confirm the developer has all three:
+These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable (and the receipt URL from config), and keep building. The developer can populate everything before they test.
 
 1. **Terminal ID** — a UAT terminal ID assigned by the Payroc Integrations team. UAT is Payroc's test environment; credentials are provisioned manually by the team (there is no self-serve signup).
 2. **Terminal secret** — created in the [Self-Care Portal](https://selfcare.payroc.com) for that specific UAT terminal.
-3. **Receipt URL** — a URL on their application that Payroc's HPP redirects the customer's browser to after payment, appending transaction details as query parameters. Because it's a browser redirect (not a call from Payroc's servers), **localhost works fine** for testing this step. The URL must be registered in the Self-Care Portal for the UAT terminal.
+3. **Receipt URL** — a URL on their application that Payroc's HPP redirects the customer's browser to after payment, appending transaction details as query parameters. Because it's a browser redirect (not a call from Payroc's servers), **localhost works fine** for testing this step. The URL must be registered in the Self-Care Portal for the UAT terminal before a live test will redirect successfully — but you can build the receipt-handler route now and read the URL from config.
 
-If anything is missing:
-- Terminal ID / UAT access → contact the Payroc Integrations team
-- Terminal secret → walk through the Self-Care Portal once they have UAT access
-- Receipt URL → work through the tunneling options in the local testing section
+**If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_TERMINAL_ID`, `PAYROC_TERMINAL_SECRET`, and a `PAYROC_RECEIPT_URL` setting. Write the code to read those values from the environment/config, then tell the developer what's outstanding and how to get it:
+- Terminal ID / UAT access → contact the Payroc Integrations team.
+- Terminal secret → create it in the Self-Care Portal once they have UAT access.
+- Receipt URL → decide the route now and build the handler; register the URL in the Self-Care Portal (and work through the tunneling options in the local testing section) before testing a live redirect.
 
 Ask for anything else you need at this point — for example, whether UAT credentials are already stored somewhere, or whether there's an existing checkout handler to modify rather than write from scratch.
 
-**If the developer has already confirmed credentials** (e.g. terminal ID and secret are visible in env vars or config), name the receipt URL explicitly as the one remaining prerequisite blocking implementation — don't present it as one of three equal questions.
+**If the developer has already confirmed the terminal credentials** (e.g. terminal ID and secret are visible in env vars or config), name the receipt URL as the main outstanding item to register before live testing — but still build the receipt handler against a configured URL rather than waiting on it.
 
 ### Checkpoint
 
-Terminal ID, terminal secret, and receipt URL all confirmed? If not, stay here and help resolve what's missing.
+Either the terminal ID, terminal secret, and receipt URL are confirmed, or the developer knows what's outstanding, how to obtain/register it, and which environment variables and config the code reads them from — and has chosen to proceed. Don't leave missing items unstated, but don't block on them either.
 
 ---
 

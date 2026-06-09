@@ -9,7 +9,7 @@ description: >-
   getting Apple Pay working with the Payroc gateway — even if they don't
   explicitly mention "integration" or ask for step-by-step guidance.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   category: integration
   status: draft
 ---
@@ -167,18 +167,22 @@ Apple Pay requires the merchant's domain to be verified with Apple via the Payro
 
 ## Prerequisites
 
-Before writing any code, confirm the developer has:
+These are needed to **run and test** Apple Pay end-to-end — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can supply the real values before they test.
 
 1. **API key** — used to obtain a Bearer token from Payroc's identity service. Same credential used for Hosted Fields; the Payroc Integrations team provisions it.
 2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team.
-3. **A publicly accessible HTTPS domain** — Apple Pay domain verification requires a URL that Apple's servers can reach. `localhost` is not sufficient for this step; a staging or production domain is required.
+3. **Domain ID** — returned when the merchant's domain is verified with Apple via the Self-Care Portal (see Step 1); included in every Apple Pay session request. The code can read it from a variable like `APPLE_PAY_DOMAIN_ID`.
+4. **A publicly accessible HTTPS domain** — Apple Pay domain verification requires a URL that Apple's servers can reach. `localhost` is not sufficient for *verification and live testing*; a staging or production domain is required. This does not block writing the integration — it blocks verifying and testing it.
 
-If anything is missing:
-- API key / terminal ID / UAT access → contact the Payroc Integrations team
+**If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY`, `PAYROC_TERMINAL_ID`, and `APPLE_PAY_DOMAIN_ID`. Write the code to read those values from the environment, then tell the developer plainly:
+
+> ⚠️ I've wired this to read your API key, terminal ID, and Apple Pay domain ID from `<VAR names>`. To actually run or test Apple Pay you'll need a Payroc UAT terminal and API key (contact the Payroc Integrations team) and a verified domain over a publicly accessible HTTPS URL (Step 1). I can keep building in the meantime.
+
+Offer to help them obtain what's missing, and continue with development if they want to.
 
 ### Checkpoint
 
-API key, terminal ID, and a publicly accessible domain confirmed? If not, stay here and help resolve what's missing before continuing.
+Either the credentials and domain are confirmed, or the developer knows what's outstanding, how to obtain it, and which environment variables the code reads it from — and has chosen to proceed. Don't leave missing items unstated, but don't block on them either.
 
 ---
 
@@ -197,9 +201,11 @@ Read the page before doing anything. Confirm the exact steps from the reference 
 
 > **The domain verification file must be accessible before adding the domain in the portal.** Apple verifies it during the domain registration step.
 
+This is a portal/hosting task that can run **in parallel** with development. If the domain isn't verified yet, don't block — keep building the session and payment code against the `APPLE_PAY_DOMAIN_ID` variable, and remind the developer that verification must be completed before Apple Pay can be tested live.
+
 ### Checkpoint
 
-Is the domain ID shown in the Self-Care Portal after saving? Can the verification file be fetched at the `/.well-known/` path over HTTPS?
+Is the domain ID shown in the Self-Care Portal after saving, and can the verification file be fetched at the `/.well-known/` path over HTTPS? If not yet, note it as outstanding for test time and continue building.
 
 ---
 
