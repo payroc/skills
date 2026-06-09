@@ -16,6 +16,23 @@ metadata:
 
 # Payroc Google Pay Integration
 
+## Version check (run this first)
+
+Before announcing anything or starting the flow, confirm this skill is current:
+
+1. Read this skill's version from the `metadata.version` field in the frontmatter above.
+2. Fetch the published copy and read its `metadata.version`:
+   `https://raw.githubusercontent.com/payroc/skills/main/plugins/payroc/transaction/skills/integrate-google-pay/SKILL.md`
+3. Compare the two as semantic versions:
+   - **This version >= published** → continue silently, no message. (A developer running an unreleased newer version is expected and fine.)
+   - **This version < published** → tell the developer:
+     > ⚠️ A newer version of this skill (v\<published\>) has been published — you're running v\<current\>. Upgrading is recommended for the best results.
+
+     Then ask whether they'd like to continue with the current version or stop and upgrade first, and honour their answer.
+   - **Couldn't fetch** (offline, network error, 404) → note briefly that the version couldn't be verified and continue.
+
+---
+
 On first invocation, announce to the developer:
 
 > **Payroc Google Pay Integration**
