@@ -16,14 +16,16 @@ and the objects they reference (`transactionResult`, `card`, `secureTokenSummary
 
 | Operation | Method & path |
 | --- | --- |
-| Authenticate (Bearer token) | `POST https://identity.payroc.com/authorize` with header `x-api-key` |
+| Authenticate (Bearer token) | `POST https://identity.uat.payroc.com/authorize` (UAT) / `https://identity.payroc.com/authorize` (prod) with header `x-api-key` |
 | Create session token | `POST /v1/hosted-fields/sessions` (see authenticate-your-session.md for exact path) |
 | Run a payment | `POST /v1/payments` |
 | 3-D Secure MPI check | `GET /merchant/mpi` (payments host) |
 
 UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
 UAT payments/MPI host: `https://payments.uat.payroc.com`  ·  Production: `https://payments.payroc.com`
-Identity (both environments): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
+Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+(Note the UAT identity host carries the `.uat` segment; production does not.)
 
 ---
 

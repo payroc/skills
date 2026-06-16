@@ -25,7 +25,9 @@ narrative copies (`load-hosted-payment-page.md`, `build-receipt-page.md`, `authe
 | Capture a pre-authorization | `POST /payments/{paymentId}/capture` |
 
 UAT host: `https://api.uat.payroc.com/v1`  ·  Production host: `https://api.payroc.com/v1`
-Identity (both environments): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
+Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+(Note the UAT identity host carries the `.uat` segment; production does not.)
 
 The `paymentId` path parameter is the value HPP returns as `UNIQUEREF` on the receipt callback. The capture
 request body is **optional**: omit it to capture the full pre-authorized amount; send `amount` (integer, the

@@ -47,13 +47,14 @@ The capture is a REST API call — entirely separate from the HPP form flow. It 
 
 Before writing the capture handler, confirm:
 
-1. **API key for the identity service** — you need an `x-api-key` to obtain a Bearer token from `POST https://identity.payroc.com/authorize`. This may or may not be the same credential as the terminal secret; ask the developer which API key they have for the REST API. If they don't have one, direct them to the Payroc Integrations team.
+1. **API key for the identity service** — you need an `x-api-key` to obtain a Bearer token from the identity service. **UAT/test:** `POST https://identity.uat.payroc.com/authorize`; **production:** `POST https://identity.payroc.com/authorize` (the UAT host carries the `.uat` segment, production does not). This may or may not be the same credential as the terminal secret; ask the developer which API key they have for the REST API. If they don't have one, direct them to the Payroc Integrations team.
 2. **UNIQUEREF stored** — the capture call needs the `UNIQUEREF` value written to durable storage in Step 3.
 
 ### Obtaining a Bearer token
 
 ```
-POST https://identity.payroc.com/authorize
+# UAT/test (note the .uat segment); production drops it: https://identity.payroc.com/authorize
+POST https://identity.uat.payroc.com/authorize
 x-api-key: <api_key>
 ```
 

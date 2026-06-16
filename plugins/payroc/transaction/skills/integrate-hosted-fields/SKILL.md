@@ -11,7 +11,7 @@ description: >-
   guidance. Also use it when a developer has HPP working and asks about the
   embedded alternative.
 metadata:
-  version: "0.1.0"
+  version: "0.2.1"
   category: integration
   status: draft
 ---
@@ -19,6 +19,23 @@ metadata:
 # Payroc Hosted Fields Integration
 
 **Scope: CNP (card-not-present) Hosted Fields — one-time sale transactions, tokenization (save payment details), and recurring billing.**
+
+## Version check (run this first)
+
+Before announcing anything or starting the flow, confirm this skill is current:
+
+1. Read this skill's version from the `metadata.version` field in the frontmatter above.
+2. Fetch the published copy and read its `metadata.version`:
+   `https://raw.githubusercontent.com/payroc/skills/main/plugins/payroc/transaction/skills/integrate-hosted-fields/SKILL.md`
+3. Compare the two as semantic versions:
+   - **This version >= published** → continue silently, no message. (A developer running an unreleased newer version is expected and fine.)
+   - **This version < published** → tell the developer:
+     > ⚠️ A newer version of this skill (v\<published\>) has been published — you're running v\<current\>. Upgrading is recommended for the best results.
+
+     Then ask whether they'd like to continue with the current version or stop and upgrade first, and honour their answer.
+   - **Couldn't fetch** (offline, network error, 404) → note briefly that the version couldn't be verified and continue.
+
+---
 
 On first invocation, announce to the developer:
 
@@ -158,15 +175,15 @@ Only ask this for **card** flows. ACH and PAD are out of scope for 3DS.
 
 ## Prerequisites
 
-Before writing any code, confirm the developer has all three:
+These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
 
 1. **API key** — used to obtain a Bearer token from Payroc's identity service. This is different from the HPP terminal secret; it is a longer-lived API credential provisioned by the Payroc Integrations team.
 2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team. UAT is Payroc's test environment; there is no self-serve signup.
 3. **UAT access confirmed** — Hosted Fields does not require Self-Care Portal configuration for the core sale flow (no receipt URL to register, unlike HPP).
 
-If anything is missing:
-- API key / UAT access → contact the Payroc Integrations team
-- If the developer has HPP credentials (`TERMINAL_ID_NO_AVS` and `PAYROC_API_KEY_PAYMENTS`) — note that `PAYROC_API_KEY_PAYMENTS` is the API key used for Bearer token auth in Hosted Fields too. The same terminal ID applies. Flag this explicitly so the developer knows their existing credentials are the right ones.
+**If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer what's outstanding and how to get it:
+- API key / UAT access → contact the Payroc Integrations team; set the variables before testing. I can keep building in the meantime.
+- If the developer already has Payroc credentials from an existing HPP integration, the same API key and processing terminal ID work for Hosted Fields too — the API key is what generates the Bearer token here. Flag this explicitly so they know they don't need to request new credentials; whatever they've named their existing environment variables, those are the right ones.
 
 **If the developer answered "yes" to Question 4 (3DS / SCA):** add two more prerequisites that must be in motion before 3DS can be tested end-to-end:
 
@@ -177,7 +194,7 @@ Tell the developer to email **cs@payroc.com** now to kick both items off, since 
 
 ### Checkpoint
 
-API key and processing terminal ID confirmed? (If 3DS: cs@payroc.com email sent for terminal enablement and webhook registration?) If not, stay here and help resolve what's missing.
+Either the credentials are confirmed, or the developer knows what's outstanding, how to obtain it, and which environment variables the code reads it from — and has chosen to proceed. (If 3DS: has the cs@payroc.com email for terminal enablement and webhook registration been sent? That can run in parallel with development.) Don't leave missing items unstated, but don't block on them either.
 
 ---
 

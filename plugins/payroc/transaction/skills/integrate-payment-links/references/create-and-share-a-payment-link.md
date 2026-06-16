@@ -26,6 +26,8 @@ Use our Identity Service to generate a Bearer token to include in the header of 
 1. Include your API key in the x-api-key parameter in the header of a POST request.
 2. Send your request to [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize).
 
+> **Note (skill annotation, not part of the source page):** The URL above is the **production** identity host. For **UAT/test**, use `https://identity.uat.payroc.com/authorize` — the UAT host carries the `.uat` segment, production does not. Use the UAT host while testing and swap to production at go-live.
+
 **Note:** You need to generate a new Bearer token before the previous Bearer token expires.
 
 #### Example request
