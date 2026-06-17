@@ -10,7 +10,7 @@ description: >
   merchant registration, owner/control-prong requirements, pricing agreements, or signature
   capture during boarding — even if they don't use the word "skill" or "boarding API" explicitly.
 metadata:
-  version: "0.1.0"
+  version: "0.1.2"
   category: boarding
   status: draft
 ---
@@ -214,28 +214,38 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 | 409 `taxIdInUse` | Merchant with that Tax ID exists | Retrieve existing merchant platform instead |
 | 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
 
-**Reading validation errors:**
+**Reading validation errors** — the response uses the **RFC 7807 problem-details envelope** (`type`,
+`title`, `status`, `detail`, `instance`); Payroc **extends** it with an `errors` array that RFC 7807
+does not define. Each `errors[]` item has a `parameter` (the JSON path of the failing field), a
+`detail` (short reason — distinct from the top-level `detail`), and a `message` (human-readable
+explanation). See [`_shared/error-response-format.md`](../../../_shared/error-response-format.md) for
+the cross-skill standard. A real `400` from UAT (an empty body):
 ```json
 {
-  "status": 400,
+  "type": "https://docs.payroc.com/api/errors#bad-request",
   "title": "Bad request",
+  "status": 400,
+  "detail": "One or more validation errors occurred, see error section for more info",
+  "instance": "https://api.uat.payroc.com/v1/merchant-platforms",
   "errors": [
     {
-      "parameter": "processingAccounts[0].owners",
-      "issue": "noControlProng",
-      "message": "At least one owner must be designated as the control prong"
+      "parameter": "merchantPlatform.business",
+      "detail": "Invalid value",
+      "message": "'business' must not be empty."
     },
     {
-      "parameter": "processingAccounts[0].processing.volumeBreakdown",
-      "issue": "invalidValue",
-      "message": "Volume percentages must sum to 100"
+      "parameter": "merchantPlatform.processingAccounts",
+      "detail": "Required field not populated",
+      "message": "'processingAccounts' must not be empty."
     }
   ]
 }
 ```
 
-Each `parameter` path maps exactly to the request body field that failed. Fix all flagged
-fields in a single corrected payload and resubmit.
+Each `parameter` path maps to the request body field that failed — use it to pinpoint and fix each
+issue. Fix all flagged fields in a single corrected payload and resubmit. (The published OpenAPI
+spec lists only `message` on each item, but the live API also returns `parameter` and `detail` —
+verified against UAT, 2026-06-16.)
 
 ---
 
