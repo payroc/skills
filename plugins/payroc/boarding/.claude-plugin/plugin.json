@@ -2,6 +2,7 @@
   "name": "boarding",
   "description": "Skills for merchant boarding and onboarding flows",
   "skills": [
-    "./skills/create-merchant-platform"
+    "./skills/create-merchant-platform",
+    "./skills/create-pricing-intent"
   ]
 }
