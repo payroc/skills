@@ -8,6 +8,7 @@
     "./skills/integrate-google-pay",
     "./skills/integrate-hosted-fields",
     "./skills/integrate-hosted-payment-pages",
-    "./skills/integrate-payment-links"
+    "./skills/integrate-payment-links",
+    "./skills/integrate-payroc-cloud"
   ]
 }
