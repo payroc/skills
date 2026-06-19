@@ -19,7 +19,7 @@ description: >
   or transaction management. If the user says "payment intent" but clearly wants a reusable fee
   template, use this skill and confirm.
 metadata:
-  version: "0.3.3"
+  version: "0.3.4"
   category: boarding
   status: draft
 ---
@@ -182,12 +182,12 @@ Key rules:
   0.25%.
 - **`base`** requires all seven of `addressVerification`, `annualFee` (an object with its own
   required `amount`), `regulatoryAssistanceProgram`, `merchantAdvantage`, `maintenance`, `minimum`,
-  and `batch` — **every key must be present**, or you get a 400. Three of them
-  (`addressVerification`, `regulatoryAssistanceProgram`, `merchantAdvantage`) are nullable: when the
-  merchant isn't charged for one, **send `null` — not `0`, and don't drop the key**. `0` is a real
-  fee of zero (e.g. "free, and shown as $0.00"), whereas `null` means "this fee doesn't apply"; they
-  are not interchangeable, and an omitted required key fails validation. Optional fees
-  (`pciNonCompliance`, `chargeback`, etc.) have server defaults — see the reference.
+  and `batch` — **every key must be present with a numeric value**, or you get a 400. The OpenAPI
+  spec marks `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` as
+  nullable, but **the live UAT API rejects `null` for all three** (`"must not be empty"`, verified
+  2026-06-19) — so send a number, and use `0` when the merchant isn't charged for one. Don't drop
+  the key either; an omitted required key also fails validation. Optional fees (`pciNonCompliance`,
+  `chargeback`, etc.) have server defaults — see the reference.
 - **`processor.card.fees`** shape varies by `planType` (see Step 2 and the reference). For
   `interchangePlus`, `fees.mastercardVisaDiscover` is required.
 - **`gateway.fees`** requires `monthly`, `setup`, `perTransaction`, and `perDeviceMonthly`.
@@ -206,8 +206,8 @@ Minimal `interchangePlus` example:
   "base": {
     "addressVerification": 10,
     "annualFee": { "amount": 9900, "billInMonth": "december" },
-    "regulatoryAssistanceProgram": null,
-    "merchantAdvantage": null,
+    "regulatoryAssistanceProgram": 0,
+    "merchantAdvantage": 0,
     "maintenance": 995,
     "minimum": 2500,
     "batch": 25
@@ -228,8 +228,8 @@ Minimal `interchangePlus` example:
 ```
 
 Minimal `flatRate` example — note the card `fees` use `standardCards` (there is **no**
-`mastercardVisaDiscover`), `amex` here only supports the `direct` variant, and the nullable `base`
-fields are `null`, not `0`:
+`mastercardVisaDiscover`), `amex` here only supports the `direct` variant, and the spec-nullable
+`base` fields are sent as `0` (UAT rejects `null`):
 
 ```json
 {
@@ -237,10 +237,10 @@ fields are `null`, not `0`:
   "country": "US",
   "version": "5.2",
   "base": {
-    "addressVerification": null,
+    "addressVerification": 0,
     "annualFee": { "amount": 0, "billInMonth": "december" },
-    "regulatoryAssistanceProgram": null,
-    "merchantAdvantage": null,
+    "regulatoryAssistanceProgram": 0,
+    "merchantAdvantage": 0,
     "maintenance": 0,
     "minimum": 0,
     "batch": 0
@@ -316,6 +316,11 @@ curl -X POST https://api.payroc.com/v1/pricing-intents \
 
 Persist `id` immediately. The `status` is `pendingReview` until Payroc reviews it; it becomes
 `active` (approved) or `rejected`. You can only assign an intent to a merchant once it's `active`.
+
+**IDs are opaque.** The `PI-XXXX` form used in these examples is for readability only. Treat the
+`id` as an opaque string whose format is not guaranteed and varies by environment — in UAT it
+comes back as a plain integer (e.g. `5722`). Don't validate or parse it against a `PREFIX-XXXX`
+pattern.
 
 **Offer the assembled body back to the developer.** After a successful create, give them the final
 request JSON you built (or write it to a file). It's worth keeping for audit, and it's the starting
@@ -461,7 +466,7 @@ inline `agreement` variant. See [`create-merchant-platform`](../create-merchant-
 
 - **PATCH is JSON Patch, not a partial object**: send `[{ "op": "...", "path": "...", "value": ... }]`, not `{ "gateway": { ... } }`
 - **PUT returns 204 with no body**: don't expect the updated record back — re-GET if you need it
-- **Nullable base fields take `null`, not `0`**: `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` are required keys — emit them as `null` when not charged, never `0`, never omit
+- **`base` fees need a number, not `null`**: `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` are required keys; despite being spec-nullable, UAT rejects `null` ("must not be empty") — send a numeric value (`0` when not charged), and never omit the key
 - **Build a complete body, including when fixing a 400**: a corrected payload must still carry all required `base` keys and all four `gateway.fees` keys, or you just earn a fresh 400
 - **Amounts in cents**: every fee is an integer in cents; percentages are numbers (≤2 dp)
 - **`key` is required and is yours**: it's your own template identifier, separate from the Payroc `id`

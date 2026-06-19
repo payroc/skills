@@ -10,7 +10,7 @@ description: >
   merchant registration, owner/control-prong requirements, pricing agreements, or signature
   capture during boarding — even if they don't use the word "skill" or "boarding API" explicitly.
 metadata:
-  version: "0.1.2"
+  version: "0.1.6"
   category: boarding
   status: draft
 ---
@@ -135,10 +135,12 @@ per account:
 | `signature` | How the merchant signs the contract |
 
 **Ownership rules** — every processing account needs:
-- At least one owner with `relationship.isControlProng: true`
+- Exactly one owner with `relationship.isControlProng: true` (only one control prong is allowed)
 - At least one owner with `relationship.isAuthorizedSignatory: true`
 
-The same person can be both. Each owner also needs `firstName`, `lastName`, `dateOfBirth`
+A single owner **cannot** be both — the API rejects an owner with both flags set (*"it must be
+one or the other or neither"*), so you need at least two owners (one control prong, a different
+authorized signatory). Each owner also needs `firstName`, `lastName`, `dateOfBirth`
 (`YYYY-MM-DD`), `address`, `identifiers` (national ID / SSN), and an email in
 `contactMethods`.
 
@@ -186,15 +188,22 @@ curl -X POST https://api.payroc.com/v1/merchant-platforms \
   "processingAccounts": [
     {
       "processingAccountId": "PA-XXXX",
-      "status": "pending"
+      "status": "entered"   // may also be "pending" depending on timing
     }
   ],
   "links": [ ... ]
 }
 ```
 
-Persist `merchantPlatformId` and each `processingAccountId` immediately. The `status` is
-`pending` while Payroc reviews the application; poll or use webhooks to detect status changes.
+Persist `merchantPlatformId` and each `processingAccountId` immediately. The initial `status`
+is typically `"entered"` (received, not yet reviewed) but may arrive as `"pending"` depending
+on processing timing — poll or use webhooks to detect status changes rather than relying on
+the create response value.
+
+**IDs are opaque.** The `MP-XXXX` / `PA-XXXX` / `PI-XXXX` forms in these examples are for
+readability only. Treat every ID as an opaque string whose format is not guaranteed and varies by
+environment — in UAT they come back as plain integers (e.g. `9815`). Don't validate or parse them
+against a `PREFIX-XXXX` pattern.
 
 ---
 
@@ -251,8 +260,9 @@ verified against UAT, 2026-06-16.)
 
 ## Common pitfalls
 
-- **No control prong / authorized signatory**: Both roles are required in every processing account's `owners` array — one person can hold both
-- **Volume breakdown doesn't sum to 100**: `cardPresent + mailOrTelephone + ecommerce` must equal exactly 100
+- **No control prong / authorized signatory**: Both roles are required in every processing account's `owners` array — but one owner **cannot** hold both (the API rejects it), so use at least two owners (one control prong, a different authorized signatory)
+- **Phone/fax `value` with non-digits**: `phone`/`mobile`/`fax` `value` must contain digits only — no `+`, spaces, or punctuation (e.g. `5125550199`, not `+1 512 555 0199`)
+- **Volume breakdown doesn't sum to 100**: `cardPresent + mailOrTelephone + ecommerce` must equal exactly 100; if `ecommerce > 0`, the account's `website` is required
 - **Amounts in cents**: All monetary values (`transactionAmounts`, `monthlyAmounts`, `acceleratedFundingFee`) are integers in cents
 - **Date format**: `dateOfBirth` and `businessStartDate` must be `YYYY-MM-DD`
 - **Missing idempotency key**: All POST requests require `Idempotency-Key` or you get a 400

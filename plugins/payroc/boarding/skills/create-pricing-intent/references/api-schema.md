@@ -116,13 +116,13 @@ Fixed and recurring fees. All monetary values in cents.
 
 ```json
 {
-  "addressVerification": 10,            // REQUIRED (nullable) — fee per AVS request
+  "addressVerification": 10,            // REQUIRED — fee per AVS request (spec-nullable, but UAT rejects null; use 0 when not charged)
   "annualFee": {                        // REQUIRED
     "amount": 9900,                     // REQUIRED — annual fee in cents
     "billInMonth": "december"           // "june" | "december" (default "december")
   },
-  "regulatoryAssistanceProgram": null,  // REQUIRED (nullable) — annual program fee
-  "merchantAdvantage": null,            // REQUIRED (nullable) — monthly Payroc Advantage fee
+  "regulatoryAssistanceProgram": 0,     // REQUIRED — annual program fee (spec-nullable, but UAT rejects null; use 0 when not charged)
+  "merchantAdvantage": 0,               // REQUIRED — monthly Payroc Advantage fee (spec-nullable, but UAT rejects null; use 0 when not charged)
   "maintenance": 995,                   // REQUIRED — monthly maintenance fee
   "minimum": 2500,                      // REQUIRED — monthly minimum-fee shortfall charge
   "batch": 25,                          // REQUIRED — fee per batch
@@ -321,8 +321,8 @@ A standard interchange-plus retail template:
   "base": {
     "addressVerification": 10,
     "annualFee": { "amount": 9900, "billInMonth": "december" },
-    "regulatoryAssistanceProgram": null,
-    "merchantAdvantage": null,
+    "regulatoryAssistanceProgram": 0,
+    "merchantAdvantage": 0,
     "maintenance": 995,
     "minimum": 2500,
     "batch": 25
