@@ -29,6 +29,9 @@
 ### contactMethodType
 `email` | `phone` | `mobile` | `fax`
 
+> `phone`/`mobile`/`fax` `value` must contain **digits only** — no `+`, spaces, or punctuation
+> (e.g. `5125550199`, not `+1 512 555 0199`). The live API rejects non-digit characters.
+
 ### addressType
 `legalAddress` | `mailingAddress`
 
@@ -75,7 +78,7 @@
   ],
   "contactMethods": [                         // required, email required
     { "type": "email", "value": "owner@acme.com" },
-    { "type": "phone", "value": "+13125550100" }   // optional
+    { "type": "phone", "value": "3125550100" }     // optional — digits only, no + or punctuation
   ]
 }
 ```
@@ -92,6 +95,7 @@
   "merchandiseOrServiceSold": "Office supplies and widgets",  // string, required
   "businessStartDate": "2018-06-01",          // YYYY-MM-DD, required
   "timezone": "America/Chicago",              // enum, required
+  "website": "https://acme.example.com",      // optional, but REQUIRED when processing.volumeBreakdown.ecommerce > 0
 
   "address": {                                // required
     "address1": "123 Main St",
@@ -119,10 +123,12 @@
 ## owners[] object
 
 Every processing account needs at minimum:
-- one owner with `relationship.isControlProng: true`
+- exactly one owner with `relationship.isControlProng: true` (only one control prong is allowed)
 - one owner with `relationship.isAuthorizedSignatory: true`
 
-The same person can satisfy both roles.
+A single owner **cannot** be both control prong and authorized signatory at once — the live API
+rejects it (*"it must be one or the other or neither"*). So you need **at least two owners**: one
+control prong and a different authorized signatory.
 
 ```json
 {
@@ -150,12 +156,13 @@ The same person can satisfy both roles.
   ],
 
   "relationship": {                           // required
-    "isControlProng": true,                   // boolean, required
-    "isAuthorizedSignatory": true,            // boolean
-    "equityPercentage": 100,                  // number 0-100
+    "isControlProng": true,                   // this owner is the control prong...
+    "isAuthorizedSignatory": false,           // ...so NOT also the signatory (an owner can't be both)
+    "equityPercentage": 60,                   // number 0-100
     "title": "CEO"                            // string, optional
   }
 }
+// A second owner is required as the authorized signatory: "isControlProng": false, "isAuthorizedSignatory": true.
 ```
 
 ---
@@ -181,26 +188,45 @@ The same person can satisfy both roles.
   "isSeasonal": false,                        // optional boolean
   "monthsOfOperation": ["jan","feb","mar"],   // optional — only if isSeasonal: true
 
-  "ach": {                                    // optional
-    "naicsCode": "441110",
-    "transactionTypes": ["web", "ppd"],
-    "monthlyTransactionLimit": 50000,         // in cents
-    "monthlyTransactionVolume": 1000000       // in cents
+  "ach": {                                    // optional; bi-directional: if present, pricing MUST include processor.ach — and if pricing includes processor.ach, this field MUST be present
+    "naics": "441110",                        // string NAICS code — field is `naics`, NOT `naicsCode`
+    "transactionTypes": ["webInitiatedPayment"],  // enum: prearrangedPayment | corpCashDisbursement | telephoneInitiatedPayment | webInitiatedPayment | other  (NOT web/ppd)
+    "estimatedMonthlyTransactions": 100,      // required — integer count
+    "previouslyTerminatedForAch": false,      // required — boolean
+    "refunds": { "writtenRefundPolicy": false },                          // required object
+    "limits": { "singleTransaction": 0, "dailyDeposit": 0, "monthlyDeposit": 0 }  // required object — cents
   },
 
   "cardAcceptance": {                         // optional
-    "visa": true,
-    "mastercard": true,
-    "discover": true,
-    "amexOptBlue": false,
-    "specialtyCards": []
+    "cardsAccepted": ["visa", "mastercard", "discover", "amexOptBlue"],  // enum array — American Express is amexOptBlue, NOT amex
+    "debitOnly": false,
+    "hsaFsa": false
   }
 }
 ```
 
+> **`ach` and `cardAcceptance` shapes corrected 2026-06-19 (verified against UAT).** Earlier
+> revisions showed `ach` with `naicsCode`, `transactionTypes: ["web","ppd"]`, and
+> `monthlyTransactionLimit`/`monthlyTransactionVolume` — all rejected by the live API. The real
+> `ach` object uses `naics`, the `transactionTypes` enum above, and requires
+> `estimatedMonthlyTransactions`, `previouslyTerminatedForAch`, `refunds`, and `limits`.
+> `cardAcceptance` uses a `cardsAccepted` enum array (not per-brand booleans / `specialtyCards`).
+> Three cross-rules: (1) the ACH constraint is **bi-directional** — if `processing.ach` is
+> present the `pricing` must include `processor.ach`, AND if the pricing intent carries
+> `processor.ach` fees then `processing.ach` must be declared on the account (UAT error:
+> `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is populated."`);
+> (2) the default `cardsAccepted` includes `amexOptBlue`, and if `amexOptBlue` is accepted the
+> pricing must carry Amex OptBlue fees (and vice versa);
+> (3) drop `amexOptBlue` from `cardsAccepted` if the pricing has no Amex OptBlue fees.
+
 ---
 
 ## funding object
+
+> **Payment-method shape (corrected 2026-06-18).** Each `fundingAccounts[].paymentMethods[]`
+> entry nests the bank numbers under `value`: `{ "type": "ach", "value": { "routingNumber",
+> "accountNumber" } }`. Earlier revisions of this file showed them flat on the payment method;
+> the spec and the generated SDKs use the `value` wrapper.
 
 ```json
 {
@@ -217,8 +243,10 @@ The same person can satisfy both roles.
       "paymentMethods": [
         {
           "type": "ach",
-          "routingNumber": "021000021",
-          "accountNumber": "123456789"
+          "value": {
+            "routingNumber": "021000021",
+            "accountNumber": "123456789"
+          }
         }
       ]
     }
@@ -325,7 +353,7 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
     ],
     "contactMethods": [
       { "type": "email", "value": "jane@janesflowers.com" },
-      { "type": "phone", "value": "+15125550199" }
+      { "type": "phone", "value": "5125550199" }
     ]
   },
 
@@ -337,6 +365,7 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
       "merchandiseOrServiceSold": "Fresh flowers and floral arrangements",
       "businessStartDate": "2019-03-01",
       "timezone": "America/Chicago",
+      "website": "https://janesflowers.com",
 
       "address": {
         "address1": "789 Blossom Rd",
@@ -370,9 +399,33 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
           ],
           "relationship": {
             "isControlProng": true,
-            "isAuthorizedSignatory": true,
-            "equityPercentage": 100,
+            "isAuthorizedSignatory": false,
+            "equityPercentage": 60,
             "title": "Owner"
+          }
+        },
+        {
+          "firstName": "Carlos",
+          "lastName": "Mendez",
+          "dateOfBirth": "1980-07-12",
+          "address": {
+            "address1": "240 Pecan St",
+            "city": "Austin",
+            "state": "TX",
+            "country": "US",
+            "postalCode": "73303"
+          },
+          "identifiers": [
+            { "type": "nationalId", "value": "876-54-3210" }
+          ],
+          "contactMethods": [
+            { "type": "email", "value": "carlos@janesflowers.com" }
+          ],
+          "relationship": {
+            "isControlProng": false,
+            "isAuthorizedSignatory": true,
+            "equityPercentage": 40,
+            "title": "Partner"
           }
         }
       ],
@@ -398,8 +451,10 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
             "paymentMethods": [
               {
                 "type": "ach",
-                "routingNumber": "111000025",
-                "accountNumber": "9876543210"
+                "value": {
+                  "routingNumber": "111000025",
+                  "accountNumber": "9876543210"
+                }
               }
             ]
           }
@@ -447,7 +502,7 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
   "processingAccounts": [
     {
       "processingAccountId": "PA-XXXX",
-      "status": "pending",
+      "status": "entered",   // may also be "pending" depending on timing
       "signature": { ... }
     }
   ],

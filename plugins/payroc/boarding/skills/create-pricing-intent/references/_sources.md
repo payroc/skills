@@ -16,5 +16,13 @@ intent schemas are entirely Payroc-owned, so this skill has no `third-party-deri
 `instance`). Verified by `POST`ing an empty body to both `/pricing-intents` and `/merchant-platforms`
 on UAT. The error-schema section of `api-schema.md` reflects the live shape, not the spec.
 
+**Live correction (2026-06-19):** the OpenAPI spec marks `base.addressVerification`,
+`base.regulatoryAssistanceProgram`, and `base.merchantAdvantage` as nullable, but the live UAT API
+**rejects `null` for all three** (*"... must not be empty"*) — verified by `POST`ing each as
+`null`. Earlier guidance said to send `null` (never `0`); that was wrong against UAT. The SKILL,
+`api-schema.md`, examples, and evals now send a numeric value (`0` when not charged). Also confirmed
+the same run: a freshly created pricing intent is `active` immediately in UAT (no manual-approval
+wait), and IDs are returned as plain integers (e.g. `5722`), not `PI-XXXX`.
+
 Related guide pages (not yet snapshotted; fetch if narrative copy is needed):
 `https://docs.payroc.com/api/schema/boarding/pricing-intents/{create,retrieve,list,update,partially-update,delete}`.
