@@ -61,7 +61,7 @@ curl
 
 ### Errors
 
-If your request is unsuccessful, we return an error. For more information about errors, see [Errors](/api/errors).
+If your request is unsuccessful, we return an error. For more information about errors, see [Errors](error-response-format.md).
 
 ## Step 1. Sign up for 3-D Secure
 
@@ -73,7 +73,7 @@ We use request forwarding to send you the results of the 3-D Secure check. When 
 
 Before you can send a request to our MPI service, you need to convert the cardholder’s payment details into a single-use token.
 
-To create a single-use token, you can use [Hosted Fields](/guides/take-payments/hosted-fields) or you can use our tokenization feature in our [API](/api).
+To create a single-use token, you can use Hosted Fields or you can use our tokenization feature in our API.
 
 ## Step 3. Send an MPI request
 

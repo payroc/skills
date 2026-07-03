@@ -7,6 +7,7 @@ and in the file's header.
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
 | `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST`/`GET /merchant-platforms/{merchantPlatformId}/processing-accounts`, `GET /processing-accounts/{processingAccountId}` + `/pricing`,`/owners`,`/contacts`,`/funding-accounts`, `POST /processing-accounts/{processingAccountId}/reminders`; schemas `createProcessingAccount`, `processingAccount`, `paginatedProcessingAccounts`, `owner`, `ownerRelationship`, `identifier`, `processing`, `createFunding`, `fundingAccount`, `paymentMethods`, `pricing`, `signature`, `contactMethod`, `address`, `createReminder` request/response) | 2026-06-18 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 processing-account schemas are entirely Payroc-owned, so this skill has no
@@ -15,16 +16,15 @@ processing-account schemas are entirely Payroc-owned, so this skill has no
 ## Notes on divergence from the spec / sibling skills
 
 - **Funding payment methods are nested under `value`.** The spec's `paymentMethods` is a
-  discriminated array: `{ "type": "ach", "value": { "routingNumber", "accountNumber" } }`. The
-  generated SDKs (which back the green UAT functional-test rating for create/retrieve/list)
-  use this shape. The older `create-merchant-platform/references/api-schema.md` documents the
-  bank numbers **flat** on the payment method; that reference predates this check and should be
-  reconciled. `api-schema.md` here follows the spec.
-- **Reminders is a `POST` that re-sends the signing email**, not a GET list. The roadmap entry
-  ([knowledge/skill-build-order-and-grouping.md](../../../../../knowledge/skill-build-order-and-grouping.md))
-  abbreviated it as "reminders"; the real operation is Create Reminder
-  (`POST /processing-accounts/{id}/reminders`, body `{ "type": "pricingAgreement" }`) and only
-  applies when `signature.type` was `requestedViaEmail`.
+  discriminated array: `{ "type": "ach", "value": { "routingNumber", "accountNumber" } }`. Live
+  UAT testing of create/retrieve/list confirmed this shape. The older
+  `create-merchant-platform/references/api-schema.md` documents the bank numbers **flat** on the
+  payment method; that reference predates this check and should be reconciled. `api-schema.md`
+  here follows the spec.
+- **Reminders is a `POST` that re-sends the signing email**, not a GET list. The real operation is
+  Create Reminder (`POST /processing-accounts/{id}/reminders`, body
+  `{ "type": "pricingAgreement" }`) and only applies when `signature.type` was
+  `requestedViaEmail`.
 - **Processing-account owners are immutable.** `PUT`/`DELETE /owners/{ownerId}` reject
   processing-account owners (they work only for funding-recipient owners). No owner
   update/delete is in scope.
@@ -39,7 +39,7 @@ API returns `parameter` + `detail` + `message` (and a top-level `instance`). Ver
 ## Live corrections (verified 2026-06-19, UAT — end-to-end run)
 
 Found while live-testing the full chain against UAT (pricing intent → merchant platform →
-processing account; test-repo PR #25). The references/SKILL guidance was corrected to match:
+processing account). The references/SKILL guidance was corrected to match:
 
 - **An owner cannot be both control prong and authorized signatory.** Earlier guidance said one
   owner could hold both; UAT rejects it (*"it must be one or the other or neither"*). At least two
@@ -62,7 +62,7 @@ processing account; test-repo PR #25). The references/SKILL guidance was correct
 
 ## Live corrections (verified 2026-06-19, UAT — regression re-test)
 
-Re-test of the full boarding chain (INFOARCH-2766) against UAT. Two new findings:
+Re-test of the full boarding chain against UAT. Two new findings:
 
 - **Processing account initial `status` may be `"entered"` or `"pending"` depending on timing.**
   Both the create-merchant-platform 201 response and the add-processing-account 201 response

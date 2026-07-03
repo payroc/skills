@@ -11,6 +11,7 @@ then update the "Last synced" date here and in the file's header.
 | `narrative-run-a-sale.md` | `https://docs.payroc.com/essentials/payroc-cloud/run-a-sale.md` | 2026-06-17 | payroc-verbatim |
 | `narrative-extend.md` | `https://docs.payroc.com/essentials/payroc-cloud/extend-your-integration.md` (+ `/capture-a-signature.md`, `/run-an-unreferenced-refund.md`, `/run-a-referenced-refund.md`, `/reverse-a-payment.md`) | 2026-06-17 | payroc-verbatim |
 | (shared) error format | `plugins/payroc/_shared/error-response-format.md` | — | payroc-verbatim |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The Payroc Cloud
 schemas are entirely Payroc-owned, so this skill has no `third-party-derived` references.

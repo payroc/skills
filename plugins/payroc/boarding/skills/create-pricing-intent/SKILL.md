@@ -106,6 +106,8 @@ Content-Type:    application/json    (POST, PUT, PATCH)
 
 ## Step 1 — Get a bearer token
 
+> Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
+
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
@@ -413,8 +415,8 @@ Payroc's own, *not* defined by RFC 7807. **Each `errors[]` item carries `paramet
 `base.annualFee.amount`); `detail` is a short reason (`"Invalid format"`, `"Required field not
 populated"`) and is distinct from the top-level RFC `detail`; `message` is the human-readable
 explanation. Use `parameter` to map each error straight back to the field in your request body. (See
-[`_shared/error-response-format.md`](../../../_shared/error-response-format.md) for the cross-skill
-standard.)
+`references/error-response-format.md` for the envelope shape and the canonical error `type`
+catalog.)
 
 > The published OpenAPI spec only documents `message` on each item, but the live API also returns
 > `parameter` and `detail` (verified against UAT, 2026-06-16). Read `parameter` — it's the fastest
@@ -422,7 +424,7 @@ standard.)
 
 | Status | Scenario | Action |
 |--------|----------|--------|
-| 400 | Validation error | Use each `errors[].parameter` to find the field, `message`/`detail` for why; fix the body and resubmit (reuse the same idempotency key) |
+| 400 | Validation error | Use each `errors[].parameter` to find the field, `message`/`detail` for why; fix the body and resubmit with a **fresh** idempotency key (the corrected body differs, so reusing the old key risks a 409 — see the note below) |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
 | 403 | Insufficient permissions | Check API key scope; `instance`/`resource` name what was attempted |
 | 404 | Pricing intent not found | Verify the `pricingIntentId`; use list to find it |

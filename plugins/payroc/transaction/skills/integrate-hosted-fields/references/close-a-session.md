@@ -15,7 +15,7 @@ const hostedFields = new Payroc.hostedFields(options);
 hostedFields.destroy(); 
 ```
 
-After calling the destroy method, you must start a new Hosted Fields session before you can take payment from the customer. For more information about how to generate a session token, go to [Authenticate your Hosted Fields session](../authenticate-your-session).
+After calling the destroy method, you must start a new Hosted Fields session before you can take payment from the customer. For more information about how to generate a session token, go to [Authenticate your Hosted Fields session](authenticate-your-session.md).
 
 **Note:** You don't need to use this method for every integration, but it is considered good practice in scenarios where Hosted Fields might run on more than one session, for example, in single-page applications.
 

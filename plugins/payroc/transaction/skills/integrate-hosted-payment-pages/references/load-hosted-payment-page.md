@@ -31,7 +31,7 @@ To create the body of your request, use the following parameters:
 | CURRENCY   | String | 3 characters     | Currency of the transaction. The value for the currency follows the [ISO 4217](https://www.iso.org/iso-4217-currency-codes.html) standard.                                                                                |
 | AMOUNT     | Double |                  | Subtotal of the transaction including taxes. Don't include surcharges or convenience fees.                                                                                                                                |
 | DATETIME   | String |                  | Date and time that you send the request. Send this value in **DD-MM-YYYY:HH:MM:SS:SSS** format, for example, `06-02-2026:12:23:23:719`.                                                                                   |
-| HASH       | String | 1-128 characters | SHA-512 hash value that you generate with values from the request parameters and the terminal secret. For more information about how to create your HASH, go to [Authenticate your requests](authenticate-your-requests). |
+| HASH       | String | 1-128 characters | SHA-512 hash value that you generate with values from the request parameters and the terminal secret. For more information about how to create your HASH, go to [Authenticate your requests](authenticate-your-requests.md). |
 
 ### Example request
 
@@ -55,7 +55,7 @@ To create the body of your request, use the following parameters:
 
 ### INVALID HASH
 
-If we can't authenticate your request, the Hosted Payment Page displays **INVALID HASH** in plain text. Check that you have set up your HASH correctly. For more information about the hash, go to [Authenticate your requests]().
+If we can't authenticate your request, the Hosted Payment Page displays **INVALID HASH** in plain text. Check that you have set up your HASH correctly. For more information about the hash, go to [Authenticate your requests](authenticate-your-requests.md).
 
 ### Validation Errors
 
@@ -65,4 +65,4 @@ Your integration doesn't need to handle these validation errors because the Host
 
 ## Next steps
 
-* [Build the merchant’s receipt page](build-receipt-page).
+* [Build the merchant’s receipt page](build-receipt-page.md).

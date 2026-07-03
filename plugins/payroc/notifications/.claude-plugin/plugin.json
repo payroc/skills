@@ -1,0 +1,7 @@
+{
+  "name": "notifications",
+  "description": "Skills for event notifications and webhook subscriptions",
+  "skills": [
+    "./skills/set-up-event-subscriptions"
+  ]
+}

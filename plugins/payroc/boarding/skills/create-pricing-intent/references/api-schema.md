@@ -383,10 +383,17 @@ The response is `200` with the full updated `pricingIntent`.
 
 ---
 
-## Error schema
+## Errors
 
-Errors follow [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807). Real `400` response from
-UAT (`POST /pricing-intents` with an empty body):
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+Status codes these endpoints return: `400` (validation), `401` (auth/expired token), `403`
+(permissions — the `403` schema additionally returns `resource`), `404` (pricing intent not found
+on retrieve/update/delete), `406` (content negotiation on create/update/patch), `409` (conflict on
+create/patch — e.g. idempotency-key reuse with a different body), `500` (server — retry with
+backoff).
+
+Real `400` response from UAT (`POST /pricing-intents` with an empty body):
 
 ```json
 {
@@ -405,22 +412,7 @@ UAT (`POST /pricing-intents` with an empty body):
 }
 ```
 
-**Each `errors[]` item carries three fields:** `parameter` (the JSON path of the field that failed,
-e.g. `country`, `base.annualFee.amount`), `detail` (a short reason, e.g. `"Invalid format"`,
-`"Required field not populated"`), and `message` (the human-readable explanation). The top-level
-envelope also includes `instance` (the request URL).
-
 > **Spec vs. live:** the published OpenAPI `ErrorsItems` schema only lists `message`, but the live
 > API returns `parameter` and `detail` too — verified against UAT on 2026-06-16 for both
 > `/pricing-intents` and `/merchant-platforms`. Treat `parameter` + `detail` + `message` as the real
 > shape. (The `403` schema additionally returns `resource`.)
-
-| Status | When |
-|--------|------|
-| `400` | Validation error |
-| `401` | Identity could not be verified (token expired/invalid) |
-| `403` | No permission for this action |
-| `404` | Pricing intent not found (retrieve/update/delete) |
-| `406` | Not acceptable (create/update/patch) |
-| `409` | Conflict (create/patch) — e.g. idempotency key reuse with a different payload |
-| `500` | Server error |

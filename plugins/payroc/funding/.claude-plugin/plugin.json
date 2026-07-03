@@ -1,1 +1,9 @@
-{ "name": "funding", "description": "Skills for funding and settlement integration" }
+{
+  "name": "funding",
+  "description": "Skills for funding and settlement integration",
+  "skills": [
+    "./skills/send-funds-to-a-merchant",
+    "./skills/set-up-a-funding-recipient",
+    "./skills/view-funding-activity"
+  ]
+}

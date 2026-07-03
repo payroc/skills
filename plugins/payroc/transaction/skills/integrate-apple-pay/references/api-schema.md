@@ -162,6 +162,14 @@ success on a guessed `status` subset.
 
 ---
 
+## Errors
+
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+For the server-side Payroc API calls (start-session and payments), expect: `400`, `401`, `403`, `404` (unknown `processingTerminalId` in the path), `409` (idempotency-key reuse / conflict on `POST /v1/payments`), `500`.
+
+---
+
 ## Required headers
 
 | Header | Where | Notes |

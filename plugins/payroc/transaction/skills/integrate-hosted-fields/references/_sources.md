@@ -19,6 +19,12 @@ there, re-fetch the SDK from the CDN URL, and regenerate `hosted-fields-sdk.js`.
 | `update-a-customers-payment-details.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/update-a-customers-payment-details.md | 2026-06-01 | payroc-verbatim |
 | `3-d-secure.md` | https://docs.payroc.com/guides/take-payments/3-d-secure.md | 2026-06-01 | payroc-verbatim |
 | `run-a-sale-with-3-d-secure.md` | https://docs.payroc.com/guides/take-payments/3-d-secure/run-a-sale-with-3-d-secure.md | 2026-06-01 | payroc-verbatim |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange; cross-skill canonical copy; HF session-token step is in `authenticate-your-session.md`) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `idempotency.md` | https://docs.payroc.com/api/idempotency (shared fragment; byte-identical copy of `plugins/payroc/_shared/idempotency.md`) | 2026-07-02 | payroc-verbatim |
+| `pagination.md` | https://docs.payroc.com/api/pagination (shared fragment; byte-identical copy of `plugins/payroc/_shared/pagination.md`) | 2026-07-02 | payroc-verbatim |
+| `run-a-card-sale-guide.md` | https://docs.payroc.com/guides/take-payments/payments/run-a-card-sale.md (reused byte-identical copy from `run-a-card-sale/references/run-a-card-sale-guide.md`) | 2026-06-22 | payroc-verbatim |
+| `secure-tokens-api-schema.md` | https://docs.payroc.com/openapi.yml (secure-tokens schemas) + create/retrieve/list/delete/update-account schema pages (reused byte-identical copy from `save-a-payment-method/references/api-schema.md`) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `update-saved-payment-details-guide.md` | https://docs.payroc.com/guides/take-payments/update-saved-payment-details.md | 2026-07-02 | payroc-verbatim |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party API surface (none in this skill).

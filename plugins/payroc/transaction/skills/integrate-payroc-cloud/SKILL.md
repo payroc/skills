@@ -90,6 +90,9 @@ wrong one is a known failure mode:
 - **`references/narrative-run-a-sale.md` and `references/narrative-extend.md` — how to sequence.**
   Which call comes first, how the poll-then-follow-link flow composes, how the follow-on flows
   (signature, referenced/unreferenced refund, reverse) build on the core pattern.
+- **`references/error-response-format.md` — error envelope (RFC 7807) + Payroc errors[] + canonical
+  error type catalog.** The envelope shape and the canonical error `type` catalog for the server-side
+  API calls; `api-schema.md` carries the per-status table.
 
 Source URLs and last-synced dates are in [`references/_sources.md`](references/_sources.md).
 
@@ -155,6 +158,8 @@ Headers: Authorization: Bearer <token>   Content-Type: application/json   Idempo
 ---
 
 ## Step 1 — Get a bearer token
+
+> Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Tokens expire in ~1 hour (`expires_in: 3600`). Exchange the API key before each session, refreshing
 proactively before expiry.
@@ -273,13 +278,7 @@ key is a `409`. Polls (`GET`) and cancels (`DELETE`) don't take an idempotency k
 
 ## Handle errors
 
-Errors use the [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) problem-details envelope
-(standard members `type`, `title`, `status`, `detail`, `instance`) plus a Payroc **`errors[]`
-extension** — the array is Payroc's own, not RFC-defined. Each item carries `parameter` (the JSON path
-of the failing field — the fastest way to find what to fix), `detail` (a short reason, *distinct* from
-the top-level `detail`), and `message`. See
-[`_shared/error-response-format.md`](../../../_shared/error-response-format.md) for the cross-skill
-standard and `references/api-schema.md` for the per-status table.
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body. See `references/api-schema.md` for the per-status table.
 
 > **Cloud error shape is not yet verified.** We applied the standard Payroc envelope (confirmed on
 > boarding endpoints) on the assumption Cloud is consistent, but could not confirm against a live

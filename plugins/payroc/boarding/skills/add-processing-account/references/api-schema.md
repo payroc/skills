@@ -2,7 +2,7 @@
 
 Snapshot of the Payroc Boarding API surface for adding and reading processing accounts on an
 **existing** merchant platform. Sourced from `https://docs.payroc.com/openapi.yml` (see
-`_sources.md`). Emit field names and enum values from this file — never from memory.
+`_sources.md`). Emit field names and enum values from this file — not from memory.
 
 ---
 
@@ -34,7 +34,7 @@ Snapshot of the Payroc Boarding API surface for adding and reading processing ac
 | List its funding accounts | `GET /v1/processing-accounts/{processingAccountId}/funding-accounts` | — | `200` → funding accounts list |
 | Create a signing reminder | `POST /v1/processing-accounts/{processingAccountId}/reminders` | `createReminder` | `201` → reminder |
 
-Base URLs: production `https://api.payroc.com`, test/UAT `https://api.uat.payroc.com`.
+UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
 
 > **Two different path roots.** You *add* and *list* accounts under the **merchant platform**
 > (`/merchant-platforms/{merchantPlatformId}/processing-accounts`), but once an account exists
@@ -287,8 +287,10 @@ already created for this merchant. The intent must be `active`.
 
 The full inline `agreement` structure (`baseUs`, `processor`, `gatewayUs5.2`, `servicesUs5.0`
 and all fee fields) is large and identical to the agreement documented in the
-**create-pricing-intent** skill's `references/api-schema.md`. Read that file when you need the
-inline-agreement field detail; prefer the intent variant whenever a template exists.
+**create-pricing-intent** skill's `references/api-schema.md` — note that the `key` field shown
+there belongs to the `pricingIntent` template wrapper, not to this inline `agreement`. Read that
+file when you need the inline-agreement field detail; prefer the intent variant whenever a template
+exists.
 
 ### signature object — two variants
 
@@ -427,8 +429,8 @@ for email signing.
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`,
 `instance`) **extended** with a Payroc `errors[]` array. Each `errors[]` item has `parameter`
 (JSON path of the failing field), `detail` (short reason), and `message` (human-readable). See
-[`_shared/error-response-format.md`](../../../_shared/error-response-format.md) for the
-cross-skill standard. Example `400` from adding an empty account body:
+`references/error-response-format.md` for the envelope shape and the canonical error `type`
+catalog. Example `400` from adding an empty account body:
 
 ```json
 {
@@ -445,7 +447,7 @@ cross-skill standard. Example `400` from adding an empty account body:
 
 | Status | Scenario | Action |
 |--------|----------|--------|
-| 400 validation | Field issues | Fix each `errors[].parameter` path; resubmit with the same idempotency key |
+| 400 validation | Field issues | Fix each `errors[].parameter` path; resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
 | 403 | Insufficient permissions / account not email-signing (reminders) | Check API key scope; confirm `requestedViaEmail` for reminders |

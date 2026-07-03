@@ -9,7 +9,7 @@ You can use a single-use token to update only the payment details linked to a se
 
 ## Before you begin
 
-Make sure that you’ve set up your integration to [save payment details](save-a-customers-payment-details).
+Make sure that you’ve set up your integration to [save payment details](save-a-customers-payment-details.md).
 
 ### Headers
 
@@ -33,7 +33,7 @@ To create the header of each GET request, include the Authorization header param
 
 ### Errors
 
-Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://www.rfc-editor.org/rfc/rfc7807). For more information about errors, go to [Errors](/api/errors).
+Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://www.rfc-editor.org/rfc/rfc7807). For more information about errors, go to [Errors](error-response-format.md).
 
 ## Integration steps
 
@@ -71,7 +71,7 @@ paths:
     get:
       operationId: list
       summary: List secure tokens
-      description: "Use this method to return a [paginated](https://docs.payroc.com/api/pagination) list of secure tokens.  \n\n**Note:** If you want to view the details of a specific secure token and you have its secureTokenId, use our [Retrieve Secure Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/retrieve) method.  \n\nUse query parameters to filter the list of results that we return, for example, to search for secure tokens by customer or by the first four digits of a card number.  \n\nOur gateway returns information about the following for each secure token in the list:  \n\n  -\tPayment details that the secure token represents.  \n  -\tCustomer details, including shipping and billing addresses.  \n  -\tSecure token that you can use to carry out transactions.  \n\n  For each secure token, we also return the secureTokenId, which you can use to perform follow-on actions.\n"
+      description: "Use this method to return a [paginated](./pagination.md) list of secure tokens.  \n\n**Note:** If you want to view the details of a specific secure token and you have its secureTokenId, use our [Retrieve Secure Token](./secure-tokens-api-schema.md) method.  \n\nUse query parameters to filter the list of results that we return, for example, to search for secure tokens by customer or by the first four digits of a card number.  \n\nOur gateway returns information about the following for each secure token in the list:  \n\n  -\tPayment details that the secure token represents.  \n  -\tCustomer details, including shipping and billing addresses.  \n  -\tSecure token that you can use to carry out transactions.  \n\n  For each secure token, we also return the secureTokenId, which you can use to perform follow-on actions.\n"
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -1215,7 +1215,7 @@ paths:
     get:
       operationId: list
       summary: List secure tokens
-      description: "Use this method to return a [paginated](https://docs.payroc.com/api/pagination) list of secure tokens.  \n\n**Note:** If you want to view the details of a specific secure token and you have its secureTokenId, use our [Retrieve Secure Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/retrieve) method.  \n\nUse query parameters to filter the list of results that we return, for example, to search for secure tokens by customer or by the first four digits of a card number.  \n\nOur gateway returns information about the following for each secure token in the list:  \n\n  -\tPayment details that the secure token represents.  \n  -\tCustomer details, including shipping and billing addresses.  \n  -\tSecure token that you can use to carry out transactions.  \n\n  For each secure token, we also return the secureTokenId, which you can use to perform follow-on actions.\n"
+      description: "Use this method to return a [paginated](./pagination.md) list of secure tokens.  \n\n**Note:** If you want to view the details of a specific secure token and you have its secureTokenId, use our [Retrieve Secure Token](./secure-tokens-api-schema.md) method.  \n\nUse query parameters to filter the list of results that we return, for example, to search for secure tokens by customer or by the first four digits of a card number.  \n\nOur gateway returns information about the following for each secure token in the list:  \n\n  -\tPayment details that the secure token represents.  \n  -\tCustomer details, including shipping and billing addresses.  \n  -\tSecure token that you can use to carry out transactions.  \n\n  For each secure token, we also return the secureTokenId, which you can use to perform follow-on actions.\n"
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -2282,8 +2282,7 @@ paths:
 
 
         For more information about adding Hosted Fields to a webpage, go to
-        [Hosted
-        Fields](https://docs.payroc.com/guides/take-payments/hosted-fields). 
+        Hosted Fields. 
       tags:
         - subpackage_hostedFields
       parameters:
@@ -2299,7 +2298,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -2846,8 +2845,7 @@ paths:
 
 
         For more information about adding Hosted Fields to a webpage, go to
-        [Hosted
-        Fields](https://docs.payroc.com/guides/take-payments/hosted-fields). 
+        Hosted Fields. 
       tags:
         - subpackage_hostedFields
       parameters:
@@ -2863,7 +2861,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -3390,11 +3388,9 @@ paths:
 
 
         **Note:** If you don't have a single-use token, you can update saved
-        payment details with our [Update Secure
-        Token](https://docs.payroc.com/api/resources#updateSecureToken) method.
+        payment details with our [Update Secure Token](./secure-tokens-api-schema.md) method.
         For more information about our two options to update a secure token, go
-        to [Update saved payment
-        details](https://docs.payroc.com/guides/take-payments/update-saved-payment-details).  
+        to [Update saved payment details](./update-saved-payment-details-guide.md).  
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -3416,7 +3412,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -4535,11 +4531,9 @@ paths:
 
 
         **Note:** If you don't have a single-use token, you can update saved
-        payment details with our [Update Secure
-        Token](https://docs.payroc.com/api/resources#updateSecureToken) method.
+        payment details with our [Update Secure Token](./secure-tokens-api-schema.md) method.
         For more information about our two options to update a secure token, go
-        to [Update saved payment
-        details](https://docs.payroc.com/guides/take-payments/update-saved-payment-details).  
+        to [Update saved payment details](./update-saved-payment-details-guide.md).  
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -4561,7 +4555,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string

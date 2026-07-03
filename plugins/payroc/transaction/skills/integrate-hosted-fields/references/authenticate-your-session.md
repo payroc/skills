@@ -8,7 +8,7 @@ To authenticate your access to the Payroc gateway, include a session token every
 ## Before you begin
 
 * Make sure you have your API key for both the test environment and the production environment.
-* Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://datatracker.ietf.org/doc/html/rfc7807). For more information about errors, go to [Errors](/api/errors).
+* Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://datatracker.ietf.org/doc/html/rfc7807). For more information about errors, go to [Errors](error-response-format.md).
 
 ## Integration steps
 
@@ -117,8 +117,7 @@ paths:
 
 
         For more information about adding Hosted Fields to a webpage, go to
-        [Hosted
-        Fields](https://docs.payroc.com/guides/take-payments/hosted-fields). 
+        Hosted Fields. 
       tags:
         - subpackage_hostedFields
       parameters:
@@ -134,7 +133,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -688,8 +687,7 @@ paths:
 
 
         For more information about adding Hosted Fields to a webpage, go to
-        [Hosted
-        Fields](https://docs.payroc.com/guides/take-payments/hosted-fields). 
+        Hosted Fields. 
       tags:
         - subpackage_hostedFields
       parameters:
@@ -705,7 +703,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string

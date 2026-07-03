@@ -15,7 +15,7 @@ You also need to add event listeners so that you can receive responses when a cu
 
 ## Before you begin
 
-Make sure that your integration can [create a session token](authenticate-your-session) each time you initialize Hosted Fields.
+Make sure that your integration can [create a session token](authenticate-your-session.md) each time you initialize Hosted Fields.
 
 ## Integration steps
 

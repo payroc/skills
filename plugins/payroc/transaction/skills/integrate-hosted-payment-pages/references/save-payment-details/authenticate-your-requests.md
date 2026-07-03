@@ -5,7 +5,7 @@
 
 To load the Hosted Payment Page, you need to include a SHA-512 hash in the HASH parameter. The hash authenticates your request and prevents tampering with sensitive values during transit to our gateway.
 
-Because you've already integrated with Hosted Payment Pages to [run a sale](../../run-a-sale), you've already added a terminal secret. However, the hash string for saving a customer's payment details is made up of different values.
+Because you've already integrated with Hosted Payment Pages to [run a sale](../authenticate-your-requests.md), you've already added a terminal secret. However, the hash string for saving a customer's payment details is made up of different values.
 
 ## Build and hash the request string
 
@@ -26,4 +26,4 @@ You send this value in the HASH parameter of your request to load the Hosted Pay
 
 ## Next steps
 
-* [Load the Hosted Payment Page](load-hosted-payment-page)
+* [Load the Hosted Payment Page](load-hosted-payment-page.md)

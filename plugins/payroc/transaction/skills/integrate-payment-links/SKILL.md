@@ -75,6 +75,7 @@ from live lookups and not from memory. Payment Links is a pure REST/JSON API; th
 | Source | Local file | Use for |
 |--------|-----------|---------|
 | API schema reference | `references/api-schema.md` | **All** enum values, required fields, request/response schemas, charge shape, JSON Patch ops |
+| Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 | Create & share guide | `references/create-and-share-a-payment-link.md` | Step-by-step narrative for creation + sharing |
 | Extended features guide | `references/extend-your-integration.md` | Retrieve, list, update, deactivate, sharing events |
 
@@ -150,6 +151,8 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 ---
 
 ## Step 1 — Authenticate
+
+> Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
 - UAT/test: `POST https://identity.uat.payroc.com/authorize`

@@ -1,0 +1,9 @@
+{
+  "name": "notifications",
+  "description": "Skills for event notifications and webhook subscriptions",
+  "version": "0.1.0",
+  "author": { "name": "Payroc" },
+  "skills": [
+    "./skills/set-up-event-subscriptions"
+  ]
+}

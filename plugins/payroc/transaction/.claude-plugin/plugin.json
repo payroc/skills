@@ -7,6 +7,19 @@
     "./skills/integrate-hosted-fields",
     "./skills/integrate-hosted-payment-pages",
     "./skills/integrate-payment-links",
-    "./skills/integrate-payroc-cloud"
+    "./skills/integrate-payroc-cloud",
+    "./skills/check-ebt-balance",
+    "./skills/create-single-use-token",
+    "./skills/look-up-card-details",
+    "./skills/manage-subscriptions",
+    "./skills/refund-a-card-payment",
+    "./skills/refund-an-ach-payment",
+    "./skills/run-a-card-sale",
+    "./skills/run-a-pre-authorization",
+    "./skills/run-a-sale-with-3ds",
+    "./skills/save-a-payment-method",
+    "./skills/set-up-a-payment-plan",
+    "./skills/take-an-ach-payment",
+    "./skills/verify-bank-account"
   ]
 }
