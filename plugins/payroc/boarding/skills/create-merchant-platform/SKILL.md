@@ -58,6 +58,8 @@ Content-Type:    application/json
 
 ## Step 1 — Get a bearer token
 
+> Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
+
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
@@ -165,9 +167,11 @@ must sum to exactly 100.
 
 ## Step 3 — Send the request
 
-Always generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* submission,
-reuse the same key — the API returns the original response instead of creating a duplicate.
-On a genuinely new submission, generate a new UUID.
+Always generate a fresh UUID v4 for `Idempotency-Key`. The key is bound to the request body, so
+reuse the same key *only* to retry a byte-for-byte identical submission — the API then returns the
+original response instead of creating a duplicate. On a genuinely new submission, or when you
+resubmit after fixing a `400` (the corrected body no longer matches the old key), generate a new
+UUID — reusing the old key with a changed body returns `409`.
 
 ```bash
 curl -X POST https://api.payroc.com/v1/merchant-platforms \
@@ -214,7 +218,7 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 
 | Status | Scenario | Action |
 |--------|----------|--------|
-| 400 validation | Field issues | Fix each field in `errors[].parameter`; resubmit with same idempotency key |
+| 400 validation | Field issues | Fix each field in `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
 | 403 | Insufficient permissions | Check API key scope; contact Payroc support |
@@ -227,8 +231,8 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 `title`, `status`, `detail`, `instance`); Payroc **extends** it with an `errors` array that RFC 7807
 does not define. Each `errors[]` item has a `parameter` (the JSON path of the failing field), a
 `detail` (short reason — distinct from the top-level `detail`), and a `message` (human-readable
-explanation). See [`_shared/error-response-format.md`](../../../_shared/error-response-format.md) for
-the cross-skill standard. A real `400` from UAT (an empty body):
+explanation). See `references/error-response-format.md` for the envelope shape and the canonical
+error `type` catalog. A real `400` from UAT (an empty body):
 ```json
 {
   "type": "https://docs.payroc.com/api/errors#bad-request",

@@ -498,11 +498,9 @@ Response: `{ limit, count, hasMore, data: [ device ... ], links }`. Each `device
 
 ## Error responses
 
-Errors use the [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) problem-details envelope
-plus a Payroc `errors[]` extension — see `_shared/error-response-format.md` for the cross-skill
-standard. Envelope (standard RFC members): `type`, `title`, `status`, `detail`, `instance`. Each
-`errors[]` item (Payroc extension): `parameter` (JSON path of the failing field), `detail` (short
-reason, distinct from the top-level `detail`), `message` (human-readable).
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+For these server-side Cloud endpoints, expect: `400`, `401`, `403`, `404` (unknown instruction/resource id in the path), `409` (cancelling an instruction no longer `inProgress`, or reusing an idempotency key with a changed body), `500`; a few endpoints also return `406` / `415` (see the per-status table below).
 
 | Status | Meaning on Cloud | Action |
 |--------|------------------|--------|

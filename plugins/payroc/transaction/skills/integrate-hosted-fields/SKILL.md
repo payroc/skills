@@ -89,6 +89,7 @@ If your question is "how do I structure the request body?" — that's the schema
 | Source | Local file |
 | --- | --- |
 | API schema reference (enums, required fields, request/response schemas) | `references/api-schema.md` |
+| Error response format (RFC 7807 envelope + Payroc errors[] + canonical error type catalog) | `references/error-response-format.md` |
 | Step 1 — Authenticate session | `references/authenticate-your-session.md` |
 | Step 2 — Create payment form | `references/create-a-payment-form.md` |
 | Step 3 — Run a sale | `references/run-a-sale.md` |
@@ -200,9 +201,12 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 
 ## Step 1 — Authenticate: get a Bearer token
 
-Read: `references/authenticate-your-session.md`
+Read: `references/authenticate-your-session.md` (Hosted Fields session token flow — Steps 1 and 2)
+Read: `references/identity-call.md` (canonical Bearer token exchange reference — endpoint URL, header name, response shape)
 
-Read the page before writing anything. From the local reference, confirm and use:
+> Do not guess the identity endpoint URL, the `x-api-key` header name, or the response field names — read `references/identity-call.md` and emit only what it documents.
+
+Read the pages before writing anything. From the local references, confirm and use:
 
 - The identity service endpoint (test vs production)
 - The required header and its format

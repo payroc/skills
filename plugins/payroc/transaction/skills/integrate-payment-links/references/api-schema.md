@@ -14,13 +14,57 @@ comes from the OpenAPI spec.
 
 | Operation | Method & path |
 | --- | --- |
-| Create a payment link | `POST /v1/processing-terminals/{processingTerminalId}/payment-links` |
-| List links for a terminal | `GET /v1/processing-terminals/{processingTerminalId}/payment-links` |
-| Retrieve a link | `GET /v1/payment-links/{paymentLinkId}` |
-| Update a link (JSON Patch) | `PATCH /v1/payment-links/{paymentLinkId}` |
-| Deactivate a link | `POST /v1/payment-links/{paymentLinkId}/deactivate` |
-| Share a link by email | `POST /v1/payment-links/{paymentLinkId}/sharing-events` |
-| List sharing events | `GET /v1/payment-links/{paymentLinkId}/sharing-events` |
+| [Create a payment link](#create-a-payment-link) | `POST /v1/processing-terminals/{processingTerminalId}/payment-links` |
+| [List links for a terminal](#list-links-for-a-terminal) | `GET /v1/processing-terminals/{processingTerminalId}/payment-links` |
+| [Retrieve a link](#retrieve-a-link) | `GET /v1/payment-links/{paymentLinkId}` |
+| [Update a link (JSON Patch)](#update-a-link-json-patch) | `PATCH /v1/payment-links/{paymentLinkId}` |
+| [Deactivate a link](#deactivate-a-link) | `POST /v1/payment-links/{paymentLinkId}/deactivate` |
+| [Share a link by email](#share-a-link-by-email) | `POST /v1/payment-links/{paymentLinkId}/sharing-events` |
+| [List sharing events](#list-sharing-events) | `GET /v1/payment-links/{paymentLinkId}/sharing-events` |
+
+### Create a payment link
+
+`POST /v1/processing-terminals/{processingTerminalId}/payment-links` — request/response body is
+`multiUsePaymentLink` or `singleUsePaymentLink` (see [Schemas](#schemas) below, discriminated by `type`).
+Returns `paymentLinkId` and `assets.paymentUrl`/`assets.paymentButton` on success (`201`).
+
+### List links for a terminal
+
+`GET /v1/processing-terminals/{processingTerminalId}/payment-links` — returns a
+`paymentLinkPaginatedList` (see [Pagination](#pagination-list-endpoints)). Supports the
+[List filter enums](#list-filter-enums) as query params (`linkType`, `chargeType`, `status`).
+
+### Retrieve a link
+
+`GET /v1/payment-links/{paymentLinkId}` — returns the full `multiUsePaymentLink` or
+`singleUsePaymentLink` representation for the given `paymentLinkId`, including its current
+`status`.
+
+### Update a link (JSON Patch)
+
+`PATCH /v1/payment-links/{paymentLinkId}` — body is a JSON Patch document (RFC 6902) array of
+operations; see [JSON Patch `op` values](#json-patch-op-values-patch-request-rfc-6902). Typical
+use: patch `expiresOn` to extend/shorten expiration. Requires the
+[`Idempotency-Key` header](./idempotency.md).
+
+### Deactivate a link
+
+`POST /v1/payment-links/{paymentLinkId}/deactivate` — no request body. Transitions `status` to
+`deactivated`; the link stops accepting payments. Requires the
+[`Idempotency-Key` header](./idempotency.md).
+
+### Share a link by email
+
+`POST /v1/payment-links/{paymentLinkId}/sharing-events` — body is a `paymentLinkEmailShareEvent`
+(see [Sharing](#sharing-paymentlinkemailshareevent-share-request-response)). Requires the [`Idempotency-Key` header](./idempotency.md). You need the `paymentLinkId` from the
+create response (or from [List links for a terminal](#list-links-for-a-terminal) if you don't have
+it) before you can share.
+
+### List sharing events
+
+`GET /v1/payment-links/{paymentLinkId}/sharing-events` — returns a `sharingEventPaginatedList`
+(see [Pagination](#pagination-list-endpoints)) of every time the link was shared, each with its
+`sharingEventId` and `dateTime`.
 
 UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
 Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
@@ -129,7 +173,7 @@ Same field set as multi-use, with two differences:
 `{ paymentUrl, paymentButton }` — both required. `paymentUrl` is the shareable URL; `paymentButton` is
 embeddable HTML. Capture `paymentLinkId` and `assets.paymentUrl` from the create response.
 
-### Sharing — paymentLinkEmailShareEvent (share request / response)
+### Sharing paymentLinkEmailShareEvent (share request / response)
 
 ```jsonc
 {
@@ -147,6 +191,14 @@ Response (201) adds `sharingEventId` and `dateTime` (ISO 8601).
 ### Pagination (list endpoints)
 `paymentLinkPaginatedList` / `sharingEventPaginatedList`: `{ limit, count, hasMore, links[], data[] }`.
 Cursor-based via `limit`, `after`, `before` query params; `hasMore` indicates another page exists.
+
+---
+
+## Errors
+
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+Across these endpoints, expect: `400`, `401`, `403`, `404` (unknown `paymentLinkId` / `processingTerminalId` in the path), `409` (idempotency-key reuse on a POST or PATCH), `500`.
 
 ---
 

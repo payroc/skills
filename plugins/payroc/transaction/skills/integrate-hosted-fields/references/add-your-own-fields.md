@@ -199,7 +199,7 @@ In the following code block, we retrieve the billing details that the customer p
 
 ## Step 5. Create payment request
 
-We add the information that we received from the customer and the single-use token to a [payment request](/api/schema/card-payments/payments/create), and then send the payment request to our gateway. For more information about how to create a payment request, go to [Run a card sale](/guides/take-payments/payments/run-a-card-sale).
+We add the information that we received from the customer and the single-use token to a payment request, and then send the payment request to our gateway. For more information about how to create a payment request, go to [Run a card sale](./run-a-card-sale-guide.md).
 
 In the following code block, we create a payment request using the billing details that the customer provides and the single-use token that we receive from the gateway.
 

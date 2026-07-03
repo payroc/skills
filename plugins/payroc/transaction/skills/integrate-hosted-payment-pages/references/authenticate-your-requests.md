@@ -56,4 +56,4 @@ You send this value in the HASH parameter of your request to load the Hosted Pay
 
 ## Next steps
 
-* [Load the Hosted Payment Page](load-hosted-payment-page).
+* [Load the Hosted Payment Page](load-hosted-payment-page.md).

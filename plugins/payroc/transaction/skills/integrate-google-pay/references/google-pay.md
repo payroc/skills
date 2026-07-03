@@ -75,7 +75,7 @@ curl
 
 ### Errors
 
-If your request is unsuccessful, we return an error. For more information about errors, see [Errors](/api/errors).
+If your request is unsuccessful, we return an error. For more information about errors, see [Errors](error-response-format.md).
 
 ## Step 1. Integrate with the Google Pay API
 
@@ -106,7 +106,7 @@ In your request, send the following parameters in the paymentMethod object:
 * **serviceProvider** – Provide a value of `google`.
 * **encryptedData** – Provide the encrypted payment details that you retrieved from the Google Pay API in hexadecimal format.
 
-**Note:** For more information about how to run other transaction types with our API, go to our [API Explorer](/api).
+**Note:** For more information about how to run other transaction types with our API, go to our API Explorer.
 
 ### Example request
 

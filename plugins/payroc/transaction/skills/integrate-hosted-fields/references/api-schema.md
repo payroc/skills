@@ -219,6 +219,14 @@ Required (gateway variant): `serviceProvider` (`gateway`), `mpiReference`.
 
 ---
 
+## Errors
+
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+These codes apply to the server-side Payroc API calls (session-token, payments, MPI) — not to the browser-side Hosted Fields SDK, which surfaces its own `error` events. For the server-side calls, expect: `400`, `401`, `403`, `404` (unknown path resource id, e.g. `processingTerminalId`), `409` (idempotency-key reuse on the session-token or payment POST), `500`.
+
+---
+
 ## Required headers
 
 | Header | Where | Notes |

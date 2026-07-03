@@ -9,7 +9,7 @@ If you want to run a sale later or run multiple sales, you need to convert the s
 
 ## Before you begin
 
-Make sure you have set up your integration to [run a sale](../run-a-sale).
+Make sure you have set up your integration to [run a sale](run-a-sale.md).
 
 ### Headers
 
@@ -27,7 +27,7 @@ To create the header of each POST request, you must include the following parame
 
 ### Errors
 
-Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://www.rfc-editor.org/rfc/rfc7807). For more information about errors, go to [Errors](/api/errors).
+Make sure that your integration can handle errors. If a request is unsuccessful, we return an error that follows the [RFC 7807 format](https://www.rfc-editor.org/rfc/rfc7807). For more information about errors, go to [Errors](error-response-format.md).
 
 ## Integration steps
 
@@ -204,20 +204,16 @@ paths:
         When you create a secure token, you need to generate and provide a
         secureTokenId that you use to run follow-on actions:  
 
-        - [Retrieve Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/retrieve)
+        - [Retrieve Secure Token](./secure-tokens-api-schema.md)
         – View the details of the secure token.  
 
-        - [Delete Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/delete)
+        - [Delete Secure Token](./secure-tokens-api-schema.md)
         – Delete the secure token.  
 
-        - [Update Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/partially-update)
+        - [Update Secure Token](./secure-tokens-api-schema.md)
         – Update the details of the secure token.  
 
-        - [Update Account
-        Details](https://docs.payroc.com/api/schema/tokenization/secure-tokens/update-account)
+        - [Update Account Details](./secure-tokens-api-schema.md)
         – Update the secure token with the details from a single-use token.  
 
 
@@ -228,8 +224,7 @@ paths:
 
         If the request is successful, our gateway returns a token that the
         merchant can use in transactions instead of the customer's sensitive
-        payment details, for example, when they [run a
-        sale](https://docs.payroc.com/api/schema/card-payments/payments/create).
+        payment details, for example, when they run a sale.
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -245,7 +240,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -1289,8 +1284,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
           required:
             - entryMethod
             - device
@@ -1328,8 +1322,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             ebtDetails:
               $ref: '#/components/schemas/ebtDetailsWithVoucher'
           required:
@@ -1357,8 +1350,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingKeyedPinDetails
@@ -1399,8 +1391,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingSwipedPinDetails
@@ -3097,20 +3088,16 @@ paths:
         When you create a secure token, you need to generate and provide a
         secureTokenId that you use to run follow-on actions:  
 
-        - [Retrieve Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/retrieve)
+        - [Retrieve Secure Token](./secure-tokens-api-schema.md)
         – View the details of the secure token.  
 
-        - [Delete Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/delete)
+        - [Delete Secure Token](./secure-tokens-api-schema.md)
         – Delete the secure token.  
 
-        - [Update Secure
-        Token](https://docs.payroc.com/api/schema/tokenization/secure-tokens/partially-update)
+        - [Update Secure Token](./secure-tokens-api-schema.md)
         – Update the details of the secure token.  
 
-        - [Update Account
-        Details](https://docs.payroc.com/api/schema/tokenization/secure-tokens/update-account)
+        - [Update Account Details](./secure-tokens-api-schema.md)
         – Update the secure token with the details from a single-use token.  
 
 
@@ -3121,8 +3108,7 @@ paths:
 
         If the request is successful, our gateway returns a token that the
         merchant can use in transactions instead of the customer's sensitive
-        payment details, for example, when they [run a
-        sale](https://docs.payroc.com/api/schema/card-payments/payments/create).
+        payment details, for example, when they run a sale.
       tags:
         - subpackage_tokenization.subpackage_tokenization/secureTokens
       parameters:
@@ -3138,7 +3124,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -4182,8 +4168,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
           required:
             - entryMethod
             - device
@@ -4221,8 +4206,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             ebtDetails:
               $ref: '#/components/schemas/ebtDetailsWithVoucher'
           required:
@@ -4250,8 +4234,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingKeyedPinDetails
@@ -4292,8 +4275,7 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingSwipedPinDetails
@@ -5331,7 +5313,7 @@ components:
 
 To run a sale with the secure token, the method that you need to follow depends on whether the secure token represents card details or bank account details.
 
-Use the same methods that you used in [Run a Sale](../run-a-sale), but update the following parameters in the paymentMethod object:
+Use the same methods that you used in [Run a Sale](run-a-sale.md), but update the following parameters in the paymentMethod object:
 
 * **type** - Change the value to `secureToken`.
 * **token** -  Include the secure token that you received in Step 2.

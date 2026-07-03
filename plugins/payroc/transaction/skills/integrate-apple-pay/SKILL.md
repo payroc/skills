@@ -97,6 +97,7 @@ If your question is "how do I structure the Payroc session-start or payments req
 | Source | Local file | Use for |
 | --- | --- | --- |
 | API schema reference | `references/api-schema.md` | **All** Payroc enum values, required fields, request/response schemas (start-session + payments) |
+| Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 | Set up Apple Pay for a merchant (Payroc narrative) | `references/set-up-apple-pay-for-a-merchant.md` | Domain verification / Self-Care Portal setup, obtaining the domain ID |
 | Add Apple Pay to your integration (Payroc narrative) | `references/add-apple-pay-to-your-integration.md` | Bearer token, session-start call, run-a-sale composition |
 | Apple — `ApplePaySession` (derived notes) | `references/third-party/apple-applepaysession.md` | JS API constructor, event/method names, status constants |
@@ -211,9 +212,10 @@ Is the domain ID shown in the Self-Care Portal after saving, and can the verific
 
 ## Step 2 — Authenticate: get a Bearer token
 
-Read: references/add-apple-pay-to-your-integration.md
+Read: `references/identity-call.md` — canonical Bearer token exchange reference. Do not guess the identity endpoint URL, header name, or response shape — emit only what this file documents.
+Read: `references/add-apple-pay-to-your-integration.md` — Payroc narrative; confirms how Bearer auth fits into the Apple Pay flow.
 
-Read the authentication section before writing anything. From the reference, confirm:
+Read both before writing anything. From the references, confirm:
 
 - The identity service endpoint
 - The required header and its format

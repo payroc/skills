@@ -93,6 +93,7 @@ If your question is "what does the Payroc payment request body look like?" — t
 | Source | Local file | Use for |
 | --- | --- | --- |
 | Payroc API schema | `references/api-schema.md` | Payroc API field names, enum values, request/response shapes |
+| Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 | Add Google Pay to your integration (Payroc narrative) | `references/google-pay.md` | Composition with Payroc + canonical `gateway` value + `gatewayMerchantId` derivation |
 | Google — request objects | `references/third-party/google-request-objects.md` | `PaymentDataRequest`, `tokenizationSpecification`, supported networks, JS object shape |
 | Google — client | `references/third-party/google-client.md` | `PaymentsClient` constructor, `isReadyToPay`, `loadPaymentData`, `createButton`, callback shapes |
@@ -179,9 +180,10 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 
 ## Step 1 — Authenticate: get a Bearer token
 
-Read: references/google-pay.md
+Read: `references/identity-call.md` — canonical Bearer token exchange reference. Do not guess the identity endpoint URL, header name, or response shape — emit only what this file documents.
+Read: `references/google-pay.md` — Payroc narrative; confirms how Bearer auth fits into the Google Pay flow.
 
-Read the authentication section before writing anything. From the narrative copy, confirm:
+Read both before writing anything. From the references, confirm:
 
 - The identity service endpoint
 - The required header and its format

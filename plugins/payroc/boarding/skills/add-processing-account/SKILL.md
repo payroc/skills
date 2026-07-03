@@ -126,6 +126,8 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 
 ## Step 1 — Get a bearer token
 
+> Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
+
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
@@ -183,10 +185,12 @@ submitting.
 
 ## Step 3 — Send the request
 
-Generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* submission, reuse the
-same key — the API returns the original result instead of creating a duplicate. A `400`
-validation error creates nothing, so when you fix the payload and resubmit, **keep the same key**
-— it's still the same account attempt. Generate a new UUID only for a genuinely separate account.
+Generate a fresh UUID v4 for `Idempotency-Key`. The key is bound to the request body, so reuse the
+same key *only* to retry a byte-for-byte identical submission — the API then returns the original
+result instead of creating a duplicate. A `400` validation error creates nothing, but when you fix
+the payload the body has changed, so resubmit with a **fresh** UUID; reusing the old key with the
+corrected body returns `409 idempotentKeyInUse`. Generate a new UUID for a genuinely separate
+account too.
 
 ```bash
 curl -X POST https://api.payroc.com/v1/merchant-platforms/MP-XXXX/processing-accounts \
@@ -263,13 +267,14 @@ Errors use the **RFC 7807 problem-details format as the envelope** (`type`, `tit
 not defined by RFC 7807). Each `errors[]` item carries `parameter` (the JSON path of the failing
 field — the most useful one), `detail` (a short reason, **distinct** from the top-level RFC
 `detail`), and `message` (the human-readable explanation). Use `parameter` to map each issue back
-to your request body, fix it, then resubmit with the same idempotency key (a `400` created
-nothing). See [`_shared/error-response-format.md`](../../../_shared/error-response-format.md) and
-the error table in `references/api-schema.md`.
+to your request body, fix it, then resubmit with a **fresh** idempotency key (a `400` created
+nothing, but the corrected body no longer matches the old key — reusing it returns `409`). See
+`references/error-response-format.md` for the envelope shape and canonical error
+`type` catalog, and the error table in `references/api-schema.md`.
 
 | Status | Scenario | Action |
 |--------|----------|--------|
-| 400 validation | Field issues | Fix each `errors[].parameter`; resubmit with same idempotency key |
+| 400 validation | Field issues | Fix each `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
 | 403 | Permissions, or account not email-signing (reminders) | Check API key scope; confirm `requestedViaEmail` |

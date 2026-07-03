@@ -13,6 +13,8 @@ date here and in the file's header.
 | `third-party/apple-payment-token.md` | https://developer.apple.com/documentation/applepayontheweb/applepaypaymenttoken | 2026-06-05 | third-party-derived |
 | `third-party/apple-server-setup.md` | https://developer.apple.com/documentation/applepayontheweb/setting-up-your-server | 2026-06-05 | third-party-derived |
 | `third-party/apple-pay-button.md` | https://developer.apple.com/documentation/applepayontheweb/displaying-apple-pay-buttons-using-javascript | 2026-06-05 | third-party-derived |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `idempotency.md` | https://docs.payroc.com/api/idempotency | 2026-07-02 | payroc-verbatim (shared fragment, byte-identical copy of `plugins/payroc/_shared/idempotency.md`) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party (Apple) API surface — factual names/structure only, no copied prose.

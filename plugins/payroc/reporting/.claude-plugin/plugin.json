@@ -1,1 +1,11 @@
-{ "name": "reporting", "description": "Skills for reporting and analytics integration" }
+{
+  "name": "reporting",
+  "description": "Skills for reporting and analytics integration",
+  "skills": [
+    "./skills/view-ach-deposits",
+    "./skills/view-authorizations",
+    "./skills/view-disputes",
+    "./skills/view-settled-transactions",
+    "./skills/view-settlement-batches"
+  ]
+}

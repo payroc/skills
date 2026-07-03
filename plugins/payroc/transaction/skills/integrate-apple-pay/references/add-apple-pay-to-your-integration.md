@@ -76,7 +76,7 @@ curl
 
 ### Errors
 
-If your request is unsuccessful, we return an error. For more information about errors, see [Errors](/api/errors).
+If your request is unsuccessful, we return an error. For more information about errors, see [Errors](error-response-format.md).
 
 ## Step 1. Integrate with the Apple JS API
 
@@ -132,7 +132,7 @@ paths:
 
 
         **Note:** For more information about how to integrate with Apple Pay, go
-        to [Apple Pay](https://docs.payroc.com/guides/take-payments/apple-pay).
+        to Apple Pay.
       tags:
         - subpackage_applePaySessions
       parameters:
@@ -446,7 +446,7 @@ paths:
 
 
         **Note:** For more information about how to integrate with Apple Pay, go
-        to [Apple Pay](https://docs.payroc.com/guides/take-payments/apple-pay).
+        to Apple Pay.
       tags:
         - subpackage_applePaySessions
       parameters:
@@ -616,7 +616,7 @@ paths:
     post:
       operationId: create
       summary: Create payment
-      description: "Use this method to run a sale or a pre-authorization with a customer's payment card. \n\nIn the response, our gateway returns information about the card payment and a paymentId, which you need for the following methods:\n\n-\t[Retrieve payment](https://docs.payroc.com/api/schema/card-payments/payments/retrieve) - View the details of the card payment.\n-\t[Adjust payment](https://docs.payroc.com/api/schema/card-payments/payments/adjust) - Update the details of the card payment.\n-\t[Capture payment](https://docs.payroc.com/api/schema/card-payments/payments/capture)  - Capture the pre-authorization.\n-\t[Reverse payment](https://docs.payroc.com/api/schema/card-payments/refunds/reverse)  - Cancel the card payment if it's in an open batch.\n-\t[Refund payment](https://docs.payroc.com/api/schema/card-payments/refunds/create-referenced-refund)  - Run a referenced refund to return funds to the payment card.\n\n**Payment methods** \n\n- **Cards** - Credit, debit, and EBT\n- **Digital wallets** - [Apple Pay®](https://docs.payroc.com/guides/take-payments/apple-pay) and [Google Pay®](https://docs.payroc.com/guides/take-payments/google-pay) \n- **Tokens** - Secure tokens and single-use tokens\n\n**Features** \n\nOur Create Payment method also supports the following features: \n\n- [Repeat payments](https://docs.payroc.com/guides/take-payments/repeat-payments/use-your-own-software) - Run multiple payments as part of a payment schedule that you manage with your own software. \n- **Offline sales** - Run a sale or a pre-authorization if the terminal loses its connection to our gateway. \n- [Tokenization](https://docs.payroc.com/guides/take-payments/save-payment-details) - Save card details to use in future transactions. \n- [3-D Secure](https://docs.payroc.com/guides/take-payments/3-d-secure) - Verify the identity of the cardholder. \n- [Custom fields](https://docs.payroc.com/guides/take-payments/add-custom-fields) - Add your own data to a payment. \n- **Tips** - Add tips to the card payment.  \n- **Taxes** - Add local taxes to the card payment. \n- **Surcharging** - Add a surcharge to the card payment. \n- **Dual pricing** - Offer different prices based on payment method, for example, if you use our RewardPay Choice pricing program. \n- **Healthcare** - Accept payments from Health Savings Accounts (HSA) and Flexible Spending Accounts (FSA). \n"
+      description: "Use this method to run a sale or a pre-authorization with a customer's payment card. \n\nIn the response, our gateway returns information about the card payment and a paymentId, which you need for the following methods:\n\n-\tRetrieve payment - View the details of the card payment.\n-\tAdjust payment - Update the details of the card payment.\n-\tCapture payment  - Capture the pre-authorization.\n-\tReverse payment  - Cancel the card payment if it's in an open batch.\n-\tRefund payment  - Run a referenced refund to return funds to the payment card.\n\n**Payment methods** \n\n- **Cards** - Credit, debit, and EBT\n- **Digital wallets** - Apple Pay® and Google Pay® \n- **Tokens** - Secure tokens and single-use tokens\n\n**Features** \n\nOur Create Payment method also supports the following features: \n\n- Repeat payments - Run multiple payments as part of a payment schedule that you manage with your own software. \n- **Offline sales** - Run a sale or a pre-authorization if the terminal loses its connection to our gateway. \n- Tokenization - Save card details to use in future transactions. \n- 3-D Secure - Verify the identity of the cardholder. \n- Custom fields - Add your own data to a payment. \n- **Tips** - Add tips to the card payment.  \n- **Taxes** - Add local taxes to the card payment. \n- **Surcharging** - Add a surcharge to the card payment. \n- **Dual pricing** - Offer different prices based on payment method, for example, if you use our RewardPay Choice pricing program. \n- **Healthcare** - Accept payments from Health Savings Accounts (HSA) and Flexible Spending Accounts (FSA). \n"
       tags:
         - subpackage_cardPayments.subpackage_cardPayments/payments
       parameters:
@@ -626,7 +626,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](idempotency.md).
           required: true
           schema:
             type: string
@@ -1111,8 +1111,8 @@ components:
         Object that contains information about the dynamic currency conversion
         (DCC) offer.  
           
-        For more information about DCC, go to [Dynamic Currency
-        Conversion](https://docs.payroc.com/knowledge/card-payments/dynamic-currency-conversion).
+        For more information about DCC, go to Dynamic Currency
+        Conversion.
       title: dccOffer
     StandingInstructionsSequence:
       type: string
@@ -1673,8 +1673,8 @@ components:
         - YDQ
       description: >-
         Unit of measurement for the item. For more information about units of
-        measurement, go to [Units of
-        measurement](https://docs.payroc.com/knowledge/basic-concepts/units-of-measurement).
+        measurement, go to Units of
+        measurement.
       title: unitOfMeasure
     lineItemRequest:
       type: object
@@ -2562,8 +2562,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
           required:
             - entryMethod
             - device
@@ -2601,8 +2601,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             ebtDetails:
               $ref: '#/components/schemas/ebtDetailsWithVoucher'
           required:
@@ -2630,8 +2630,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingKeyedPinDetails
@@ -2672,8 +2672,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingSwipedPinDetails
@@ -2763,12 +2763,10 @@ components:
         Provider of the digital wallet. Send one of the following values:
 
         - `apple` - For more information about how to integrate with Apple Pay,
-        go to [Apple
-        Pay®](https://docs.payroc.com/guides/take-payments/apple-pay).
+        go to Apple Pay®.
 
         - `google` - For more information about how to integrate with google
-        Pay, go to [Google
-        Pay®](https://docs.payroc.com/guides/take-payments/google-pay).
+        Pay, go to Google Pay®.
       title: >-
         FxRateInquiryPaymentMethodDiscriminatorMappingDigitalWalletServiceProvider
     BankTransferPaymentRequestPaymentMethodDiscriminatorMappingSingleUseTokenAccountType:
@@ -2969,12 +2967,10 @@ components:
                 values:
 
                 - `apple` - For more information about how to integrate with
-                Apple Pay, go to [Apple
-                Pay®](https://docs.payroc.com/guides/take-payments/apple-pay).
+                Apple Pay, go to Apple Pay®.
 
                 - `google` - For more information about how to integrate with
-                google Pay, go to [Google
-                Pay®](https://docs.payroc.com/guides/take-payments/google-pay).
+                google Pay, go to Google Pay®.
             cardholderName:
               type: string
               description: Cardholder’s name.
@@ -4549,7 +4545,7 @@ paths:
     post:
       operationId: create
       summary: Create payment
-      description: "Use this method to run a sale or a pre-authorization with a customer's payment card. \n\nIn the response, our gateway returns information about the card payment and a paymentId, which you need for the following methods:\n\n-\t[Retrieve payment](https://docs.payroc.com/api/schema/card-payments/payments/retrieve) - View the details of the card payment.\n-\t[Adjust payment](https://docs.payroc.com/api/schema/card-payments/payments/adjust) - Update the details of the card payment.\n-\t[Capture payment](https://docs.payroc.com/api/schema/card-payments/payments/capture)  - Capture the pre-authorization.\n-\t[Reverse payment](https://docs.payroc.com/api/schema/card-payments/refunds/reverse)  - Cancel the card payment if it's in an open batch.\n-\t[Refund payment](https://docs.payroc.com/api/schema/card-payments/refunds/create-referenced-refund)  - Run a referenced refund to return funds to the payment card.\n\n**Payment methods** \n\n- **Cards** - Credit, debit, and EBT\n- **Digital wallets** - [Apple Pay®](https://docs.payroc.com/guides/take-payments/apple-pay) and [Google Pay®](https://docs.payroc.com/guides/take-payments/google-pay) \n- **Tokens** - Secure tokens and single-use tokens\n\n**Features** \n\nOur Create Payment method also supports the following features: \n\n- [Repeat payments](https://docs.payroc.com/guides/take-payments/repeat-payments/use-your-own-software) - Run multiple payments as part of a payment schedule that you manage with your own software. \n- **Offline sales** - Run a sale or a pre-authorization if the terminal loses its connection to our gateway. \n- [Tokenization](https://docs.payroc.com/guides/take-payments/save-payment-details) - Save card details to use in future transactions. \n- [3-D Secure](https://docs.payroc.com/guides/take-payments/3-d-secure) - Verify the identity of the cardholder. \n- [Custom fields](https://docs.payroc.com/guides/take-payments/add-custom-fields) - Add your own data to a payment. \n- **Tips** - Add tips to the card payment.  \n- **Taxes** - Add local taxes to the card payment. \n- **Surcharging** - Add a surcharge to the card payment. \n- **Dual pricing** - Offer different prices based on payment method, for example, if you use our RewardPay Choice pricing program. \n- **Healthcare** - Accept payments from Health Savings Accounts (HSA) and Flexible Spending Accounts (FSA). \n"
+      description: "Use this method to run a sale or a pre-authorization with a customer's payment card. \n\nIn the response, our gateway returns information about the card payment and a paymentId, which you need for the following methods:\n\n-\tRetrieve payment - View the details of the card payment.\n-\tAdjust payment - Update the details of the card payment.\n-\tCapture payment  - Capture the pre-authorization.\n-\tReverse payment  - Cancel the card payment if it's in an open batch.\n-\tRefund payment  - Run a referenced refund to return funds to the payment card.\n\n**Payment methods** \n\n- **Cards** - Credit, debit, and EBT\n- **Digital wallets** - Apple Pay® and Google Pay® \n- **Tokens** - Secure tokens and single-use tokens\n\n**Features** \n\nOur Create Payment method also supports the following features: \n\n- Repeat payments - Run multiple payments as part of a payment schedule that you manage with your own software. \n- **Offline sales** - Run a sale or a pre-authorization if the terminal loses its connection to our gateway. \n- Tokenization - Save card details to use in future transactions. \n- 3-D Secure - Verify the identity of the cardholder. \n- Custom fields - Add your own data to a payment. \n- **Tips** - Add tips to the card payment.  \n- **Taxes** - Add local taxes to the card payment. \n- **Surcharging** - Add a surcharge to the card payment. \n- **Dual pricing** - Offer different prices based on payment method, for example, if you use our RewardPay Choice pricing program. \n- **Healthcare** - Accept payments from Health Savings Accounts (HSA) and Flexible Spending Accounts (FSA). \n"
       tags:
         - subpackage_cardPayments.subpackage_cardPayments/payments
       parameters:
@@ -4559,7 +4555,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](idempotency.md).
           required: true
           schema:
             type: string
@@ -5044,8 +5040,8 @@ components:
         Object that contains information about the dynamic currency conversion
         (DCC) offer.  
           
-        For more information about DCC, go to [Dynamic Currency
-        Conversion](https://docs.payroc.com/knowledge/card-payments/dynamic-currency-conversion).
+        For more information about DCC, go to Dynamic Currency
+        Conversion.
       title: dccOffer
     StandingInstructionsSequence:
       type: string
@@ -5606,8 +5602,8 @@ components:
         - YDQ
       description: >-
         Unit of measurement for the item. For more information about units of
-        measurement, go to [Units of
-        measurement](https://docs.payroc.com/knowledge/basic-concepts/units-of-measurement).
+        measurement, go to Units of
+        measurement.
       title: unitOfMeasure
     lineItemRequest:
       type: object
@@ -6495,8 +6491,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
           required:
             - entryMethod
             - device
@@ -6534,8 +6530,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             ebtDetails:
               $ref: '#/components/schemas/ebtDetailsWithVoucher'
           required:
@@ -6563,8 +6559,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingKeyedPinDetails
@@ -6605,8 +6601,8 @@ components:
               type: string
               description: >-
                 Cardholder's signature. For more information about how to format
-                the signature, go to [How to send a signature to our
-                gateway](https://docs.payroc.com/knowledge/basic-concepts/signature-capture).
+                the signature, go to How to send a signature to our
+                gateway.
             pinDetails:
               $ref: >-
                 #/components/schemas/FxRateInquiryPaymentMethodDiscriminatorMappingCardCardDetailsDiscriminatorMappingSwipedPinDetails
@@ -6696,12 +6692,10 @@ components:
         Provider of the digital wallet. Send one of the following values:
 
         - `apple` - For more information about how to integrate with Apple Pay,
-        go to [Apple
-        Pay®](https://docs.payroc.com/guides/take-payments/apple-pay).
+        go to Apple Pay®.
 
         - `google` - For more information about how to integrate with google
-        Pay, go to [Google
-        Pay®](https://docs.payroc.com/guides/take-payments/google-pay).
+        Pay, go to Google Pay®.
       title: >-
         FxRateInquiryPaymentMethodDiscriminatorMappingDigitalWalletServiceProvider
     BankTransferPaymentRequestPaymentMethodDiscriminatorMappingSingleUseTokenAccountType:
@@ -6902,12 +6896,10 @@ components:
                 values:
 
                 - `apple` - For more information about how to integrate with
-                Apple Pay, go to [Apple
-                Pay®](https://docs.payroc.com/guides/take-payments/apple-pay).
+                Apple Pay, go to Apple Pay®.
 
                 - `google` - For more information about how to integrate with
-                google Pay, go to [Google
-                Pay®](https://docs.payroc.com/guides/take-payments/google-pay).
+                google Pay, go to Google Pay®.
             cardholderName:
               type: string
               description: Cardholder’s name.
@@ -8246,5 +8238,5 @@ components:
 
 After you integrate with the Apple Pay JS API and the Payroc API, complete the following steps:
 
-* **Set up Apple Pay for each merchant** - To set up Apple Pay for a merchant to run transactions, go to [Set up Apple Pay for a Merchant](/guides/take-payments/apple-pay/set-up-apple-pay-for-a-merchant).
+* **Set up Apple Pay for each merchant** - To set up Apple Pay for a merchant to run transactions, go to [Set up Apple Pay for a Merchant](set-up-apple-pay-for-a-merchant.md).
 * **Set up a Sandbox Apple Account** - To run test transactions with Apple Pay, set up a Sandbox Apple Account. To set up a Sandbox Apple Account, contact our Integrations Team at [integrationsupport@payroc.com](mailto:integrationsupport@payroc.com).

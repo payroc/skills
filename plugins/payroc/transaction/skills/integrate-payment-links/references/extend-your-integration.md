@@ -5,9 +5,9 @@
 
 After you set up your integration to create and share a payment link, you extend your integration to include the following:
 
-* [**Share a link**](https://docs.payroc.com/api/schema/payment-links/sharing-events/share) — Send an existing payment link to one or more customers by email.
-* [**Update a link**](https://docs.payroc.com/api/schema/payment-links/partially-update) — Update a payment link, for example, its expiration date.
-* [**Retrieve a link**](https://docs.payroc.com/api/schema/payment-links/retrieve) — Retrieve the details of a payment link.
-* [**Retrieve a list of links**](https://docs.payroc.com/api/schema/payment-links/list) - Retrieve a paginated list of payment links that are associated with a processing terminal.
-* [**Retrieve a link's sharing events**](https://docs.payroc.com/api/schema/payment-links/sharing-events/list) — Retrieve a paginated list of the times that a merchant shared a payment link.
-* [**Deactivate a link**](https://docs.payroc.com/api/schema/payment-links/deactivate) — Deactivate a payment link.
+* [**Share a link**](./api-schema.md#share-a-link-by-email) — Send an existing payment link to one or more customers by email.
+* [**Update a link**](./api-schema.md#update-a-link-json-patch) — Update a payment link, for example, its expiration date.
+* [**Retrieve a link**](./api-schema.md#retrieve-a-link) — Retrieve the details of a payment link.
+* [**Retrieve a list of links**](./api-schema.md#list-links-for-a-terminal) - Retrieve a paginated list of payment links that are associated with a processing terminal.
+* [**Retrieve a link's sharing events**](./api-schema.md#list-sharing-events) — Retrieve a paginated list of the times that a merchant shared a payment link.
+* [**Deactivate a link**](./api-schema.md#deactivate-a-link) — Deactivate a payment link.

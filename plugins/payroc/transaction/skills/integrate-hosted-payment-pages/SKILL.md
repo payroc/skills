@@ -61,6 +61,8 @@ On first invocation, announce to the developer:
 
 ## Quick reference
 
+> When implementing any REST API call (capture, subscriptions, MIT payments), read `references/identity-call.md` for Bearer token exchange details. Do not guess the identity endpoint URL, header name, or response shape — use only what the reference documents.
+
 ```text
 # Identity service (Bearer token — used for REST APIs: capture, repeat payments)
 # UAT/test: identity.uat.payroc.com · Production: identity.payroc.com (note: UAT has the .uat segment, prod does not)
@@ -107,6 +109,7 @@ If your question is "what does the capture API request body look like, and what 
 | Source | Local file | Use for |
 | --- | --- | --- |
 | API schema reference | `references/api-schema.md` | Capture API, `transactionResult` schema, any Payroc REST API field/enum |
+| Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 | Repeat-payments API schema | `references/repeat-payments-api-schema.md` | Secure Tokens, Payment Plans, Subscriptions endpoints/enums; Payments `secureToken` + `standingInstructions` (MIT) |
 | Authenticate (HMAC field order, AMOUNT/DATETIME formats) | `references/authenticate-your-requests.md` | Sale/pre-auth hash recipe — authoritative |
 | Load the Hosted Payment Page (POST fields + enums) | `references/load-hosted-payment-page.md` | Sale/pre-auth HPP form-POST field names and accepted enum values — authoritative |
@@ -118,6 +121,7 @@ If your question is "what does the capture API request body look like, and what 
 | Pre-auth flow (Steps 2–4) | `references/pre-auth.md` | Pre-auth flow (reads the narrative copies + `api-schema.md` for capture) |
 | Recurring flow (save card + repeat payments) | `references/recurring.md` | Recurring flow (reads the `save-payment-details/` copies + `repeat-payments-api-schema.md`) |
 | Background validation | `references/implement-background-validation.md` | Webhook validation flow |
+| Bearer token exchange (REST API calls) | `references/identity-call.md` | Identity service endpoint URL, `x-api-key` header, response shape — authoritative for capture + subscription auth |
 
 These are local snapshots, authoritative for this skill. Their source URLs and last-synced dates are
 recorded in [`references/_sources.md`](references/_sources.md) — regenerate from there if they look stale.

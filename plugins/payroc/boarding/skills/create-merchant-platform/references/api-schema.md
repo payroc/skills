@@ -512,3 +512,13 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
   ]
 }
 ```
+
+---
+
+## Errors
+
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+Status codes this endpoint returns: `400` (validation, incl. `idempotencyKeyMissing`), `401`
+(auth/expired token), `403` (permissions), `409` (conflict — `resourceAlreadyExists`,
+`idempotencyKeyInUse`, `taxIdInUse`), `500` (server — retry with backoff).

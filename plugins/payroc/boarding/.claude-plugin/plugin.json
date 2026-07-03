@@ -3,6 +3,9 @@
   "description": "Skills for merchant boarding and onboarding flows",
   "skills": [
     "./skills/create-merchant-platform",
-    "./skills/create-pricing-intent"
+    "./skills/create-pricing-intent",
+    "./skills/add-processing-account",
+    "./skills/add-attachment-to-processing-account",
+    "./skills/order-a-terminal"
   ]
 }

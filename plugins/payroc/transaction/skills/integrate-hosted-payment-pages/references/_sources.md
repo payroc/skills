@@ -15,6 +15,7 @@ file's header.
 | `save-payment-details/load-hosted-payment-page.md` | https://docs.payroc.com/essentials/hosted-payment-page/extend-your-integration/save-a-customers-payment-details/load-hosted-payment-page.md | 2026-06-04 | payroc-verbatim |
 | `save-payment-details/build-receipt-page.md` | https://docs.payroc.com/essentials/hosted-payment-page/extend-your-integration/save-a-customers-payment-details/build-receipt-page.md | 2026-06-04 | payroc-verbatim |
 | `repeat-payments-api-schema.md` | https://docs.payroc.com/openapi.yml (Repeat Payments — Secure Tokens, Payment Plans, Subscriptions + Payments `secureToken` / `standingInstructions` schemas) | 2026-06-04 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange; used for REST API calls: capture, subscriptions. HPP form-POST auth is hash-based and covered by `authenticate-your-requests.md`) | 2026-06-22 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party API surface (none in this skill).

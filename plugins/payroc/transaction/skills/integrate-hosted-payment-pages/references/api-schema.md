@@ -127,6 +127,16 @@ Required: `status`, `responseCode`.
 
 ---
 
+## Errors
+
+These codes apply to the server-side Payroc REST API calls (capture, and the repeat-payments endpoints in `repeat-payments-api-schema.md`) — not to the HPP form-POST / receipt-callback surface, which signals outcomes via `RESPONSECODE` (see the narrative copies).
+
+Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
+
+For the capture call (`POST /payments/{paymentId}/capture`), expect: `400`, `401`, `403`, `404` (unknown `paymentId` in the path, or a pre-auth that has expired), `409` (pre-auth already captured / idempotency-key reuse), `500`.
+
+---
+
 ## Required headers (capture / REST API)
 
 | Header | Where | Notes |

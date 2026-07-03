@@ -77,7 +77,7 @@ curl
 
 ### Errors
 
-If your request is unsuccessful, we return an error. For more information about errors, see [Errors](/api/errors).
+If your request is unsuccessful, we return an error. For more information about errors, see [Errors](error-response-format.md).
 
 ## Step 1. Create a payment link
 
@@ -130,7 +130,7 @@ paths:
 
         **Note:** To share the payment link with a customer, use our [Share
         Payment
-        Link](https://docs.payroc.com/api/schema/payment-links/sharing-events/share)
+        Link](./api-schema.md#share-a-link-by-email)
         method.
       tags:
         - subpackage_paymentLinks
@@ -147,7 +147,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -1220,7 +1220,7 @@ paths:
 
         **Note:** To share the payment link with a customer, use our [Share
         Payment
-        Link](https://docs.payroc.com/api/schema/payment-links/sharing-events/share)
+        Link](./api-schema.md#share-a-link-by-email)
         method.
       tags:
         - subpackage_paymentLinks
@@ -1237,7 +1237,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -2169,11 +2169,11 @@ paths:
 
         To email a payment link, you need its paymentLinkId. Our gateway
         returned the paymentLinkId in the response of the [Create Payment
-        Link](https://docs.payroc.com/api/schema/payment-links/create) method.  
+        Link](./api-schema.md#create-a-payment-link) method.  
 
 
         **Note:** If you don't have the paymentLinkId, use our [List Payment
-        Links](https://docs.payroc.com/api/schema/payment-links/list) method to
+        Links](./api-schema.md#list-links-for-a-terminal) method to
         search for the payment link.  
 
 
@@ -2183,7 +2183,7 @@ paths:
 
         In the response, our gateway returns a sharingEventId, which you can use
         to [List Payment Link Sharing
-        Events](https://docs.payroc.com/api/schema/payment-links/sharing-events/list).  
+        Events](./api-schema.md#list-sharing-events).  
       tags:
         - subpackage_paymentLinks.subpackage_paymentLinks/sharingEvents
       parameters:
@@ -2199,7 +2199,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
@@ -2763,11 +2763,11 @@ paths:
 
         To email a payment link, you need its paymentLinkId. Our gateway
         returned the paymentLinkId in the response of the [Create Payment
-        Link](https://docs.payroc.com/api/schema/payment-links/create) method.  
+        Link](./api-schema.md#create-a-payment-link) method.  
 
 
         **Note:** If you don't have the paymentLinkId, use our [List Payment
-        Links](https://docs.payroc.com/api/schema/payment-links/list) method to
+        Links](./api-schema.md#list-links-for-a-terminal) method to
         search for the payment link.  
 
 
@@ -2777,7 +2777,7 @@ paths:
 
         In the response, our gateway returns a sharingEventId, which you can use
         to [List Payment Link Sharing
-        Events](https://docs.payroc.com/api/schema/payment-links/sharing-events/list).  
+        Events](./api-schema.md#list-sharing-events).  
       tags:
         - subpackage_paymentLinks.subpackage_paymentLinks/sharingEvents
       parameters:
@@ -2793,7 +2793,7 @@ paths:
             Unique identifier that you generate for each request. You must use
             the [UUID v4 format](https://www.rfc-editor.org/rfc/rfc4122) for the
             identifier. For more information about the idempotency key, go to
-            [Idempotency](https://docs.payroc.com/api/idempotency).
+            [Idempotency](./idempotency.md).
           required: true
           schema:
             type: string
