@@ -19,7 +19,7 @@ description: >
   or transaction management. If the user says "payment intent" but clearly wants a reusable fee
   template, use this skill and confirm.
 metadata:
-  version: "0.3.4"
+  version: "0.3.5"
   category: boarding
   status: draft
 ---

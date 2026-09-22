@@ -15,7 +15,7 @@ description: >
   (initial boarding of a brand-new merchant) — reach for this skill when the merchant platform
   already exists and you have its merchantPlatformId.
 metadata:
-  version: "0.1.3"
+  version: "0.2.0"
   category: boarding
   status: draft
 ---
@@ -80,8 +80,8 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 
 ## How to work (core principles)
 
-- **Read before you emit.** The request body is one `createProcessingAccount` object with ~13
-  required fields and several nested objects. Open `references/api-schema.md` and copy field
+- **Read before you emit.** The request body is one `createProcessingAccount` object with
+  several required fields and nested objects. Open `references/api-schema.md` and copy field
   names, enum values, and the funding `paymentMethods` shape from there. Don't reconstruct them
   from memory.
 - **Gather before you build.** Boarding needs real data (owners, SSNs, bank details, volumes).
@@ -112,6 +112,10 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
    card-present / MOTO / e-commerce split (must sum to 100).
 6. **Funding** — bank account name, routing number, account number, account type, and use.
 7. **Signature** — email signing (`requestedViaEmail`, most common) or direct link.
+8. **Addendums** — does the merchant need any special forms sent with the agreement (installment
+   payments, money services, telehealth, firearms, pharmacy CNP, CBD, tobacco CNP, donations,
+   Clover equipment, Roc Giving)? `addendums` is a required field on the request, but `[]` is a
+   valid answer if none apply — see `references/api-schema.md#addendums`.
 
 ---
 
@@ -152,9 +156,10 @@ The request body **is** a single processing-account object — no `business` wra
 `processingAccounts` array. (That wrapper belongs to `POST /merchant-platforms` during initial
 boarding; here you POST one account object to the platform's sub-resource.)
 
-Required fields: `doingBusinessAs`, `businessType`, `categoryCode`, `merchandiseOrServiceSold`,
-`businessStartDate`, `timezone`, `address`, `contactMethods`, `owners`, `processing`,
-`funding`, `pricing`, `signature`. Optional: `website`, `contacts`, `metadata`.
+Required fields: `doingBusinessAs`, `owners`, `merchandiseOrServiceSold`, `businessStartDate`,
+`timezone`, `address`, `contactMethods`, `processing`, `funding`, `pricing`, `signature`,
+`addendums`. Optional: `businessType`, `categoryCode`, `processor`, `website`, `contacts`,
+`metadata`.
 
 Read `references/api-schema.md` for the full field list and the annotated example. The points
 worth stating up front, because they're the common mistakes:
@@ -276,6 +281,7 @@ nothing, but the corrected body no longer matches the old key — reusing it ret
 |--------|----------|--------|
 | 400 validation | Field issues | Fix each `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
+| 400 addendum/processor validation | Unrecognized or duplicate `addendums[].type`, an addendum missing a required field, or an unrecognized `processor` | Not a fatal or unexpected error — see the addendum/processor error table in `references/api-schema.md`; fix the flagged field and resubmit |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
 | 403 | Permissions, or account not email-signing (reminders) | Check API key scope; confirm `requestedViaEmail` |
 | 404 | Unknown `merchantPlatformId` / `processingAccountId` | Verify the id via the list endpoints |

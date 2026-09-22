@@ -13,7 +13,7 @@ description: >
   reusable/secure token, or set up recurring billing — those require the
   save-a-payment-method skill.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: transaction
   status: draft
 ---

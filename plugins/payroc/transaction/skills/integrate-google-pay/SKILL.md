@@ -9,7 +9,7 @@ description: >-
   gateway — even if they don't explicitly mention "integration" or ask for
   step-by-step guidance.
 metadata:
-  version: "0.4.0"
+  version: "0.4.1"
   category: integration
   status: draft
 ---

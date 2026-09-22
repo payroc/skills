@@ -13,7 +13,7 @@ description: >
   set-up-a-payment-plan instead), one-time card sales or refunds, saving or tokenizing a payment
   method, event webhook subscriptions, or payment links.
 metadata:
-  version: "0.4.0"
+  version: "0.4.2"
   category: transaction
   status: draft
 ---
@@ -539,7 +539,7 @@ cross-skill standard.
 
 - [ ] API key sourced from environment variable — never hardcoded
 - [ ] Bearer token generated from identity service using the URL and header from `references/identity-call.md`
-- [ ] `Idempotency-Key` header present (UUID v4) on every POST and PATCH
+- [ ] `Idempotency-Key` header present (UUID v4) on every POST and PATCH except `/deactivate`, `/reactivate` and DELETE
 - [ ] All enum values (`type`, `frequency`, `onUpdate`, `onDelete`, `accountType`, `secCode`) read from `references/api-schema.md` — not from memory
 - [ ] `paymentPlanId` and `subscriptionId` are merchant-assigned unique strings
 - [ ] `recurringOrder.amount` present in plan when `type: automatic`

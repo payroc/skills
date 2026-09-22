@@ -1,7 +1,7 @@
 # Apple Pay — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Apple Pay session + payment request schemas). Last synced: 2026-06-01. This is the offline source of
+> (Apple Pay session + payment request schemas). Last synced: 2026-07-23. This is the offline source of
 > truth this skill emits from — read enum values and required-field sets from here, not from memory. To
 > refresh, re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -14,10 +14,11 @@ cross the wire to Payroc as named here.
 
 ## Endpoints
 
-| Operation | Method & path |
-| --- | --- |
-| Start an Apple Pay session | `POST /v1/processing-terminals/{processingTerminalId}/apple-pay-sessions` |
-| Run a payment (sale / pre-auth) | `POST /v1/payments` |
+| Operation | Method & path | Notes |
+| --- | --- | --- |
+| Start an Apple Pay session (terminal-path variant) | `POST /v1/processing-terminals/{processingTerminalId}/apple-pay-sessions` | Original endpoint; `processingTerminalId` is a path parameter |
+| Start an Apple Pay session (payments-path variant) | `POST /v1/payments/apple-pay/sessions` | **New** (added 2026-07-23); `processingTerminalId` is a body field — prefer this endpoint for new integrations |
+| Run a payment (sale / pre-auth) | `POST /v1/payments` | |
 
 UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
 Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
@@ -92,11 +93,30 @@ ISO 4217 three-letter code (e.g. `GBP`, `USD`, `EUR`). Full enum is in the spec;
 Required: `appleDomainId`, `appleValidationUrl`.
 Header: `Authorization: Bearer <token>` (required). This endpoint takes **no** `Idempotency-Key` parameter.
 
+### applePaySessions (payments-path variant — new endpoint, start-session request body)
+
+`POST /v1/payments/apple-pay/sessions`
+
+Added 2026-07-23. Use this endpoint for new integrations. The `processingTerminalId` moves from the URL
+path into the request body; otherwise the session-start mechanics are identical to the terminal-path
+variant above.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `processingTerminalId` | string | **required** — the UAT/prod terminal ID (was a path parameter in the old endpoint; now a body field). |
+| `appleDomainId` | string | **required** — the unique domain ID from the Payroc Self-Care Portal (Step 1). |
+| `appleValidationUrl` | string | **required** — the `validationURL` from Apple's `onvalidatemerchant` event, passed through verbatim. |
+
+Required: `processingTerminalId`, `appleDomainId`, `appleValidationUrl`.
+Header: `Authorization: Bearer <token>` (required). This endpoint takes **no** `Idempotency-Key` parameter.
+
 ### applePayResponseSession (start-session response, 200)
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `startSessionResponse` | string | **required** — the object Apple returns to start the merchant's session. Pass it back to Apple via `completeMerchantValidation` (unwrapped). |
+
+> This response shape applies to both the terminal-path and payments-path variants.
 
 ### paymentRequest (run-a-payment request body) — `paymentRequest`
 

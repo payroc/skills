@@ -28,7 +28,12 @@ Full production URL: `POST https://api.payroc.com/v1/cards/balance`
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | token from the identity service; expires in 3600s |
 | `Content-Type: application/json` | POST | |
-| `Idempotency-Key: <UUID v4>` | POST | required; fresh UUID per distinct operation |
+| `Idempotency-Key: <UUID v4>` | not used | see the note below |
+
+> **Note:** `POST /v1/cards/balance` does **not** require an `Idempotency-Key` header. Unlike most
+> Payroc POST endpoints this is a read-only balance inquiry — no resource is created or modified.
+> Sending the header anyway is harmless; the gateway ignores it. Omitting it does not return a
+> `400`.
 
 ---
 

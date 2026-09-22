@@ -215,7 +215,10 @@ Response (201): `subscriptionPayment` — includes `payment.paymentId`, `payment
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | token from the identity service; expires in 3600s |
 | `Content-Type: application/json` | POST / PATCH | |
-| `Idempotency-Key: <UUID v4>` | every POST and PATCH | required; fresh UUID per distinct operation |
+| `Idempotency-Key: <UUID v4>` | every POST and PATCH — **except** the deactivate and reactivate sub-endpoints | required; fresh UUID per distinct operation |
+
+The deactivate (`/deactivate`) and reactivate (`/reactivate`) subscription POSTs do not require
+`Idempotency-Key`. Sending the header anyway is harmless; the gateway ignores it.
 
 ---
 

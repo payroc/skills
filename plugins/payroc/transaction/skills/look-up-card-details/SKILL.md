@@ -14,7 +14,7 @@ description: >-
   number format validation (Luhn check), processing a card payment, pre-authorization, refunds,
   configuring surcharging on a terminal, or general surcharging setup — those are separate skills.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: transaction
   status: draft
 ---

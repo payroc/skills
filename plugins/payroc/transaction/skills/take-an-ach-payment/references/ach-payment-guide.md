@@ -5,7 +5,7 @@
 > `https://docs.payroc.com/guides/take-payments/payments/re-present-an-ach-payment.md`,
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/referenced-refunds/bank.md`,
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/reversals/bank.md`.
-> Last synced: 2026-06-22.
+> Last synced: 2026-09-18.
 
 ---
 
@@ -94,12 +94,18 @@ automatically reverses it (rather than routing a return). No explicit reversal n
 
 ## Refunds
 
-Use `POST /v1/bank-transfer-payments/{paymentId}/refund` to issue a referenced refund after a payment
-has settled. To issue a refund not linked to an existing payment (unreferenced), use
-`POST /v1/bank-transfer-refunds` instead.
+Use `POST /v1/bank-transfer-payments/{paymentId}/refund` to issue a referenced refund against a PAD
+payment. The body requires `amount` and `description`. To issue a refund not linked to an existing
+payment (unreferenced), use `POST /v1/bank-transfer-refunds` instead.
+
+**ACH payments:** You can't run a referenced refund against an ACH payment that is in a closed batch.
+Our gateway returns a `400` error, `Bank transfer with status COMPLETE can not be refunded`. To return
+funds for an ACH payment after its batch closes, run an unreferenced refund
+(`POST /v1/bank-transfer-refunds`) instead. This doesn't apply to pre-authorized debit (PAD) payments.
 
 **Refund timing note:** If the original payment is still in an open batch when the refund is requested,
-the gateway automatically reverses it instead of processing a true refund.
+the gateway automatically reverses it instead of processing a true refund. That response carries
+`transactionResult.type: "payment"` and `status: "reversal"`, with a positive `authorizedAmount`.
 
 ---
 

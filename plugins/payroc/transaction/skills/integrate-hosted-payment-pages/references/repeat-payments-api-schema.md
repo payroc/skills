@@ -32,7 +32,9 @@ Identity (production): `POST https://identity.payroc.com/authorize` with header 
 
 All requests use **Bearer-token** auth (`Authorization: Bearer <token>`, token from the identity service,
 expires in 3600s) — the same mechanism as the pre-auth Capture API, **not** the HPP HMAC hash. POSTs also
-require `Content-Type: application/json` and an `Idempotency-Key: <UUID v4>`.
+require `Content-Type: application/json` and an `Idempotency-Key: <UUID v4>` — **except** the
+deactivate and reactivate sub-endpoints, which do not require `Idempotency-Key`. Sending the
+header anyway is harmless; the gateway ignores it.
 
 **Dependency order (gateway path):** Subscriptions reference a payment plan and a secure token, so the plan
 and the token must exist first. With HPP save-card, the token already exists — its `token` value is the

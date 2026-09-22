@@ -15,7 +15,7 @@ description: >-
   (that is hardware setup, out of scope). If the user wants to set up or pair a device, say that is
   out of scope and that this skill picks up once a device serial number exists.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: transaction
   status: draft
 ---

@@ -1,5 +1,5 @@
 > **Canonical reference — Payroc Identity Service.** Source: https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only; the Hosted Fields session-token step is not included here).
-> Last synced: 2026-06-22. Authoritative for all skills that call the Payroc REST API.
+> Last synced: 2026-09-16. Authoritative for all skills that call the Payroc REST API.
 
 # Payroc Identity Service — Bearer Token Exchange
 
@@ -72,11 +72,15 @@ curl -X POST https://identity.payroc.com/authorize \
 
 ## Using the token on subsequent requests
 
-Include the token in the `Authorization` header of every Payroc REST API call:
+Include the token in the `Authorization` header of every Payroc REST API call, along with `Content-Type: application/json` and (on `POST`/`PATCH` requests) an `Idempotency-Key`:
 
 ```text
 Authorization: Bearer <access_token>
+Content-Type: application/json
+Idempotency-Key: <UUID v4>
 ```
+
+Some endpoints require a different `Content-Type`. Check that skill's own reference material for exceptions before assuming `application/json`.
 
 **Token lifetime guidance:**
 - Exchange once per session (not once per request).

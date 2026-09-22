@@ -16,7 +16,7 @@ description: >
   a merchant, running payments or transactions, or any operation that does not involve uploading
   or retrieving file attachment metadata for an existing processing account.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: boarding
   status: draft
 ---

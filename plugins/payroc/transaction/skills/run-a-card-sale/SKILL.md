@@ -14,7 +14,7 @@ description: >
   ACH/bank-transfer payments, 3-D Secure authentication, or Hosted Fields / Hosted Payment Pages
   (embedded UI card input) — those are separate skills.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   category: transaction
   status: draft
 ---
@@ -205,6 +205,13 @@ Based on intake:
 - `currency` is an ISO 4217 code. Read valid values from `references/api-schema.md`.
 
 If the developer needs itemised amounts (tips, taxes, surcharge), add a `breakdown` object. Read the breakdown schema from `references/api-schema.md` before writing any `tip.type`, `tax.type`, or `healthcareExpenses[].type` enum values.
+
+> **Level 2/3/CEDP interchange rates.** None of these fields are required by the API, but if the
+> developer is processing B2B or purchasing-card transactions and wants the lower Level 2/Level
+> 3 interchange rates, mention that supplying `taxes`, `dutyAmount`, `freightAmount`, and
+> per-item `commodityCode`/`productCode` on `breakdown.items` is what qualifies a transaction —
+> see "Level 2/3/CEDP fields" in `references/api-schema.md`. Don't add them unprompted; just
+> surface the option when the developer's use case sounds like it would benefit.
 
 ### 2c. Build the paymentMethod object
 

@@ -15,7 +15,7 @@ description: >
   funds to an existing recipient, viewing funding activity or reports, processing ACH
   payments unrelated to recipient setup, or onboarding a merchant processing account.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: funding
   status: draft
 ---

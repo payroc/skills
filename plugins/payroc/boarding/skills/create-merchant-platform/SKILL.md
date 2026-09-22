@@ -10,7 +10,7 @@ description: >
   merchant registration, owner/control-prong requirements, pricing agreements, or signature
   capture during boarding — even if they don't use the word "skill" or "boarding API" explicitly.
 metadata:
-  version: "0.1.6"
+  version: "0.2.0"
   category: boarding
   status: draft
 ---
@@ -123,8 +123,6 @@ per account:
 | Field | Notes |
 |-------|-------|
 | `doingBusinessAs` | Trading/DBA name |
-| `businessType` | `retail`, `restaurant`, `internet`, `moto`, `lodging`, `notForProfit` |
-| `categoryCode` | 4-digit MCC integer |
 | `merchandiseOrServiceSold` | Plain-English description |
 | `businessStartDate` | `YYYY-MM-DD` |
 | `timezone` | e.g. `"America/New_York"` — see schema reference for full list |
@@ -135,6 +133,19 @@ per account:
 | `funding` | Bank account and settlement schedule |
 | `pricing` | Pricing intent ID or full pricing agreement |
 | `signature` | How the merchant signs the contract |
+| `addendums` | Array — `[]` if no special forms apply, see Addendums below |
+
+`businessType` (`retail`, `restaurant`, `internet`, `moto`, `lodging`, `notForProfit`) and
+`categoryCode` (4-digit MCC integer) are optional — send them when known, since downstream
+boarding review still uses them. `processor` (`tsys` | `fiserv`, default `tsys`) is also
+optional; send it explicitly rather than relying on the default.
+
+**Addendums** — ask whether the merchant needs any of these forms sent with the agreement:
+installment payments, money services, telehealth, firearms, pharmacy CNP compliance, CBD,
+tobacco CNP, donations, Clover equipment, or Roc Giving. `addendums` is required on the
+request but `[]` is a valid answer if none apply. See `references/api-schema.md#addendums`
+for the per-type payload shapes (Clover and Roc Giving carry real fields; the rest are
+attestation-only).
 
 **Ownership rules** — every processing account needs:
 - Exactly one owner with `relationship.isControlProng: true` (only one control prong is allowed)
@@ -220,6 +231,7 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 |--------|----------|--------|
 | 400 validation | Field issues | Fix each field in `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
+| 400 addendum/processor validation | Unrecognized or duplicate `addendums[].type`, an addendum missing a required field, or an unrecognized `processor` | Not a fatal or unexpected error — see the addendum/processor error table in `references/api-schema.md`; fix the flagged field and resubmit |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
 | 403 | Insufficient permissions | Check API key scope; contact Payroc support |
 | 409 `resourceAlreadyExists` | Duplicate merchant | Check if merchant was already boarded; retrieve existing record |

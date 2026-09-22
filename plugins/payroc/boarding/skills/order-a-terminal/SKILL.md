@@ -9,12 +9,15 @@ description: >
   settings (batch closure, tips, taxes, receipts, tokenization) at order time, build the request
   body for POST .../terminal-orders, check the status of a terminal order, list a processing
   account's terminal orders (GET /processing-accounts/{id}/terminal-orders), retrieve one order
-  (GET /terminal-orders/{id}), or read the provisioned processing terminal and its host-processor
-  configuration — even if they don't say "skill", "terminal order", or "boarding API" explicitly.
+  (GET /terminal-orders/{id}), specify who pays for the terminal and how (paymentIntent — merchant
+  or sales partner, hosted payment page / account on file / residual offset), retrieve a payment
+  intent (GET /payment-intents/{id}), or read the provisioned processing terminal and its
+  host-processor configuration — even if they don't say "skill", "terminal order", or "boarding
+  API" explicitly.
   This is distinct from add-processing-account (creating the MID itself) — reach for this skill once
   the processing account exists and you have its processingAccountId and want to send it hardware.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   category: boarding
   status: draft
 ---
@@ -108,6 +111,10 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 4. **Training** — `trainingProvider` `partner` (default) or `payroc`.
 5. **Terminal configuration (optional)** — only if the merchant specified it: timezone, industry
    template, batch closure, tips, taxes, receipt notifications, tokenization, gateway/device settings.
+6. **Who pays for the terminal (optional)** — omit `paymentIntent` unless the developer asks about
+   billing for the order. If they do: is it the merchant or the sales partner, and how (hosted
+   payment page / account on file / residual offset)? See
+   `references/api-schema.md#paymentintent-object-optional`.
 
 ---
 

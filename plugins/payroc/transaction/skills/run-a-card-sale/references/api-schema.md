@@ -1,7 +1,7 @@
 # Run a Card Sale — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (payments schemas). Last synced: 2026-06-22. This is the offline source of truth this skill emits
+> (payments schemas). Last synced: 2026-09-16. This is the offline source of truth this skill emits
 > from — read enum values and required-field sets from here, not from memory. To refresh, re-fetch the
 > source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -204,6 +204,20 @@ The `keyed` entry type is the most common for online/MOTO card-not-present sales
 | `dualPricing` | object | Alternative pricing: `offered`, `choiceRate`, `alternativeTender` |
 | `healthcareExpenses` | array | Each: `type` enum + `amount` |
 | `items` | array | Line items: commodity code, product code, unit price, quantity, taxes |
+
+#### Level 2/3/CEDP fields
+
+None of the fields below are structurally required by the API. Spec prose (not a `required:`
+constraint) marks them as needed to qualify a transaction for Level 2/Level 3/CEDP enhanced-data
+interchange rates — lower rates on B2B and purchasing-card transactions in exchange for richer
+line-item and tax detail. Send them when the merchant wants that rate benefit; omit them for a
+plain consumer sale.
+
+| Field | Needed for |
+| --- | --- |
+| `subtotal`, `taxes` | Level 2, Level 3, CEDP |
+| `breakdown.dutyAmount`, `breakdown.freightAmount`, `breakdown.items` (the array itself) | Level 3, CEDP |
+| Each item's `commodityCode`, `productCode`, `description`, `unitPrice`, `quantity` | Level 3, CEDP |
 
 ### customer object (optional)
 

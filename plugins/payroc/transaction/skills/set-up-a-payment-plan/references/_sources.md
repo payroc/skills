@@ -8,7 +8,7 @@ file's header.
 | --- | --- | --- | --- |
 | `api-schema.md` | https://docs.payroc.com/openapi.yml (Repeat Payments schemas) and https://docs.payroc.com/api/schema/repeat-payments/payment-plans/create.md + subscriptions/create.md | 2026-06-22 | payroc-verbatim (curated slice) |
 | `repeat-payments-guide.md` | https://docs.payroc.com/guides/take-payments/repeat-payments/use-our-gateway.md and https://docs.payroc.com/knowledge/card-payments/payment-plans-and-subscriptions.md | 2026-06-22 | payroc-verbatim |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party API surface (none in this skill).

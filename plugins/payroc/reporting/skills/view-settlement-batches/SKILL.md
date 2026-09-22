@@ -13,7 +13,7 @@ description: >
   (use view-ach-deposits), disputes (use view-disputes), or authorizations
   (use view-authorizations).
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: reporting
   status: draft
 ---

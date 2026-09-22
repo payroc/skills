@@ -42,6 +42,14 @@
 `interchangePlus` | `interchangePlusPlus` | `tiered3` | `tiered4` | `tiered6` |
 `flatRate` | `consumerChoice` | `rewardPayChoice`
 
+### processor (backend processor — top-level field on processingAccounts[], not the pricing object's `processor` above)
+`tsys` | `fiserv` (default `tsys`). Send it explicitly — don't rely on the default.
+
+### addendumType
+`installmentPaymentsV1` | `moneyServicesV1` | `telehealthV1` | `firearmsV1` |
+`pharmacyCnpComplianceV1` | `cbdV1` | `tobaccoCnpV1` | `donationsV1` |
+`cloverMerchantProcessingAmendmentV1` | `rocGivingV1`. See [Addendums](#addendums) below.
+
 ---
 
 ## Request body
@@ -87,14 +95,20 @@
 
 ## processingAccounts[] object
 
+`businessType` and `categoryCode` are optional (previously both required — send them when
+known, downstream boarding review still uses them). `addendums` is required, but not required
+to be non-empty — send `"addendums": []` when none of the [Addendums](#addendums) forms apply.
+
 ```json
 {
   "doingBusinessAs": "Acme Widgets",          // string, required
-  "businessType": "retail",                   // enum, required
-  "categoryCode": 5999,                       // integer MCC, required
+  "businessType": "retail",                   // enum, optional — send if known
+  "categoryCode": 5999,                       // integer MCC, optional — send if known
+  "processor": "tsys",                        // enum tsys|fiserv, optional, default tsys — send explicitly
   "merchandiseOrServiceSold": "Office supplies and widgets",  // string, required
   "businessStartDate": "2018-06-01",          // YYYY-MM-DD, required
   "timezone": "America/Chicago",              // enum, required
+  "addendums": [ ],                           // required — [] if none apply, see Addendums
   "website": "https://acme.example.com",      // optional, but REQUIRED when processing.volumeBreakdown.ecommerce > 0
 
   "address": {                                // required
@@ -164,6 +178,67 @@ control prong and a different authorized signatory.
 }
 // A second owner is required as the authorized signatory: "isControlProng": false, "isAuthorizedSignatory": true.
 ```
+
+---
+
+## Addendums
+
+`addendums` (on each `processingAccounts[]` entry) is an array of polymorphic `addendumEntry`
+objects, each discriminated by `type`. Send `[]` if none apply. Eight of the ten types are
+attestation-only — the entire object is just the discriminator:
+
+```json
+{ "type": "installmentPaymentsV1" }
+```
+
+| `type` | Send it when the merchant… |
+| --- | --- |
+| `installmentPaymentsV1` | offers installment payments, loans, or leases |
+| `moneyServicesV1` | offers money services (e.g. traveler's checks) |
+| `telehealthV1` | provides telehealth services |
+| `firearmsV1` | sells firearms |
+| `pharmacyCnpComplianceV1` | is a pharmacy accepting card-not-present transactions |
+| `cbdV1` | sells CBD, synthetic THC/cannabis, HHC, kratom, tianeptine, or delta 8/9/10/0 THC products |
+| `tobaccoCnpV1` | sells tobacco and accepts card-not-present transactions |
+| `donationsV1` | accepts donations |
+
+The other two carry real payloads:
+
+**`cloverMerchantProcessingAmendmentV1`** — merchant is ordering Clover equipment. `lineItems`
+is required, an object keyed by device SKU (`cloverCompact`, `cloverFlex4thGen`,
+`cloverFlexPocket`, `cloverMiniLte3rdGen`, `cloverSoloPosSystem`,
+`cloverStationDuoGen2PosSystem`, `cloverCompactTetherCable`, `cloverCashDrawer`,
+`cloverKitchenPrinter`, `cloverKitchenPrinterThermal`, `cloverWeightScale`,
+`cloverHandsFreeScanner`, `cloverBarCodeScanner`, `cloverKds24`, `cloverKds14`), at least one
+key present, each value `{ "quantity": <int, min 1>, "totalPrice": <int cents, min 0> }`:
+
+```json
+{
+  "type": "cloverMerchantProcessingAmendmentV1",
+  "lineItems": {
+    "cloverSoloPosSystem": { "quantity": 1, "totalPrice": 149900 },
+    "cloverCashDrawer": { "quantity": 2, "totalPrice": 19800 }
+  }
+}
+```
+
+**`rocGivingV1`** — merchant uses Roc Giving. Required: `accountAdminContact`
+(`firstName`, `lastName`, `emailAddress` required; `phone` optional), `autoCloseTime`
+(`HH:mm`, 24-hour clock), `donorSupportPercentage` (number, 0–100). Optional `plan`:
+`basic` (default) | `advanced`.
+
+```json
+{
+  "type": "rocGivingV1",
+  "accountAdminContact": { "firstName": "Jane", "lastName": "Doe", "emailAddress": "jane.doe@example.com" },
+  "autoCloseTime": "23:40",
+  "donorSupportPercentage": 2.5,
+  "plan": "basic"
+}
+```
+
+The response's `addendums` array (`readOnly`) echoes back which addendum types were accepted
+and appended to the Merchant Processing Agreement — empty if none were requested.
 
 ---
 
@@ -468,7 +543,9 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
 
       "signature": {
         "type": "requestedViaEmail"
-      }
+      },
+
+      "addendums": []
     }
   ],
 
@@ -502,8 +579,11 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
   "processingAccounts": [
     {
       "processingAccountId": "PA-XXXX",
+      "doingBusinessAs": "Jane's Flower Shop",
+      "processor": "tsys",                // required in the response — which processor authorizes/settles this account
       "status": "entered",   // may also be "pending" depending on timing
-      "signature": { ... }
+      "signature": { ... },
+      "addendums": [ ]                    // required, readOnly — accepted addendum types, [] if none requested
     }
   ],
   "metadata": { ... },
@@ -522,3 +602,13 @@ Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`,
 Status codes this endpoint returns: `400` (validation, incl. `idempotencyKeyMissing`), `401`
 (auth/expired token), `403` (permissions), `409` (conflict — `resourceAlreadyExists`,
 `idempotencyKeyInUse`, `taxIdInUse`), `500` (server — retry with backoff).
+
+**Addendum and processor validation.** Four `400` scenarios are specific to `addendums`/`processor` —
+recognize these rather than treating them as an opaque failure:
+
+| `errors[].parameter` pattern | `errors[].detail` | Cause |
+| --- | --- | --- |
+| `...addendums[N].type` | `Unrecognized addendum type.` | `type` isn't one of the 10 values in [Addendums](#addendums) |
+| `...addendums[N].type` | `Duplicate addendum type.` | The same `type` appears more than once in the array |
+| `...addendums[N].<field>` | `Missing required field.` | An addendum entry is missing a field its type requires (e.g. `cloverMerchantProcessingAmendmentV1` without `lineItems`) |
+| `...processor` | `Unrecognized processor.` | `processor` isn't `tsys` or `fiserv` |

@@ -12,7 +12,7 @@ description: >
   how to know when a merchant's boarding status changes or when a terminal order ships — without
   polling. NOT for managing recurring billing subscriptions or payment plans.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   category: notifications
   status: draft
 ---
@@ -115,6 +115,8 @@ Then ask the developer:
 
 **Which events do you want to subscribe to?** (Select all that apply)
 - `processingAccount.status.changed` — notified when Payroc changes a processing account status (boarding workflow)
+- `processingAccount.riskStatus.changed` — notified when Payroc holds or releases funding for a processing account
+- `processingAccount.signature.signed` — notified when an owner or authorized signatory signs the Merchant Processing Agreement
 - `terminalOrder.status.changed` — notified when Payroc changes a terminal order status (hardware shipping)
 
 > **Read `references/api-schema.md` before presenting, emitting, or reviewing any event type values, notification type values, status values, or Idempotency-Key requirements** — use only the documented strings. Do not suggest or accept values not listed there. This directive applies both to code generation and to code review tasks.
@@ -189,6 +191,14 @@ Before registering the subscription, the webhook receiver must be ready. Impleme
 *processingAccount.status.changed:*
 - `processingAccountId` (string) — the account that changed
 - `status` (enum) — the new status; valid values in `references/api-schema.md`
+
+*processingAccount.riskStatus.changed:*
+- `processingAccountId` (string) — the account whose risk status changed
+- `riskStatus` (enum) — `fullSuspense` | `nonFullSuspense`; see `references/api-schema.md`
+
+*processingAccount.signature.signed:*
+- `processingAccountId` (string) — the account whose agreement was signed
+- `signed` (string) — always `"true"`
 
 *terminalOrder.status.changed:*
 - `terminalOrderId` (string)
@@ -459,5 +469,7 @@ Once all checklist items pass:
 
 Offer next steps:
 - **Boarding integration** — use `processingAccount.status.changed` events to drive merchant onboarding status in your platform
+- **Funding risk tracking** — use `processingAccount.riskStatus.changed` to detect when funding is held or released
+- **Signature tracking** — use `processingAccount.signature.signed` to know when a merchant has signed their agreement without polling
 - **Terminal hardware tracking** — use `terminalOrder.status.changed` to show merchants the shipping status of their terminals
 - **Payment webhooks** — for transaction-level notifications, check the Payroc docs for payment event types as they become available

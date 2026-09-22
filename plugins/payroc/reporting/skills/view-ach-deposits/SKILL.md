@@ -12,7 +12,7 @@ description: >
   verifying bank accounts, viewing settlement batches, viewing settled transactions, or viewing
   funding activity — those have dedicated skills.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: reporting
   status: draft
 ---
