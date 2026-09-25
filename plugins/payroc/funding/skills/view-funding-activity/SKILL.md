@@ -16,7 +16,7 @@ description: >
   setting up a funding recipient or funding account (use set-up-a-funding-recipient),
   or viewing ACH deposits (use view-ach-deposits).
 metadata:
-  version: "0.5.0"
+  version: "0.5.1"
   category: funding
   status: draft
 ---

@@ -1,7 +1,7 @@
 # ACH / Bank Transfer Payments — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Bank Transfer Payment schemas and paths). Last synced: 2026-06-22. This is the offline source of
+> (Bank Transfer Payment schemas and paths). Last synced: 2026-09-17. This is the offline source of
 > truth this skill emits from — read enum values and required-field sets from here, not from memory.
 > To refresh, re-fetch the source URL and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -15,7 +15,7 @@
 | List bank transfer payments | `GET /v1/bank-transfer-payments` |
 | Retrieve bank transfer payment | `GET /v1/bank-transfer-payments/{paymentId}` |
 | Reverse (void) a payment | `POST /v1/bank-transfer-payments/{paymentId}/reverse` |
-| Refund a payment (referenced) | `POST /v1/bank-transfer-payments/{paymentId}/refund` |
+| Refund a payment (referenced) | `POST /v1/bank-transfer-payments/{paymentId}/refund` — body requires `amount` + `description`. Not usable for a settled ACH payment; see Refunds in `ach-payment-guide.md` |
 | Re-present a payment | `POST /v1/bank-transfer-payments/{paymentId}/represent` |
 
 UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`

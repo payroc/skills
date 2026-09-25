@@ -13,7 +13,7 @@ description: >
   a payment method (use save-a-payment-method), managing or updating existing subscriptions
   (use manage-subscriptions), or one-time card or ACH payments.
 metadata:
-  version: "0.1.0"
+  version: "0.1.4"
   category: transaction
   status: draft
 ---
@@ -75,12 +75,12 @@ POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}
 POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate
 POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay
 
-Required headers (POST / PATCH):
+Required headers (POST / PATCH, except /deactivate and /reactivate):
   Authorization:   Bearer <token>
   Idempotency-Key: <uuid-v4>
   Content-Type:    application/json
 
-Required header (GET / DELETE):
+Required header (/deactivate, /reactivate, GET, DELETE — no Idempotency-Key):
   Authorization:   Bearer <token>
 ```
 
@@ -106,7 +106,7 @@ These are local snapshots, authoritative for this skill. Their source URLs and l
 1. **Inspect before asking** — scan the codebase before asking anything; use what you find to skip obvious questions.
 2. **Ask before coding** — gather unknowns through intake before writing implementation code.
 3. **Read the schema reference before emitting any enum value.** Every field that accepts a fixed set of strings — `type`, `frequency`, `onUpdate`, `onDelete`, `paymentMethod.type`, `paymentMethod.accountType`, `paymentMethod.secCode`, `currentState.status` — is documented in `references/api-schema.md`. Read it before you emit the value. Do not use training-data guesses. A plausible-sounding string that is not in the documented enum produces a 400 or silent mismatch. The same rule applies when **reviewing** developer-supplied code: consult `references/api-schema.md` before issuing a verdict — never validate from memory.
-4. **Idempotency-Key on every POST and PATCH.** The value must be a UUID v4. Omitting it causes a 400. Generate a fresh UUID for each distinct operation; do not reuse the same key across different requests.
+4. **Idempotency-Key on every POST and PATCH except `/deactivate` and `/reactivate`.** The value must be a UUID v4. Omitting it causes a 400. Generate a fresh UUID for each distinct operation; do not reuse the same key across different requests. The subscription `/deactivate` and `/reactivate` POSTs do not take the header — sending it there is harmless, but omitting it does not cause a 400.
 5. **Never hardcode credentials.** API keys, terminal IDs, and secure tokens must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement token refresh logic.
 7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
@@ -281,7 +281,7 @@ Idempotency-Key: <UUID v4>      ← generate a new UUID; do not reuse Step 2's k
 
 **`paymentMethod.secCode`** — only required for ACH bank accounts. Read valid values (`web`, `tel`, `ccd`, `ppd`) from `references/api-schema.md` before emitting.
 
-**`startDate`** — `YYYY-MM-DD` format. This is when the subscription starts; the first payment (or first manual collection) is due on or after this date.
+**`startDate`** — `YYYY-MM-DD` format. This is when the subscription starts; the first payment (or first manual collection) is due on or after this date. Must be the current day or a later date. The gateway's calendar runs on Coordinated Universal Time (UTC) in winter and Irish Standard Time (IST) in summer, so near midnight "today" may differ from the caller's local date. Validate this before sending.
 
 **Inherited fields** — the subscription inherits `type`, `frequency`, `currency`, and `length` from the payment plan. You can override `name`, `description`, `setupOrder`, `recurringOrder`, `endDate`, `length`, and `pauseCollectionFor` at the subscription level.
 
@@ -323,7 +323,7 @@ Monitor subscription state by polling `GET /v1/processing-terminals/{processingT
 
 ### Manual plans
 
-For `manual`-type plans, your system must trigger each payment:
+For `manual`-type plans, your system must trigger each payment. You can collect only when a payment is due. The plan's `frequency` sets how often that is, for example weekly or monthly. If the payment for the current period has already been collected, the gateway rejects the request, so don't retry a rejected collection within the same period.
 
 Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
 
@@ -382,10 +382,9 @@ Query parameters: `paymentPlanId` (filter by plan), `limit` (max results, defaul
 Required headers:
 ```
 Authorization:   Bearer <token>
-Idempotency-Key: <UUID v4>
 ```
 
-No request body.
+No request body, and **no `Idempotency-Key`** — this endpoint does not take the header.
 
 **Before writing deactivation code:** confirm the developer understands the effect. Deactivating:
 - Sets the subscription's `currentState.status` to `"cancelled"`
@@ -403,10 +402,9 @@ If the developer only wants to pause temporarily, `pauseCollectionFor` (on subsc
 Required headers:
 ```
 Authorization:   Bearer <token>
-Idempotency-Key: <UUID v4>
 ```
 
-No request body.
+No request body, and **no `Idempotency-Key`** — this endpoint does not take the header.
 
 Reactivation resumes a previously deactivated subscription. The `currentState.status` returns to `"active"` and payment collection resumes.
 
@@ -436,7 +434,7 @@ Successful deletion returns HTTP 204 with an empty body.
 | 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header uses the correct UAT API key |
 | 400 — validation error mentioning `type`, `frequency`, `onUpdate`, `onDelete` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — validation error mentioning `paymentMethod.type` | Wrong discriminator value | The only valid value is `"secureToken"` — read `references/api-schema.md` |
-| 400 — `idempotencyKeyMissing` | Idempotency-Key header absent on a POST or PATCH | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH — including body-less POSTs like /deactivate and /reactivate |
+| 400 — `idempotencyKeyMissing` | Idempotency-Key header absent on a POST or PATCH | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH — except the body-less `/deactivate` and `/reactivate` POSTs, which do not take it and never raise this error |
 | 400 — `recurringOrder` missing or empty | Automatic plan with no recurring amount | Send `recurringOrder.amount` when `type` is `"automatic"` |
 | 400 — `paymentPlanId` not found when creating subscription | Referenced plan doesn't exist yet | Create the plan first, then create the subscription |
 | 400 — secure token invalid | Token not yet validated or wrong format | Ensure the `secureTokenId` from the Tokenization API is valid (`cardNumberValidated` or `bankAccountValidated`) |
@@ -467,7 +465,7 @@ Successful deletion returns HTTP 204 with an empty body.
 
 - [ ] API key sourced from environment variable — never hardcoded
 - [ ] Bearer token generated from identity service — never hardcoded
-- [ ] `Idempotency-Key` header present and set to a UUID v4 on every POST and PATCH
+- [ ] `Idempotency-Key` header present and set to a UUID v4 on every POST and PATCH except `/deactivate` and `/reactivate`
 - [ ] `type`, `frequency`, `onUpdate`, `onDelete`, and `paymentMethod.type` values read from `references/api-schema.md` — not from training data
 - [ ] `paymentPlanId` is a unique, merchant-chosen string
 - [ ] `subscriptionId` is a unique, merchant-chosen string
@@ -475,6 +473,8 @@ Successful deletion returns HTTP 204 with an empty body.
 - [ ] Secure token obtained from Tokenization API before subscription creation
 - [ ] All amounts are integers in the lowest currency denomination
 - [ ] Dates use `YYYY-MM-DD` format (`startDate`, `endDate`)
+- [ ] `startDate` is the current day or later (gateway date: UTC in winter, IST in summer)
+- [ ] Manual collections are triggered only when a payment is due, at most once per `frequency` period
 - [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
 - [ ] Deletion: developer explicitly confirmed the plan deletion is permanent before code was written
 

@@ -14,7 +14,7 @@ description: >-
   number format validation (Luhn check), processing a card payment, pre-authorization, refunds,
   configuring surcharging on a terminal, or general surcharging setup — those are separate skills.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   category: transaction
   status: draft
 ---
@@ -49,6 +49,7 @@ On first invocation, announce to the developer:
 > - Whether the card is debit or credit
 > - Whether the card is FSA/HSA-linked (healthcare)
 > - Surcharging eligibility and calculated surcharge amount (if your terminal is configured for surcharging)
+> - Service fee details and disclosure text (if the merchant applies a service fee)
 >
 > **Input options:**
 > - **BIN only** — just the first 6–8 digits of the card number (no full PAN required)
@@ -78,7 +79,7 @@ All enum values and schemas live in the local `references/` files below — this
 
 | Source | Local file | Use for |
 | --- | --- | --- |
-| API schema reference | `references/api-schema.md` | **All** enum values, request variants (`cardBin`, `card`, `secureToken`, `digitalWallet`), response shape, surcharging object, error codes |
+| API schema reference | `references/api-schema.md` | **All** enum values, request variants (`cardBin`, `card`, `secureToken`, `digitalWallet`), response shape, surcharging and service fee objects, error codes |
 | Identity call reference | `references/identity-call.md` | Bearer token exchange — endpoint URL, request header, response fields |
 | Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 
@@ -117,7 +118,9 @@ Use what you find to pre-fill obvious answers and ask targeted questions. Then a
 
 2. **Do you need surcharging information?** If yes, you'll need to include your `processingTerminalId`. If the developer doesn't know their terminal ID, note it as outstanding and continue.
 
-3. **Do you have an amount to calculate surcharge against?** If surcharging is relevant, including `amount` (integer, lowest denomination) and `currency` (ISO 4217 code) returns the surcharge calculated on that specific amount.
+3. **Do you have an amount to calculate surcharge against?** If surcharging is relevant, including `amount` (integer, lowest denomination) and `currency` (ISO 4217 code) returns the surcharge calculated on that specific amount. The same applies to a percentage-based service fee: its `amount` comes back only if the request includes `amount`.
+
+4. **Does the merchant apply a service fee?** If so, the response carries a `serviceFee` object alongside (or instead of) `surcharging`. Handle both in Step 4.
 
 ---
 
@@ -311,12 +314,26 @@ Key fields to capture and use:
 | `surcharging.amount` | integer | Surcharge amount in lowest denomination (e.g. cents) |
 | `surcharging.percentage` | number | Surcharge rate as a percentage |
 | `surcharging.disclosure` | string | Disclosure text to show to the customer |
+| `serviceFee.applicable` | boolean | Whether a service fee applies to this card. Always present when `serviceFee` is |
+| `serviceFee.amount` | integer | Fee in lowest denomination. A percentage fee is returned only if the request included `amount` |
+| `serviceFee.percentage` | number | Fee rate. Not returned when `basis` is `debitAmount` |
+| `serviceFee.basis` | string | `creditPercentage` \| `debitPercentage` \| `debitAmount` |
+| `serviceFee.disclosure` | string | Disclosure text to show to the customer. Only returned when `applicable` is `true` |
 
 **Surcharging notes:**
 - The `surcharging` object is only present if `processingTerminalId` was included in the request and the terminal is configured for surcharging.
 - Even if `surcharging` is present, always check `surcharging.allowed` — `false` means this card is exempt (e.g. debit cards are often exempt from surcharging).
 - If you included `amount` in the request, `surcharging.amount` reflects the calculated surcharge on that specific amount.
 - Show `surcharging.disclosure` to the customer before they complete payment if `surcharging.allowed` is `true`.
+
+**Service fee notes:**
+
+> **Read the `serviceFee` notes in `references/api-schema.md` before writing service fee handling.** The `basis` enum and the rules for when each field is returned are documented there.
+
+- The `serviceFee` object is only present if the merchant applies a service fee. It is also absent if the gateway can't determine which currency to calculate the fee in.
+- Check `serviceFee.applicable` before adding a fee. It is `false` when the card is exempt from the program or is an EBT card.
+- Branch on `basis`, not on `debit`. The gateway reads card type from the BIN file, and a credit card that doesn't accept service fees comes back as `debitAmount` or `debitPercentage`.
+- Show `serviceFee.disclosure` to the customer before they complete payment if `serviceFee.applicable` is `true`.
 
 ---
 
@@ -357,6 +374,8 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 | 400 — missing `bin` | `cardBin` type sent without `bin` field | Add the `bin` field |
 | No `surcharging` in response | Terminal ID not provided, or terminal not configured for surcharging | Include `processingTerminalId` in the request; check terminal setup with Payroc support |
 | `surcharging.allowed: false` | Card is exempt from surcharging (e.g. debit or regulated card) | Do not add a surcharge for this card; use `debit` field to detect debit cards |
+| No `serviceFee` in response | Merchant doesn't apply a service fee, or the gateway couldn't determine the currency | If the merchant has a service fee, send `currency` and `processingTerminalId`. The fee is calculated in the request currency on multi-currency accounts, otherwise in the terminal's currency |
+| `serviceFee` present but no `amount` | Percentage-based fee and no `amount` in the request | Include `amount` (and `currency`) to get the calculated fee |
 | 404 — token not found | Secure token is invalid or the saved card was deleted | Verify the token; prompt the customer to re-enter card details |
 | 403 — permission denied | API key scope doesn't cover this endpoint | Contact Payroc support to check API key permissions |
 
@@ -369,7 +388,8 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 - **Omitting `processingTerminalId` when surcharging info is needed**: The `surcharging` object is absent from the response without a terminal ID. Always include it if the caller needs to know whether to apply a surcharge.
 - **Not checking `surcharging.allowed`**: A `surcharging` object being present does not mean surcharging applies — always check `surcharging.allowed` before applying or disclosing a surcharge.
 - **Using `amount` in major units**: `amount` is in the lowest currency denomination (e.g. cents for USD). `5000` means $50.00, not $5000.00.
-- **Showing disclosure text**: If `surcharging.allowed` is `true`, show `surcharging.disclosure` to the customer **before** they confirm payment. This is a legal/compliance requirement in many jurisdictions.
+- **Showing disclosure text**: If `surcharging.allowed` is `true`, show `surcharging.disclosure` to the customer **before** they confirm payment. This is a legal/compliance requirement in many jurisdictions. The same goes for `serviceFee.disclosure` when `serviceFee.applicable` is `true`.
+- **Treating `serviceFee` as present means it applies**: Check `serviceFee.applicable`. A present object with `applicable: false` means no fee for this card.
 
 ---
 
@@ -378,5 +398,5 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 Read `references/api-schema.md` for:
 - All enum values (`card.type`, `entryMethod`, `serviceProvider`, `accountType`, `secCode`)
 - Complete request variants for each `card.type`
-- Response field descriptions and surcharging object shape
+- Response field descriptions and the surcharging and service fee object shapes
 - Full error status code table

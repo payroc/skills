@@ -13,7 +13,7 @@ description: >
   word "verify" explicitly. Do NOT use for general ACH or bank transfer payment
   processing that does not involve the verify endpoint.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: transaction
   status: draft
 ---

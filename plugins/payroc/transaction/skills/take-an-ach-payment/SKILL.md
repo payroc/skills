@@ -13,7 +13,7 @@ description: >
   verifying bank accounts, card payments, or single-use card tokens. Also covers single-use bank
   account tokens (`singleUseToken` type) obtained from a Hosted Fields session.
 metadata:
-  version: "0.4.0"
+  version: "0.4.3"
   category: transaction
   status: draft
 ---
@@ -47,7 +47,7 @@ On first invocation, announce to the developer:
 > - ACH payments (US bank accounts — routing number + account number)
 > - PAD payments (Canadian bank accounts — transit number + institution number)
 > - Tokenizing bank details for future charges
-> - Reversals (void before settlement), refunds (after settlement), and re-presenting returned ACH transactions
+> - Reversals (void before settlement), refunds, and re-presenting returned ACH transactions
 >
 > **What to know upfront:**
 > - ACH payments are asynchronous — `status` is initially `pending` and settles later
@@ -430,9 +430,11 @@ No request body required. Removes the payment from the open batch — no funds a
 
 Headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`
 
-No request body is required for a full referenced refund. Use this after the payment has settled. For a payment still in an open batch, see reversal above.
+Requires a body with `amount` and `description` — both are mandatory, and an empty body returns `400`. Send the original amount for a full refund, or a lower value for a partial one.
 
-**Partial refunds:** Check `references/api-schema.md` — if the refund endpoint accepts an amount body it will be documented there. If no refund request schema is documented, only full refunds are supported via this endpoint.
+**You can't run a referenced refund against an ACH payment that is in a closed batch.** Our gateway returns a `400` error, `Bank transfer with status COMPLETE can not be refunded`, as soon as the batch closes, and while the batch is still open it reverses the payment rather than refunding it. To return funds for an ACH payment after its batch closes, run an unreferenced refund (`POST /v1/bank-transfer-refunds`) instead. This doesn't apply to pre-authorized debit (PAD) payments.
+
+Refunds are a separate flow with their own decision logic — use the **refund-an-ach-payment** skill rather than building from this section.
 
 ---
 

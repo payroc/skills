@@ -10,13 +10,15 @@ description: >
   /v1/bank-transfer-payments/{id}/refund endpoint, or work with the
   /v1/bank-transfer-refunds endpoint. Also trigger when the developer asks about the
   difference between ACH reversals and refunds, choosing the right refund method for a
-  bank transfer, NACHA return codes on a refund, or tracking ACH refund status. Does NOT
+  bank transfer, NACHA return codes on a refund, tracking ACH refund status, re-presenting
+  a returned ACH payment to retry collection (work with the
+  /v1/bank-transfer-payments/{id}/represent endpoint), or closing a return after the customer
+  paid another way (work with the /v1/bank-transfer-payments/{id}/close endpoint). Does NOT
   cover card payment refunds (credit card, debit card, or Visa/Mastercard/Amex refunds —
   use the refund-a-card-payment skill for those), taking new ACH payments, accepting bank
-  transfer payments, verifying bank accounts, retrying NSF/returned payments, or viewing
-  ACH deposit reports.
+  transfer payments, verifying bank accounts, or viewing ACH deposit reports.
 metadata:
-  version: "0.5.0"
+  version: "0.7.3"
   category: transaction
   status: draft
 ---
@@ -56,19 +58,21 @@ On first invocation, announce to the developer:
 > **How ACH refunds work:**
 > - ACH is a batch payment system — refunds are not instant. Funds take 1–3 business days to clear.
 > - The right approach depends on whether the original payment has settled and whether you have its ID.
+> - **For US ACH, you can't run a referenced refund against a payment that is in a closed batch.** Once the batch closes, that endpoint returns `400`. The unreferenced refund is the only path. This doesn't apply to Canadian PAD.
 
 ---
 
 ## Quick reference
 
 ```text
-# Referenced refund (settled payment, have paymentId)
+# Referenced refund (PAD only once settled; for ACH, open batch only — converts to a reversal)
+# Body requires amount + description
 POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/refund
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
-# Unreferenced refund (settled payment, no paymentId)
+# Unreferenced refund (no paymentId needed; the ONLY path for a settled ACH payment)
 POST https://api.uat.payroc.com/v1/bank-transfer-refunds
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
@@ -85,6 +89,17 @@ POST https://api.uat.payroc.com/v1/bank-transfer-refunds/{refundId}/reverse
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
+
+# Re-present a return (retry collecting the ACH payment — request body optional)
+POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent
+Authorization:   Bearer <token>
+Idempotency-Key: <uuid-v4>
+Content-Type:    application/json
+
+# Close a return (customer paid another way — no request body)
+POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close
+Authorization:   Bearer <token>
+Idempotency-Key: <uuid-v4>
 ```
 
 ---
@@ -146,16 +161,18 @@ Then ask the developer the following questions (pre-fill from codebase scan wher
    - Yes → referenced refund or reversal path
    - No → unreferenced refund path (requires special merchant enablement — confirm first)
 
-2. **Has the payment already settled?**
+2. **Is the payment ACH (US) or PAD (Canadian pre-authorized debit)?**
+   - Ask this before the settlement question — for ACH it decides the answer.
+   - Also affects which bank account fields are needed for unreferenced refunds.
+
+3. **Has the payment already settled?**
    - Not yet settled (still in open batch) → reversal is the right tool (not a refund)
-   - Settled → referenced or unreferenced refund
-   - Don't know → can look it up via `GET /v1/bank-transfer-payments/{paymentId}`
+   - Settled + ACH → unreferenced refund. The referenced endpoint returns `400` for a settled ACH payment; the `paymentId` doesn't help you here
+   - Settled + PAD → referenced refund if you have the `paymentId`, unreferenced otherwise
+   - Don't know → look it up via `GET /v1/bank-transfer-payments/{paymentId}` and read `transactionResult.status`
 
-3. **Is this a full refund or partial?**
-   - Note: referenced refunds apply to the full original payment amount. The referenced refund endpoint does not accept an `amount` field — do not attempt to pass one for a partial refund, as the schema does not document this field and the behaviour would be undefined. Partial refund capability should be confirmed with the Payroc Integrations team before attempting.
-
-4. **Is the payment ACH (US) or PAD (Canadian pre-authorized debit)?**
-   - Affects which bank account fields are needed for unreferenced refunds.
+4. **Is this a full refund or partial?**
+   - Both referenced and unreferenced refunds take an `amount`, so both support partial refunds. Send the full original amount for a full refund, or a lower value for a partial one.
 
 Use the answers to determine which path to implement below.
 
@@ -212,20 +229,27 @@ Does the token helper return a Bearer token without error? If not, verify `x-api
 | Situation | Method | Endpoint |
 | --- | --- | --- |
 | Payment in open batch (not settled) | **Reversal** | `POST /v1/bank-transfer-payments/{paymentId}/reverse` |
-| Payment settled + have `paymentId` | **Referenced refund** | `POST /v1/bank-transfer-payments/{paymentId}/refund` |
-| Payment settled + no `paymentId` | **Unreferenced refund** | `POST /v1/bank-transfer-refunds` |
+| **ACH** payment settled (`complete`) — with or without `paymentId` | **Unreferenced refund** | `POST /v1/bank-transfer-refunds` |
+| **PAD** payment settled + have `paymentId` | **Referenced refund** | `POST /v1/bank-transfer-payments/{paymentId}/refund` |
+| PAD payment settled + no `paymentId` | **Unreferenced refund** | `POST /v1/bank-transfer-refunds` |
 
-If the developer is unsure whether a payment has settled, help them look it up first (see Step 3a).
+Settlement state drives this, so look the payment up before choosing (see Step 3a). For ACH that lookup is not optional — see the boundary below.
 
-> **Gateway auto-conversion:** If you call the referenced refund endpoint on a payment that is still in an open batch, the Payroc gateway automatically converts it to a reversal. So if you're not sure of the settlement state, the referenced refund endpoint is safe to call — you won't create a duplicate. But confirm this behaviour with the developer so they're not surprised — when auto-converted, the response `transactionResult.status` will be `"reversal"` (not `"pending"` or `"complete"`). Note: `transactionResult.type` will remain `"refund"` regardless — the `"reversal"` value appears only in the `status` field, not in `type`.
+> **ACH payments:** You can't run a referenced refund against an ACH payment that is in a closed batch. For a payment whose `bankAccount.type` is `"ach"`, `POST /v1/bank-transfer-payments/{paymentId}/refund` returns `400` with `Bank transfer with status COMPLETE can not be refunded` as soon as the batch closes. **Route every closed-batch ACH refund to `POST /v1/bank-transfer-refunds` (Step 6).** This restriction doesn't apply to PAD — a PAD payment in a closed batch, with its `paymentId`, is the case this endpoint exists for. That asymmetry is the whole distinction: same endpoint, same batch state, allowed for PAD and refused for ACH.
+
+> **Gateway auto-conversion:** Calling the referenced refund endpoint on a payment still in an open batch converts it to a reversal rather than creating a duplicate. Tell the developer what that response looks like, because it does not look like a refund: `transactionResult.type` is `"payment"`, `transactionResult.status` is `"reversal"`, and `authorizedAmount` is **positive**. Do not treat the absence of `type: "refund"` or a negative amount as a failure.
 
 ---
 
 ## Step 3 — Referenced refund path
 
-### Step 3a (optional) — Find the original payment
+Use this path for a **PAD** payment in a closed batch, or for either payment method while the batch is still open — where the gateway converts the call to a reversal.
 
-If the developer needs to look up the `paymentId`:
+> **Not for ACH in a closed batch.** If `bankAccount.type` is `"ach"` and `transactionResult.status` is `"complete"`, this path returns `400`. Go to Step 6 instead. Step 3a is how you find out, so do not skip it for ACH.
+
+### Step 3a — Find the original payment and check its state
+
+Required for ACH, optional for PAD when the developer already holds the `paymentId`:
 
 ```bash
 # By payment ID
@@ -237,7 +261,11 @@ GET https://api.uat.payroc.com/v1/bank-transfer-payments?processingTerminalId=12
 Authorization: Bearer <access_token>
 ```
 
-Check the response to confirm the payment exists and its `transactionResult.status`. Note whether `refunds[]` already contains entries — a payment may already be partially or fully refunded.
+Read three things off the response before going further:
+
+- `bankAccount.type` — `"ach"` or `"pad"`. Decides whether the settled case is even available to you.
+- `transactionResult.status` — `"complete"` means the batch has closed. Combined with `"ach"`, that routes to Step 6.
+- `refunds[]` — a payment may already be partially or fully refunded.
 
 ### Step 3b — Issue the referenced refund
 
@@ -248,44 +276,64 @@ curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/re
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{
+    "amount": 4999,
+    "description": "Refund for order OrderRef6543"
+  }'
 ```
 
-The refund amount and bank account details are taken from the original payment — you do not re-supply them.
+`amount` and `description` are both **required** — an empty body returns `400`. The bank account details come from the original payment, but the amount does not. Send the full original amount for a full refund, or a lower value for a partial one.
 
 ### Step 3c — Handle the referenced refund response
 
-**HTTP 200** — refund submitted:
+The response shape depends on which of two things the gateway did, and they do not look alike.
+
+**HTTP 200, auto-converted to a reversal** (payment was still in an open batch):
 
 ```json
 {
   "paymentId": "M2MJOG6O2Y",
   "processingTerminalId": "1234001",
   "order": { "amount": 4999, "currency": "USD", "orderId": "OrderRef6543", "..." : "..." },
-  "bankAccount": { "type": "ach", "accountNumber": "****3159", "nameOnAccount": "Sarah Hazel Hopper", "..." : "..." },
+  "bankAccount": { "type": "pad", "accountNumber": "****7890", "..." : "..." },
+  "transactionResult": {
+    "type": "payment",
+    "status": "reversal",
+    "authorizedAmount": 4999,
+    "currency": "USD",
+    "responseCode": "A"
+  }
+}
+```
+
+`type` stays `"payment"`, `status` is `"reversal"`, and `authorizedAmount` is **positive**. The original payment was cancelled, not refunded. This is the only outcome available on the referenced endpoint for ACH.
+
+**HTTP 200, genuine refund** (PAD, closed batch):
+
+```json
+{
+  "paymentId": "M2MJOG6O2Y",
   "transactionResult": {
     "type": "refund",
     "status": "pending",
     "authorizedAmount": -4999,
     "currency": "USD",
-    "responseCode": "A",
-    "responseMessage": "NoError",
-    "processorResponseCode": "0"
+    "responseCode": "A"
   },
   "refunds": [ { "..." : "..." } ]
 }
 ```
 
 Key fields to check:
-- `transactionResult.type` — will be `"refund"`. This field never returns `"reversal"` — that value is not in the `transactionResult.type` enum (`payment | refund | unreferencedRefund | accountVerification`).
-- `transactionResult.status` — expect `"pending"` or `"ready"` initially; `"reversal"` if the gateway auto-converted the request (payment was still in open batch); final status arrives asynchronously
-- `transactionResult.authorizedAmount` — negative value confirms it's a refund (e.g. `-4999`)
+- `transactionResult.type` — `"payment"` on the reversal path, `"refund"` on a genuine refund. It never returns `"reversal"`; that value belongs to `status`, and the `type` enum is `payment | refund | unreferencedRefund | accountVerification`.
+- `transactionResult.status` — `"reversal"` when auto-converted; otherwise `"pending"` or `"ready"` initially, with the final status arriving asynchronously.
+- `transactionResult.authorizedAmount` — negative on a genuine refund, positive on the reversal path. Do not use the sign alone to decide whether the call worked.
 
 > **Do not report the refund as complete on an initial `"pending"` status.** ACH refunds take 1–3 business days. Poll `GET /v1/bank-transfer-payments/{paymentId}` and watch the `refunds[]` array for final status.
 
 ### Checkpoint
 
-Does the API return HTTP 200 with `transactionResult.type: "refund"` and a negative `authorizedAmount`? If `transactionResult.status` is `"reversal"`, the gateway auto-converted the request (the payment was still in an open batch) — this is expected behaviour, not an error. If the response shows anything other than HTTP 200, work through the error taxonomy.
+Did the API return HTTP 200? If so, read `transactionResult.type` and `status` together to tell the developer which of the two outcomes above they got — a reversal is expected behaviour on an open batch, not an error, even though it carries `type: "payment"` and a positive amount. If the response is a `400` naming the payment status, the batch has closed: for ACH, move to Step 6. Anything else, work through the error taxonomy.
 
 ---
 
@@ -308,7 +356,7 @@ When the reversal succeeds, check `transactionResult.status` on the response —
 
 ### Checkpoint
 
-Does the API return HTTP 200? If not, the payment may have already settled — use the referenced refund path instead.
+Does the API return HTTP 200? If not, the payment may have already settled. For PAD, use the referenced refund path instead; for ACH, use the unreferenced refund path (Step 6).
 
 ---
 
@@ -326,6 +374,44 @@ curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds/{refundId}/reve
 No request body is required. This is a different endpoint from the payment reversal (`/bank-transfer-payments/{paymentId}/reverse`) — it applies to a refund that has already been created.
 
 > **Note:** This endpoint is only documented for unreferenced refunds (`/v1/bank-transfer-refunds/{refundId}/reverse`). To reverse a referenced refund, consult the Payroc Integrations team.
+
+---
+
+## Step 4c — Resolve a return: re-present or close
+
+A **return** happens when the customer's bank bounces the ACH payment (insufficient funds,
+closed account, etc.). Retrieve the original payment (`GET /v1/bank-transfer-payments/{paymentId}`)
+and read its `returns[]` array — each entry has its own `paymentId`, which is what you act on
+below, **not** the original payment's id.
+
+There are two ways to resolve it — ask the developer which applies:
+
+**Re-present** (retry collecting the same ACH payment — e.g. a temporary NSF that's likely
+resolved now):
+
+```bash
+curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
+  -H "Content-Type: application/json"
+```
+
+Request body is optional — omit it to retry with the bank details already on file, or send an
+updated `paymentMethod` if the customer gave you new bank details (see
+`references/api-schema.md`). Skip entries where `represented` is already `true`.
+
+**Close** (the customer resolved the return by paying another way — e.g. a card):
+
+```bash
+curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')"
+```
+
+No request body. Skip entries where `closed` is already `true`.
+
+Both return `200` with the updated payment object. See `references/api-schema.md` for the full
+`returns[]` shape, the `paymentMethod` variants, and error responses.
 
 ---
 
@@ -505,6 +591,9 @@ Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `401` on any request | Token missing, expired, or API key wrong | Re-exchange token; verify `x-api-key` header value is the correct UAT key |
+| `400` — `Bank transfer with status COMPLETE can not be refunded` | Referenced refund called on an ACH payment in a closed batch. That endpoint can't refund it | Use the unreferenced refund, `POST /v1/bank-transfer-refunds` (Step 6). Retrying the referenced endpoint will never succeed. The message quotes the gateway's internal status name in uppercase, which is not the `transactionResult.status` enum value — expect `COMPLETE` in the message and `complete` in the payment |
+| `400` — `Bank transfer with status VOID can not be refunded` | Same gate, different state: the payment was already reversed | Check `transactionResult.status` before refunding. A payment auto-converted to a reversal cannot then be refunded |
+| `400` — missing `amount` or `description` on a referenced refund | Empty or partial request body | Both fields are required. `'description' must not be blank` and `'amount' must be greater than 0` come back together on an empty body |
 | `400` — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST; generate a new UUID per operation |
 | `400` — validation error on `refundMethod` | Wrong field name or enum value | Read `references/api-schema.md`; check `type`, `secCode`, `accountType` spellings. Note: `secCode` values are **lowercase** (`web`, `tel`, `ccd`, `ppd`) — NACHA convention is uppercase but the API expects lowercase |
 | `400` — validation error on `processingTerminalId` | Sent as integer instead of string | `processingTerminalId` is always a **string** — send `"1234001"` with quotes, not `1234001` as a JSON integer |
@@ -517,7 +606,16 @@ Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`
 | `409` — resource already exists / refund already issued | Payment already fully refunded | Check `payment.refunds[]` before submitting; do not re-issue if already complete |
 | `transactionResult.status: "returned"` | Customer's bank rejected the ACH return (NACHA return code) | Closed/invalid account. Resolve outside ACH (check, wire, or credit). |
 | Initial status `"pending"` but no update after days | ACH processing delay or NACHA return | Poll `GET /v1/bank-transfer-payments/{paymentId}` or `GET /v1/bank-transfer-refunds/{refundId}`; check for `"returned"` status |
-| Reversal 400 or unexpected behaviour | Payment has already settled — can't reverse | Use the referenced refund endpoint instead |
+| Reversal 400 or unexpected behaviour | Payment has already settled — can't reverse | For PAD, use the referenced refund endpoint. For ACH, use the unreferenced refund — the referenced endpoint will also fail |
+
+> **The message strings in this table are for diagnosis, not for branching.** `errors[].message` is
+> generated by the gateway; the OpenAPI example only documents it, and neither the spec nor this skill
+> fixes its wording. Every `400` on these endpoints also carries the same envelope `type`,
+> `https://docs.payroc.com/api/errors#bad-request`, so there is no condition-specific code to match on
+> either. Quote the message when explaining a failure to a developer, but do not generate code that
+> compares against it. Decide the path from the payment's own state instead: read `bankAccount.type` and
+> `transactionResult.status` first (Step 3a), and route a closed-batch ACH payment to Step 6 rather than
+> calling the referenced endpoint and matching on the error it returns.
 
 **Error response shape (RFC 7807 + Payroc extension):**
 
@@ -530,13 +628,16 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 - [ ] API key sourced from environment variable — never hardcoded
 - [ ] Bearer token generated from identity service — never hardcoded
 - [ ] `Idempotency-Key` header present and set to a UUID v4 on every POST
-- [ ] Correct refund path chosen: reversal (open batch), referenced (settled + have paymentId), unreferenced (settled + no paymentId)
+- [ ] Correct refund path chosen: reversal (open batch); ACH settled → unreferenced regardless of paymentId; PAD settled + have paymentId → referenced; PAD settled + no paymentId → unreferenced
 - [ ] `refundMethod.type`, `secCode`, `accountType`, and all other enum values read from `references/api-schema.md` — not from training data
 - [ ] `secCode` enum values are lowercase (`web`, `tel`, `ccd`, `ppd`) — not uppercase
 - [ ] `processingTerminalId` is sent as a JSON string (`"1234001"`), not an integer (`1234001`)
 - [ ] For PAD (Canadian) unreferenced refunds: `transitNumber` + `institutionNumber` used instead of `routingNumber`; no `secCode`
 - [ ] Amounts are integers in the currency's lowest denomination (e.g. cents), not decimals
 - [ ] For referenced refunds: `paymentId` captured from the original payment creation response and used in the path
+- [ ] For referenced refunds: `amount` and `description` both sent in the body — an empty body returns `400`
+- [ ] For ACH: settlement state checked before choosing a path, and settled payments routed to the unreferenced refund rather than the referenced endpoint
+- [ ] Response handling does not treat `transactionResult.type: "payment"` or a positive `authorizedAmount` as a failure — that is the auto-converted reversal
 - [ ] For unreferenced refunds: merchant account confirmed as enabled for unreferenced refunds
 - [ ] ACH async handling: code does not assume `"pending"` status means failure; polling or webhook logic implemented
 - [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
