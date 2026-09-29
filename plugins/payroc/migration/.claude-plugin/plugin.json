@@ -1,0 +1,7 @@
+{
+  "name": "migration",
+  "description": "Skills for migrating an existing integration from a legacy Payroc gateway to the Payroc API",
+  "skills": [
+    "./skills/migrate-from-ibx"
+  ]
+}

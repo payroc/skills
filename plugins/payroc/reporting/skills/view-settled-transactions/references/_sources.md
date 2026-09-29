@@ -11,7 +11,7 @@ Last synced: 2026-06-22.
 **Local file:** `references/identity-call.md`
 **Source:** https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange)
 **Purpose:** Canonical Payroc Identity Service schema — endpoint URL, request headers, response fields. Read this before emitting any auth code; do not guess these values.
-**Last synced:** 2026-06-22
+**Last synced:** 2026-09-16
 
 ---
 

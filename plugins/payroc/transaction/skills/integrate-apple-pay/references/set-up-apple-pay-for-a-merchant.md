@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/guides/take-payments/apple-pay/set-up-apple-pay-for-a-merchant.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-09-24. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Set up Apple Pay for a merchant
 
@@ -9,6 +9,8 @@ To set up Apple Pay for a merchant, complete the following steps:\
 **Step 2.** Add the merchant's domain to the Self-Care Portal.
 
 ## Before you begin
+
+Contact us to enable Apple Pay for the merchant's processing terminal, otherwise you can't set up Apple Pay for the merchant.
 
 Add the following subfolder to the merchant's domain:
 
@@ -26,10 +28,12 @@ Add the following subfolder to the merchant's domain:
 
 ## Step 2. Add the merchant's domain to the Self-Care Portal
 
-1. Select **ADD NEW DOMAIN**.
+1. From the Apple Pay Domains page, select **ADD NEW DOMAIN**.
 2. In the **Domain** field, enter the merchant's domain name, for example, website.com.
 3. Select **Save**.
 
 The Self-Care Portal redirects you to the Apple Pay Domains page where it displays the unique ID of the merchant's domain.
 
 **Important:** Store the unique ID of the merchant's domain. You need to send the unique ID when you start an Apple Pay Session.
+
+The Self-Care Portal also displays the Merchant Identifier, which you need if you want to add a convenience fee or split a payment with multiple merchants.

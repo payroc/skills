@@ -191,7 +191,7 @@ cardDetails:
       serialNumber: <string>
       category: "attended"    # or "unattended"
     cardNumber: "<card number string>"
-    expiryDate: "<MMYY or MMYYYY>"
+    expiryDate: "<MMYY>"
     cvv: "<optional CVV string>"
 ```
 

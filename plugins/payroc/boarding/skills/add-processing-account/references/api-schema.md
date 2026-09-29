@@ -12,6 +12,7 @@ Snapshot of the Payroc Boarding API surface for adding and reading processing ac
 - [Headers](#headers)
 - [Enums](#enums)
 - [Request body — `createProcessingAccount`](#request-body--createprocessingaccount)
+- [Addendums](#addendums)
 - [Response — `processingAccount`](#response--processingaccount-201-on-add-200-on-retrieve)
 - [List (pagination)](#list--get-merchant-platformsmerchantplatformidprocessing-accounts)
 - [Reminders](#reminders--post-processing-accountsprocessingaccountidreminders)
@@ -58,6 +59,14 @@ UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc
 ### businessType (`CreateProcessingAccountBusinessType`)
 `retail` | `restaurant` | `internet` | `moto` | `lodging` | `notForProfit`
 
+### processor
+`tsys` | `fiserv` (default `tsys`). Send it explicitly — don't rely on the default.
+
+### addendumType
+`installmentPaymentsV1` | `moneyServicesV1` | `telehealthV1` | `firearmsV1` |
+`pharmacyCnpComplianceV1` | `cbdV1` | `tobaccoCnpV1` | `donationsV1` |
+`cloverMerchantProcessingAmendmentV1` | `rocGivingV1`. See [Addendums](#addendums) below.
+
 ### timezone
 `Pacific/Midway` | `Pacific/Honolulu` | `America/Anchorage` | `America/Los_Angeles` |
 `America/Denver` | `America/Phoenix` | `America/Chicago` | `America/Indiana/Indianapolis` |
@@ -102,16 +111,22 @@ The body **is** a single processing-account object (no `business` wrapper, no
 `processingAccounts` array — that wrapper belongs to `POST /merchant-platforms`). It is the
 exact same object as one element of the `processingAccounts` array in Create Merchant Platform.
 
-Required: `doingBusinessAs`, `owners`, `businessType`, `categoryCode`,
-`merchandiseOrServiceSold`, `businessStartDate`, `timezone`, `address`, `contactMethods`,
-`processing`, `funding`, `pricing`, `signature`.
-Optional: `website`, `contacts`, `metadata`.
+Required: `doingBusinessAs`, `owners`, `merchandiseOrServiceSold`, `businessStartDate`,
+`timezone`, `address`, `contactMethods`, `processing`, `funding`, `pricing`, `signature`,
+`addendums`.
+Optional: `businessType`, `categoryCode`, `processor`, `website`, `contacts`, `metadata`.
+
+`addendums` is required but not required to be non-empty — send `"addendums": []` when the
+merchant doesn't need any of the forms in [Addendums](#addendums) below. `businessType` and
+`categoryCode` are no longer required (previously both were); send them when you have the
+values, since downstream boarding review still uses them.
 
 ```json
 {
   "doingBusinessAs": "Acme Widgets",          // required, string
-  "businessType": "retail",                   // required, enum
-  "categoryCode": 5999,                       // required, integer MCC
+  "businessType": "retail",                   // optional, enum — send if known
+  "categoryCode": 5999,                       // optional, integer MCC — send if known
+  "processor": "tsys",                        // optional, enum tsys|fiserv, default tsys — send explicitly
   "merchandiseOrServiceSold": "Office supplies and widgets",  // required, string
   "businessStartDate": "2018-06-01",          // required, YYYY-MM-DD
   "timezone": "America/Chicago",              // required, enum
@@ -124,10 +139,70 @@ Optional: `website`, `contacts`, `metadata`.
   "funding": { ... },                         // required — createFunding
   "pricing": { ... },                         // required — intent or agreement
   "signature": { ... },                       // required
+  "addendums": [ ],                           // required — [] if none apply, see Addendums
   "contacts": [ ... ],                        // optional
   "metadata": { }                             // optional — your key/value pairs, echoed back
 }
 ```
+
+### Addendums
+
+`addendums` is an array of polymorphic `addendumEntry` objects, each discriminated by `type`.
+Send `[]` if none apply. Eight of the ten types are attestation-only — the entire object is
+just the discriminator:
+
+```json
+{ "type": "installmentPaymentsV1" }
+```
+
+| `type` | Send it when the merchant… |
+| --- | --- |
+| `installmentPaymentsV1` | offers installment payments, loans, or leases |
+| `moneyServicesV1` | offers money services (e.g. traveler's checks) |
+| `telehealthV1` | provides telehealth services |
+| `firearmsV1` | sells firearms |
+| `pharmacyCnpComplianceV1` | is a pharmacy accepting card-not-present transactions |
+| `cbdV1` | sells CBD, synthetic THC/cannabis, HHC, kratom, tianeptine, or delta 8/9/10/0 THC products |
+| `tobaccoCnpV1` | sells tobacco and accepts card-not-present transactions |
+| `donationsV1` | accepts donations |
+
+The other two carry real payloads:
+
+**`cloverMerchantProcessingAmendmentV1`** — merchant is ordering Clover equipment. `lineItems`
+is required, an object keyed by device SKU (`cloverCompact`, `cloverFlex4thGen`,
+`cloverFlexPocket`, `cloverMiniLte3rdGen`, `cloverSoloPosSystem`,
+`cloverStationDuoGen2PosSystem`, `cloverCompactTetherCable`, `cloverCashDrawer`,
+`cloverKitchenPrinter`, `cloverKitchenPrinterThermal`, `cloverWeightScale`,
+`cloverHandsFreeScanner`, `cloverBarCodeScanner`, `cloverKds24`, `cloverKds14`), at least one
+key present, each value `{ "quantity": <int, min 1>, "totalPrice": <int cents, min 0> }`:
+
+```json
+{
+  "type": "cloverMerchantProcessingAmendmentV1",
+  "lineItems": {
+    "cloverSoloPosSystem": { "quantity": 1, "totalPrice": 149900 },
+    "cloverCashDrawer": { "quantity": 2, "totalPrice": 19800 }
+  }
+}
+```
+
+**`rocGivingV1`** — merchant uses Roc Giving. Required: `accountAdminContact`
+(`firstName`, `lastName`, `emailAddress` required; `phone` optional), `autoCloseTime`
+(`HH:mm`, 24-hour clock), `donorSupportPercentage` (number, 0–100). Optional `plan`:
+`basic` (default) | `advanced`.
+
+```json
+{
+  "type": "rocGivingV1",
+  "accountAdminContact": { "firstName": "Jane", "lastName": "Doe", "emailAddress": "jane.doe@example.com" },
+  "autoCloseTime": "23:40",
+  "donorSupportPercentage": 2.5,
+  "plan": "basic"
+}
+```
+
+The response's `addendums` array (`readOnly`) echoes back which addendum types were accepted
+and appended to the Merchant Processing Agreement — empty if none were requested.
 
 ### address object
 
@@ -323,6 +398,7 @@ Only `requestedViaEmail` makes the account eligible for signing **reminders** (s
   ],
   "businessType": "retail",
   "categoryCode": 5999,
+  "processor": "tsys",
   "merchandiseOrServiceSold": "Office supplies and widgets",
   "businessStartDate": "2018-06-01",
   "timezone": "America/Chicago",
@@ -337,6 +413,7 @@ Only `requestedViaEmail` makes the account eligible for signing **reminders** (s
   "pricing": { "link": { "rel": "pricing", "method": "GET", "href": "https://.../processing-accounts/PA-XXXX/pricing" } },
   "contacts": [ ... ],
   "signature": { "type": "requestedViaEmail" },
+  "addendums": [ ],                           // readOnly — echoes accepted addendum types, [] if none
   "metadata": { },
   "links": [ { "rel": "self", "method": "GET", "href": "https://.../processing-accounts/PA-XXXX" } ]
 }
@@ -444,6 +521,16 @@ catalog. Example `400` from adding an empty account body:
   ]
 }
 ```
+
+**Addendum and processor validation.** Four `400` scenarios are specific to `addendums`/`processor` —
+recognize these rather than treating them as an opaque failure:
+
+| `errors[].parameter` pattern | `errors[].detail` | Cause |
+| --- | --- | --- |
+| `...addendums[N].type` | `Unrecognized addendum type.` | `type` isn't one of the 10 values in [Addendums](#addendums) |
+| `...addendums[N].type` | `Duplicate addendum type.` | The same `type` appears more than once in the array |
+| `...addendums[N].<field>` | `Missing required field.` | An addendum entry is missing a field its type requires (e.g. `cloverMerchantProcessingAmendmentV1` without `lineItems`) |
+| `...processor` | `Unrecognized processor.` | `processor` isn't `tsys` or `fiserv` |
 
 | Status | Scenario | Action |
 |--------|----------|--------|

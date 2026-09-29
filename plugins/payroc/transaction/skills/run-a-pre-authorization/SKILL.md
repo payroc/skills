@@ -12,7 +12,7 @@ description: >
   card sales (autoCapture: true), ACH/bank-transfer payments, refunds on settled transactions,
   3-D Secure authentication, or tokenization — those are separate skills.
 metadata:
-  version: "0.1.1"
+  version: "0.1.2"
   category: transaction
   status: draft
 ---

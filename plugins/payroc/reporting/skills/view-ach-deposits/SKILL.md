@@ -12,7 +12,7 @@ description: >
   verifying bank accounts, viewing settlement batches, viewing settled transactions, or viewing
   funding activity — those have dedicated skills.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: reporting
   status: draft
 ---
@@ -165,9 +165,6 @@ The response contains `access_token`, `expires_in` (3600), `scope`, and `token_t
 Store the API key in an environment variable (`PAYROC_API_KEY`). Never inline it.
 
 For production code, include expiry tracking — a token that expires mid-session causes a `401` on an otherwise valid request.
-
-The Payroc SDKs (TypeScript, Python, C#, PHP, Go, Java, Ruby) handle token exchange automatically.
-See https://docs.payroc.com/api/payroc-sd-ks-beta.
 
 ### Checkpoint
 

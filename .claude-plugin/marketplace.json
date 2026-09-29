@@ -7,6 +7,7 @@
     { "name": "transaction", "source": "./plugins/payroc/transaction", "description": "Skills for payment transaction integration",         "version": "0.1.0" },
     { "name": "funding",     "source": "./plugins/payroc/funding",     "description": "Skills for funding and settlement integration",      "version": "0.1.0" },
     { "name": "reporting",   "source": "./plugins/payroc/reporting",   "description": "Skills for reporting and analytics integration",     "version": "0.1.0" },
-    { "name": "notifications", "source": "./plugins/payroc/notifications", "description": "Skills for event notifications and webhook subscriptions", "version": "0.1.0" }
+    { "name": "notifications", "source": "./plugins/payroc/notifications", "description": "Skills for event notifications and webhook subscriptions", "version": "0.1.0" },
+    { "name": "migration", "source": "./plugins/payroc/migration", "description": "Skills for migrating an existing integration from a legacy Payroc gateway to the Payroc API", "version": "0.1.0" }
   ]
 }

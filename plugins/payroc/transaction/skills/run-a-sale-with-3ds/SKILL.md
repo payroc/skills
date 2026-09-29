@@ -15,7 +15,7 @@ description: >-
   explicitly. Do NOT use for card sales without 3DS authentication, refunds,
   ACH payments, or card tokenization alone.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: transaction
   status: draft
 ---
@@ -418,7 +418,7 @@ If the developer is using an external 3-D Secure provider (not Payroc's MPI serv
 
 > **`cavv`, `xid`, and `dsTransactionId` are all optional.** Only include them if your third-party 3DS provider supplies the value. Do not send a placeholder string (e.g. `"<cardholder-auth-value>"`) for a field you don't have — omit the field entirely. Sending a non-empty placeholder will produce a 400.
 
-> **`eci` enum trap — read this before writing the value.** The `eci` values for the `thirdParty` payment request field (`"fullyAuthenticated"`, `"attemptedAuthentication"`) are **completely different** from the MPI callback `eci` values (`"05"`, `"06"`, `"07"`). Do not copy the MPI callback value directly into the payment request. Read `references/api-schema.md` Enums section — `threeDSecure.eci (thirdParty variant)` — before emitting this value.
+> **`eci` enum trap — read this before writing the value.** The `eci` values for the `thirdParty` payment request field (`"fullyAuthenticated"`, `"authAttempted"`) are **completely different** from the MPI callback `eci` values (`"05"`, `"06"`, `"07"`). Do not copy the MPI callback value directly into the payment request. Read `references/api-schema.md` Enums section — `threeDSecure.eci (thirdParty variant)` — before emitting this value.
 
 This skill focuses on the Payroc MPI (`serviceProvider: "gateway"`) path. If the developer is using a third-party 3DS provider, they should confirm the correct field mapping with that provider's documentation.
 

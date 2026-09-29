@@ -1,7 +1,7 @@
 # Payment Plans & Subscriptions — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Repeat Payments schemas). Last synced: 2026-06-22. This is the offline source of truth this skill emits
+> (Repeat Payments schemas). Last synced: 2026-09-24. This is the offline source of truth this skill emits
 > from — read enum values and required-field sets from here, not from memory. To refresh, re-fetch the
 > source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -131,7 +131,7 @@ Response (201): full `paymentPlan` object plus `processingTerminalId`.
   // Required
   "subscriptionId": "SUB-CUST-001",        // merchant-assigned unique identifier
   "paymentPlanId": "PlanRef8765",           // must match an existing payment plan
-  "startDate": "2026-07-01",               // YYYY-MM-DD
+  "startDate": "2026-07-01",               // YYYY-MM-DD; must be the current day or later (gateway date: UTC in winter, IST in summer)
   "paymentMethod": {
     "type": "secureToken",                  // only supported value — always exactly this string
     "token": "tok_abc123...",              // secure token from the Tokenization API
@@ -215,7 +215,10 @@ Response (201): `subscriptionPayment` — includes `payment.paymentId`, `payment
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | token from the identity service; expires in 3600s |
 | `Content-Type: application/json` | POST / PATCH | |
-| `Idempotency-Key: <UUID v4>` | every POST and PATCH | required; fresh UUID per distinct operation |
+| `Idempotency-Key: <UUID v4>` | every POST and PATCH — **except** the deactivate and reactivate sub-endpoints | required; fresh UUID per distinct operation |
+
+The deactivate (`/deactivate`) and reactivate (`/reactivate`) subscription POSTs do not require
+`Idempotency-Key`. Sending the header anyway is harmless; the gateway ignores it.
 
 ---
 
@@ -226,7 +229,8 @@ Response (201): `subscriptionPayment` — includes `payment.paymentId`, `payment
 - **Secure token required before subscription**: the `paymentMethod.token` in a subscription must be a valid secure token obtained via the Payroc Tokenization API (save-a-payment-method skill) before creating the subscription.
 - **`recurringOrder` required when `type = "automatic"`**: for `manual` plans, the gateway does not collect payments automatically — omit `recurringOrder` or include it at the plan level only.
 - **Amounts in lowest denomination**: all `amount` fields are integers in the smallest currency unit (e.g. cents for USD).
-- **Dates are `YYYY-MM-DD`**: `startDate`, `endDate`, `nextDueDate` all use this format.
+- **Dates are `YYYY-MM-DD`**: `startDate`, `endDate`, `nextDueDate` all use this format. `startDate` must be the current day or later (gateway date: UTC in winter, IST in summer).
+- **Pay manual subscription**: only for a subscription whose `type` is `manual`. Collect only when a payment is due (the plan's `frequency` sets the period). The gateway rejects a second collection in the same period.
 - **Delete is irreversible**: a deleted payment plan cannot be recovered; new subscriptions cannot be added to it after deletion.
 - **Deactivate vs Delete**: deactivating a subscription sets its status to `cancelled` but does NOT delete it — it can be reactivated. Deleting a payment plan permanently removes the plan template.
 

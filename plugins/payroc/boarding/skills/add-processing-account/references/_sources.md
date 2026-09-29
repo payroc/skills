@@ -6,8 +6,8 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST`/`GET /merchant-platforms/{merchantPlatformId}/processing-accounts`, `GET /processing-accounts/{processingAccountId}` + `/pricing`,`/owners`,`/contacts`,`/funding-accounts`, `POST /processing-accounts/{processingAccountId}/reminders`; schemas `createProcessingAccount`, `processingAccount`, `paginatedProcessingAccounts`, `owner`, `ownerRelationship`, `identifier`, `processing`, `createFunding`, `fundingAccount`, `paymentMethods`, `pricing`, `signature`, `contactMethod`, `address`, `createReminder` request/response) | 2026-06-18 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST`/`GET /merchant-platforms/{merchantPlatformId}/processing-accounts`, `GET /processing-accounts/{processingAccountId}` + `/pricing`,`/owners`,`/contacts`,`/funding-accounts`, `POST /processing-accounts/{processingAccountId}/reminders`; schemas `createProcessingAccount`, `processingAccount`, `paginatedProcessingAccounts`, `owner`, `ownerRelationship`, `identifier`, `processing`, `createFunding`, `fundingAccount`, `paymentMethods`, `pricing`, `signature`, `contactMethod`, `address`, `createReminder` request/response) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 processing-account schemas are entirely Payroc-owned, so this skill has no

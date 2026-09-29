@@ -15,11 +15,17 @@ embedding a full pricing agreement inline.
 | Operation | Method & path | Idempotency-Key | Success |
 |-----------|---------------|:---------------:|---------|
 | List pricing intents | `GET /pricing-intents` | — | `200` `paginatedPricingIntent` |
-| Create pricing intent | `POST /pricing-intents` | **required** | `201` `pricingIntent` |
+| Create pricing intent | `POST /pricing-intents` | **required** | `201` `writePricingIntent` |
 | Retrieve pricing intent | `GET /pricing-intents/{pricingIntentId}` | — | `200` `pricingIntent` |
 | Update pricing intent (full replace) | `PUT /pricing-intents/{pricingIntentId}` | — | `204` No Content |
-| Partially update pricing intent | `PATCH /pricing-intents/{pricingIntentId}` | **required** | `200` `pricingIntent` |
+| Partially update pricing intent | `PATCH /pricing-intents/{pricingIntentId}` | **required** | `200` `writePricingIntent` |
 | Delete pricing intent | `DELETE /pricing-intents/{pricingIntentId}` | — | `204` No Content |
+
+**Read/write schema split:** `writePricingIntent` (create/update/patch bodies — 5.2 only) is a
+different schema from `pricingIntent` (retrieve/list responses — 5.0 or 5.2). You can only
+ever *write* a 5.2 template; a *retrieved* one may come back as 5.0 (an older template you
+didn't create) or 5.2. Don't assume every retrieved intent matches the 5.2 shape below —
+check `version` first.
 
 - **`Authorization: Bearer <token>`** is required on every operation.
 - **`PATCH` uses [RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902) JSON Patch** — the body
@@ -58,7 +64,8 @@ Updating or deleting a pricing intent does **not** affect merchants you have alr
 `monthly` | `annual`
 
 ### services[].name (discriminator)
-`hardwareAdvantagePlan`
+`hardwareAdvantagePlan` | `accountUpdater` | `wirelessProcessing` | `cloverProcessing` |
+`rocServicesProcessing`
 
 ### rewardPayChoice debit.option
 `interchangePlus` | `flatRate`
@@ -77,10 +84,12 @@ Updating or deleting a pricing intent does **not** affect merchants you have alr
 
 ---
 
-## Request / response body — `pricingIntent` (→ `pricingIntent5.2`)
+## Request / response body — `writePricingIntent` / `pricingIntent`
 
-The same `pricingIntent` schema is used for the create request body, the create/retrieve/patch
-responses, and the PUT request body.
+`writePricingIntent` (create request, create/PATCH response, PUT request body) resolves to
+`pricingIntent5.2` only — you cannot write a 5.0 template. `pricingIntent` (retrieve/list
+response) resolves to `pricingIntent5.0` **or** `pricingIntent5.2` — check `version` before
+assuming the 5.2 field shape below applies.
 
 ```json
 {
@@ -296,15 +305,27 @@ supports the `direct` variant.
 
 ---
 
-## services array (`servicesUs5.0`)
+## services array (`servicesUs5.2`)
 
-Array of polymorphic service objects (discriminated on `name`). Currently only one service:
+Array of polymorphic service objects, discriminated on `name`. Five services:
 
 ```json
 [
-  { "name": "hardwareAdvantagePlan", "enabled": true }
+  { "name": "hardwareAdvantagePlan", "enabled": true },
+  { "name": "accountUpdater", "fees": { "setup": 0, "monthly": 500, "perUpdate": 25 } },
+  { "name": "wirelessProcessing", "fees": { "setup": 0, "monthlyAccess": 1000 } },
+  { "name": "cloverProcessing", "fees": { "platformMonthly": 1000, "dataProtectionPerMid": 500, "keyedAuthorizationPerTransaction": 10 } },
+  { "name": "rocServicesProcessing", "fees": { "monthly": 500 } }
 ]
 ```
+
+| `name` | Required `fees` fields (all amounts in cents) |
+| --- | --- |
+| `hardwareAdvantagePlan` | none — just `{ "name": ..., "enabled": <bool> }` |
+| `accountUpdater` | `setup`, `monthly`, `perUpdate` |
+| `wirelessProcessing` | `setup`, `monthlyAccess` |
+| `cloverProcessing` | `platformMonthly`, `dataProtectionPerMid`, `keyedAuthorizationPerTransaction` |
+| `rocServicesProcessing` | `monthly` |
 
 ---
 

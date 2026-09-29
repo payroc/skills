@@ -13,7 +13,7 @@ description: >
   (use view-ach-deposits), disputes (use view-disputes), or authorizations
   (use view-authorizations).
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: reporting
   status: draft
 ---
@@ -136,9 +136,7 @@ curl -X POST https://identity.payroc.com/authorize \
 The response includes `access_token`, `expires_in` (3600 seconds), and `token_type` ("Bearer").
 Use `Authorization: Bearer <access_token>` on every subsequent API call.
 
-Store the API key in an environment variable — never inline it. The Payroc SDKs (TypeScript,
-Python, C#, PHP, Go, Java, Ruby) handle token exchange automatically — see
-https://docs.payroc.com/api/payroc-sd-ks-beta.
+Store the API key in an environment variable — never inline it.
 
 ### Checkpoint
 

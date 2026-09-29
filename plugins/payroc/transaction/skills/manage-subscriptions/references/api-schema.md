@@ -1,7 +1,7 @@
 # Manage Subscriptions — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Repeat Payments schemas). Last synced: 2026-06-22. This is the offline source of truth this skill
+> (Repeat Payments schemas). Last synced: 2026-09-24. This is the offline source of truth this skill
 > emits from — read enum values and required-field sets from here, not from memory. To refresh,
 > re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -166,7 +166,7 @@ Required fields:
 | `subscriptionId` | string | Merchant-assigned unique identifier |
 | `paymentPlanId` | string | The plan this subscription follows |
 | `paymentMethod` | object | Secure token details (see below) |
-| `startDate` | string | First billing date — `YYYY-MM-DD` |
+| `startDate` | string | First billing date — `YYYY-MM-DD`; must be the current day or later (gateway date: UTC in winter, IST in summer) |
 
 Optional fields:
 
@@ -237,6 +237,8 @@ Fields that **cannot be modified at all** (no PATCH operation allowed):
 - `paymentPlan`
 
 ### Pay Manual Subscription (request body)
+
+Only for a subscription whose `type` is `manual`. Collect only when a payment is due (the plan's `frequency` sets the period). The gateway rejects a second collection in the same period.
 
 ```jsonc
 {
