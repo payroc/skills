@@ -16,7 +16,7 @@ description: >
   a merchant, running payments or transactions, or any operation that does not involve uploading
   or retrieving file attachment metadata for an existing processing account.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: boarding
   status: draft
 ---
@@ -158,9 +158,7 @@ Response:
 }
 ```
 
-Use `Authorization: Bearer <access_token>` on every subsequent request. The Payroc SDKs
-(TypeScript, Python, C#, PHP, Go, Java, Ruby) handle token exchange automatically — see
-https://docs.payroc.com/api/payroc-sd-ks-beta.
+Use `Authorization: Bearer <access_token>` on every subsequent request.
 
 ### Checkpoint
 

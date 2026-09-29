@@ -15,7 +15,7 @@ description: >
   (use view-settled-transactions), ACH deposits (use view-ach-deposits), or disputes
   (use view-disputes).
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: reporting
   status: draft
 ---

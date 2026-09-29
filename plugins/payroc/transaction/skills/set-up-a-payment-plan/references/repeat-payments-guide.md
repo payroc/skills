@@ -1,7 +1,7 @@
 # Payroc Repeat Payments — Narrative Guide
 
 > **Local snapshot — authoritative for this skill.** Sources: https://docs.payroc.com/guides/take-payments/repeat-payments/use-our-gateway.md and https://docs.payroc.com/knowledge/card-payments/payment-plans-and-subscriptions.md
-> Last synced: 2026-06-22.
+> Last synced: 2026-09-24.
 
 ---
 
@@ -22,7 +22,7 @@ One plan can have many subscribers. Each subscription belongs to exactly one cus
 |-----------|----------|-------------|
 | Who collects payments | Your POS / own system | Payroc gateway |
 | `recurringOrder` required | No | Yes |
-| How to charge | Call the "Pay manual subscription" endpoint per billing cycle | Gateway charges automatically at each billing interval |
+| How to charge | Call the "Pay manual subscription" endpoint once per billing cycle, when the payment is due | Gateway charges automatically at each billing interval |
 | Use case | Merchants who manage billing in their own software | Full gateway-managed recurring billing |
 
 ---
@@ -32,7 +32,7 @@ One plan can have many subscribers. Each subscription belongs to exactly one cus
 1. **Create a payment plan** — define the template (frequency, amount, length, currency).
 2. **Create a secure token** — tokenize the customer's payment method via the Tokenization API (`save-a-payment-method` skill). The resulting `secureTokenId` is what you pass into the subscription.
 3. **Create a subscription** — link the customer (via their secure token) to the payment plan, with a start date.
-4. **Collect payments** — for `automatic` plans the gateway handles this. For `manual` plans, call the "Pay manual subscription" endpoint each time you want to charge.
+4. **Collect payments** — for `automatic` plans the gateway handles this. For `manual` plans, call the "Pay manual subscription" endpoint each time a payment is due. The plan's `frequency` sets how often that is, and if the payment for the current period has already been collected, the gateway rejects the request.
 
 ---
 

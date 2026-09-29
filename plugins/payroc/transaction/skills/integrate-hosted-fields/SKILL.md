@@ -11,7 +11,7 @@ description: >-
   guidance. Also use it when a developer has HPP working and asks about the
   embedded alternative.
 metadata:
-  version: "0.2.1"
+  version: "0.2.2"
   category: integration
   status: draft
 ---

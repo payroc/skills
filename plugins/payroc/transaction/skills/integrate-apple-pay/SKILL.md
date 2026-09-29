@@ -9,7 +9,7 @@ description: >-
   getting Apple Pay working with the Payroc gateway — even if they don't
   explicitly mention "integration" or ask for step-by-step guidance.
 metadata:
-  version: "0.5.0"
+  version: "0.6.2"
   category: integration
   status: draft
 ---
@@ -41,7 +41,7 @@ On first invocation, announce to the developer:
 >
 > **How Apple Pay works with Payroc (four parts):**
 > 1. Your domain is verified with Apple via the Self-Care Portal, giving you a domain ID
-> 2. When a customer taps the Apple Pay button, the Apple Pay JS API fires an `onvalidatemerchant` event — your server calls the Payroc API to start a session and returns the response to Apple
+> 2. When a customer taps the Apple Pay button, the Apple Pay JS API fires an `onvalidatemerchant` event — your server calls the Payroc API to start a session and returns the response to Apple. Two endpoint variants are available: the new `POST /v1/payments/apple-pay/sessions` (preferred for new integrations) and the original `POST /v1/processing-terminals/{processingTerminalId}/apple-pay-sessions`.
 > 3. Apple presents the payment sheet; the customer authorises with Face ID / Touch ID
 > 4. The `onpaymentauthorized` event fires with encrypted payment data — your server converts it to hex and POSTs to the Payroc payments endpoint
 >
@@ -62,7 +62,13 @@ x-api-key: <api-key>
 
 # Apple Pay JS API — provided by Safari / WebKit; there is no script tag to load
 
-# Apple Pay session start (server-side — validate the merchant session with Apple)
+# Apple Pay session start — payments-path variant (PREFERRED for new integrations)
+# processingTerminalId is a body field; no path parameter needed
+POST https://api.uat.payroc.com/v1/payments/apple-pay/sessions
+Authorization:  Bearer <token>
+Content-Type:   application/json
+
+# Apple Pay session start — terminal-path variant (original; still supported)
 POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/apple-pay-sessions
 Authorization:  Bearer <token>
 Content-Type:   application/json
@@ -96,7 +102,7 @@ If your question is "how do I structure the Payroc session-start or payments req
 
 | Source | Local file | Use for |
 | --- | --- | --- |
-| API schema reference | `references/api-schema.md` | **All** Payroc enum values, required fields, request/response schemas (start-session + payments) |
+| API schema reference | `references/api-schema.md` | **All** Payroc enum values, required fields, request/response schemas (both session-start variants + payments). Includes the new `POST /v1/payments/apple-pay/sessions` payments-path endpoint (preferred for new integrations) and the original `POST /v1/processing-terminals/{processingTerminalId}/apple-pay-sessions` terminal-path endpoint. |
 | Error response format | `references/error-response-format.md` | Error envelope (RFC 7807) + Payroc errors[] + canonical error type catalog |
 | Set up Apple Pay for a merchant (Payroc narrative) | `references/set-up-apple-pay-for-a-merchant.md` | Domain verification / Self-Care Portal setup, obtaining the domain ID |
 | Add Apple Pay to your integration (Payroc narrative) | `references/add-apple-pay-to-your-integration.md` | Bearer token, session-start call, run-a-sale composition |
@@ -173,7 +179,8 @@ These are needed to **run and test** Apple Pay end-to-end — not to write the c
 1. **API key** — used to obtain a Bearer token from Payroc's identity service. Same credential used for Hosted Fields; the Payroc Integrations team provisions it.
 2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team.
 3. **Domain ID** — returned when the merchant's domain is verified with Apple via the Self-Care Portal (see Step 1); included in every Apple Pay session request. The code can read it from a variable like `APPLE_PAY_DOMAIN_ID`.
-4. **A publicly accessible HTTPS domain** — Apple Pay domain verification requires a URL that Apple's servers can reach. `localhost` is not sufficient for *verification and live testing*; a staging or production domain is required. This does not block writing the integration — it blocks verifying and testing it.
+4. **Apple Pay enabled on the processing terminal** — Payroc must enable Apple Pay for the merchant's processing terminal before the merchant can be set up in the Self-Care Portal (Step 1). Ask the Payroc Integrations team to enable it.
+5. **A publicly accessible HTTPS domain** — Apple Pay domain verification requires a URL that Apple's servers can reach. `localhost` is not sufficient for *verification and live testing*; a staging or production domain is required. This does not block writing the integration — it blocks verifying and testing it.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY`, `PAYROC_TERMINAL_ID`, and `APPLE_PAY_DOMAIN_ID`. Write the code to read those values from the environment, then tell the developer plainly:
 
@@ -193,6 +200,7 @@ Read: references/set-up-apple-pay-for-a-merchant.md
 
 Read the page before doing anything. Confirm the exact steps from the reference — but at the time of writing they are:
 
+0. Confirm Payroc has enabled Apple Pay on the merchant's processing terminal. Without it, the setup can't be completed
 1. Log in to the [Self-Care Portal](https://selfcare.payroc.com) for the UAT terminal
 2. Navigate to Settings → Apple Pay Domains
 3. Download the Apple Pay domain verification file
@@ -273,20 +281,41 @@ Does the Apple Pay payment sheet appear when the button is tapped on an Apple de
 
 ## Step 4 — Start the Apple Pay session
 
-Read: references/add-apple-pay-to-your-integration.md (same page — the session-start API call) and `references/api-schema.md` (the `applePaySessions` request/response schemas)
+Read: `references/api-schema.md` (both `applePaySessions` schema sections — the terminal-path variant and the payments-path variant) and `references/add-apple-pay-to-your-integration.md` (session-start narrative).
 
-> **Do not use any endpoint URL, field name, or response shape from your training knowledge. Read the session-start endpoint, required body fields, and response structure from `references/api-schema.md` and the narrative copy above.**
+> **Do not use any endpoint URL, field name, or response shape from your training knowledge. Read both session-start endpoint schemas from `references/api-schema.md` before choosing which to implement.**
+
+**There are now two supported endpoints for starting an Apple Pay session — read `references/api-schema.md` to confirm the exact schema for each before emitting any code:**
+
+| Variant | Endpoint | `processingTerminalId` location | When to use |
+| --- | --- | --- | --- |
+| Payments-path (new — preferred) | `POST /v1/payments/apple-pay/sessions` | **Request body** | New integrations |
+| Terminal-path (original) | `POST /v1/processing-terminals/{processingTerminalId}/apple-pay-sessions` | URL path | Existing integrations already using this path |
+
+For new integrations, implement the payments-path variant. For existing integrations already using the terminal-path variant, no migration is required — both are supported.
 
 When `onvalidatemerchant` fires, your server must call the Payroc API to validate the session with Apple. From the references, confirm:
 
-- The session-start endpoint URL (test vs production)
-- The required request body fields: `appleDomainId` (the domain ID from Step 1) and `appleValidationUrl` (the `validationURL` from the event)
+- Which endpoint variant to use (and the exact URL for test vs production)
+- The required request body fields for your chosen variant (read the relevant schema section in `references/api-schema.md`)
 - The response object to pass back to `completeMerchantValidation`
+
+**Payments-path variant body** (read from `references/api-schema.md` — `applePaySessions (payments-path variant)`):
+- `processingTerminalId` — **required** (moved from the URL path)
+- `appleDomainId` — the domain ID from Step 1
+- `appleValidationUrl` — the `validationURL` from the event, verbatim
+
+**Terminal-path variant body** (read from `references/api-schema.md` — `applePaySessions (start-session request body)`):
+- `appleDomainId` — the domain ID from Step 1
+- `appleValidationUrl` — the `validationURL` from the event, verbatim
+- `processingTerminalId` — in the URL path, not the body
+
+Both variants return the same `applePayResponseSession` shape: `{ startSessionResponse: "..." }`. Pass `startSessionResponse` unwrapped to `completeMerchantValidation`.
 
 Implement a server-side endpoint that:
 1. Receives the `validationURL` from the client
 2. Generates (or reuses) a valid Bearer token
-3. POSTs to the Payroc session-start endpoint with `appleDomainId` and `appleValidationUrl`
+3. POSTs to the chosen Payroc session-start endpoint with the correct body fields
 4. Returns the response body to the client
 
 ### Checkpoint
@@ -354,7 +383,8 @@ There is no inbound webhook in this flow — the only public-reachability need i
 | Apple Pay button is visible on a non-Apple browser (where it should be hidden) | An author CSS rule sets `display` on the button, overriding the user-agent `[hidden] { display: none }` rule, so the `hidden` gate is defeated | Read `references/third-party/apple-pay-button.md`; gate by toggling `style.display`/a class in JS, or keep `display` out of the button's base CSS; confirm it's actually hidden when `ApplePaySession` is absent |
 | Payments API 400 `"orderId size must be between 1 and 24"` | `order.orderId` exceeds 24 characters — typically a raw `uuidv4()`/`crypto.randomUUID()` (36 chars) or a prefixed UUID | Read the `order.orderId` 1–24 constraint from `references/api-schema.md`; use a scheme that always fits (short hex, base36 timestamp + short random, or a short merchant order number) |
 | `onvalidatemerchant` fires but `completeMerchantValidation` throws | Session-start API call failed or response is not the raw Apple session object | Log the full Payroc response; confirm the response body (not a wrapped object) is passed directly to `completeMerchantValidation` |
-| Session-start returns 404 | Wrong endpoint URL or incorrect `processingTerminalId` in path | Re-read the endpoint URL from `references/api-schema.md`; confirm the terminal ID is the UAT terminal |
+| Session-start returns 404 | Wrong endpoint URL or incorrect `processingTerminalId` in path (terminal-path variant) | Re-read the endpoint URL from `references/api-schema.md`; confirm the terminal ID is the UAT terminal |
+| Session-start returns 400 with a missing-field error naming `processingTerminalId` | Using the payments-path variant (`POST /v1/payments/apple-pay/sessions`) but omitting `processingTerminalId` from the request body — it is no longer a path parameter on this endpoint | Read `references/api-schema.md` (payments-path variant schema); add `processingTerminalId` to the request body |
 | Session-start returns 400 | `appleDomainId` or `appleValidationUrl` missing or invalid | Confirm the domain ID from the Self-Care Portal; confirm `validationURL` is passed through from the event verbatim without modification |
 | Domain verification fails in Self-Care Portal | Verification file not accessible over HTTPS | Confirm the file is at exactly `/.well-known/apple-developer-merchantid-domain-association` with no extension; test with `curl` before adding the domain |
 | Payment API 401 | Bearer token expired or wrong API key | Re-fetch Bearer token; verify the `x-api-key` value |
@@ -414,7 +444,7 @@ Once HTTP 201 is confirmed and all checklist items pass:
 > - **Payment processing** — the customer authorises with Face ID / Touch ID; your server converts the encrypted payment data to hex and posts it to the Payroc payments endpoint.
 > - **Validated in UAT** — end-to-end Apple Pay transaction confirmed.
 >
-> **Before going live:** swap UAT endpoint URLs for production URLs in both the session-start call and the payments API call. Register the production domain in the production Self-Care Portal and obtain its domain ID.
+> **Before going live:** swap UAT endpoint URLs for production URLs in both the session-start call and the payments API call (`api.uat.payroc.com` → `api.payroc.com`). If using the payments-path variant, change `https://api.uat.payroc.com/v1/payments/apple-pay/sessions` → `https://api.payroc.com/v1/payments/apple-pay/sessions`. Register the production domain in the production Self-Care Portal and obtain its domain ID.
 
 Offer next steps:
 

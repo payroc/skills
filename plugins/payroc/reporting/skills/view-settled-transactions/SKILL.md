@@ -16,7 +16,7 @@ description: >
   (use view-ach-deposits), viewing authorization records (use view-authorizations),
   processing payments, creating refunds, or checking real-time authorization status.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: reporting
   status: draft
 ---

@@ -16,7 +16,7 @@ description: >
   balance reports, or funding balances without the intent to disburse (use the
   view-funding-activity skill).
 metadata:
-  version: "0.1.2"
+  version: "0.1.3"
   category: funding
   status: draft
 ---

@@ -122,7 +122,8 @@ The token already exists (it's the `CARDREFERENCE` from Stage A). Two calls, in 
    (`weekly`/`fortnightly`/`monthly`/`quarterly`/`yearly`), `onUpdate`, `onDelete`. For an `automatic` plan,
    include `recurringOrder.amount` (lowest denomination). `length: 0` runs indefinitely.
 2. **Create a Subscription** — `POST /processing-terminals/{processingTerminalId}/subscriptions`. Required:
-   `subscriptionId`, `paymentPlanId` (from step 1), `paymentMethod`, `startDate` (YYYY-MM-DD). Set
+   `subscriptionId`, `paymentPlanId` (from step 1), `paymentMethod`, `startDate` (YYYY-MM-DD, the current day
+   or later; the gateway date is UTC in winter, IST in summer). Set
    `paymentMethod` to the secure-token variant:
 
    ```json
@@ -133,11 +134,13 @@ The token already exists (it's the `CARDREFERENCE` from Stage A). Two calls, in 
    period). If you send both `length` and `endDate`, the gateway uses `endDate`.
 
 For a `manual` subscription, collect each payment with
-`POST .../subscriptions/{subscriptionId}/pay`. For `automatic`, the gateway collects on schedule. Manage the
+`POST .../subscriptions/{subscriptionId}/pay` when it is due. The gateway rejects a second collection in the
+same `frequency` period. For `automatic`, the gateway collects on schedule. Manage the
 lifecycle with `/deactivate` and `/reactivate`.
 
 **Verify in UAT:** the subscription is created (HTTP 2xx) and `currentState.status` is `active`. For a
-`manual` plan, also run one `/pay` call and confirm it succeeds.
+`manual` plan, also run one `/pay` call and confirm it succeeds. It succeeds only if a payment is due, so
+test with a `startDate` of today.
 
 #### Checkpoint
 

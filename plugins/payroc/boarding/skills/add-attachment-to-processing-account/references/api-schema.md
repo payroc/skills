@@ -5,7 +5,7 @@
 > `GET /attachments/{attachmentId}`; schemas `attachment`, `AttachmentType`,
 > `AttachmentUploadStatus`, `AttachmentEntityType`, `AttachmentEntity`,
 > `ProcessingAccountsProcessingAccountIdAttachmentsPostRequestBodyContentMultipartFormDataSchemaAttachment`).
-> Last synced: 2026-06-22. Emit field names and enum values from this file — not from memory.
+> Last synced: 2026-09-16. Emit field names and enum values from this file — not from memory.
 
 ---
 
@@ -149,7 +149,8 @@ Returned on both `POST` (201) and `GET` (200).
 ```
 
 **Required response fields:** `attachmentId`, `type`, `uploadStatus`, `fileName`, `contentType`,
-`entity`, `createdDate`, `lastModifiedDate`.
+`entity`, `createdDate`, `lastModifiedDate`. `createdDate` and `lastModifiedDate` are
+`readOnly` — the API sets them; never send them in the upload request.
 
 **Note:** The upload status on a freshly created attachment is typically `pending`. Poll
 `GET /v1/attachments/{attachmentId}` to check whether it transitions to `accepted` or `rejected`.

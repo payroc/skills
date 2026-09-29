@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > and `https://docs.payroc.com/api/schema/notifications/event-subscriptions/` (per-operation docs).
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-09-16. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory.
 
 ---
@@ -32,9 +32,11 @@ Read these verbatim; do not guess or invent event type names.
 | Event type string | Description |
 | --- | --- |
 | `processingAccount.status.changed` | Payroc changed the status of a processing account |
+| `processingAccount.riskStatus.changed` | Payroc changed the risk status of a processing account (funding held/released) |
+| `processingAccount.signature.signed` | An owner or authorized signatory signed the Merchant Processing Agreement |
 | `terminalOrder.status.changed` | Payroc changed the status of a terminal order |
 
-> **Note:** This is the complete list of documented event types as of 2026-06-22. Do not emit any event type string not listed here.
+> **Note:** This is the complete list of documented event types as of 2026-09-16. Do not emit any event type string not listed here.
 
 ### status — event subscription status (read-only; returned by API)
 
@@ -249,6 +251,61 @@ Processing account status enum values:
   "data": {
     "processingAccountId": "38765",
     "status": "approved"
+  }
+}
+```
+
+### data object — processingAccount.riskStatus.changed
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `processingAccountId` | string | ID of the processing account whose risk status changed |
+| `riskStatus` | enum | New risk status value |
+
+Risk status enum values:
+
+| Value | Description |
+| --- | --- |
+| `fullSuspense` | Funding suspended — all settlements held until Payroc completes its review |
+| `nonFullSuspense` | Processing account cleared for normal funding |
+
+**Example:**
+```json
+{
+  "specversion": "1.0",
+  "type": "processingAccount.riskStatus.changed",
+  "version": "1.0.0",
+  "source": "payroc",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "time": "2024-09-15T10:45:00.000Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "processingAccountId": "38765",
+    "riskStatus": "fullSuspense"
+  }
+}
+```
+
+### data object — processingAccount.signature.signed
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `processingAccountId` | string | ID of the processing account whose Merchant Processing Agreement was signed |
+| `signed` | string | Always `"true"` — Payroc only sends this event once the agreement is signed |
+
+**Example:**
+```json
+{
+  "specversion": "1.0",
+  "type": "processingAccount.signature.signed",
+  "version": "1.0.0",
+  "source": "payroc",
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "time": "2026-05-21T11:30:00.000Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "processingAccountId": "38765",
+    "signed": "true"
   }
 }
 ```
