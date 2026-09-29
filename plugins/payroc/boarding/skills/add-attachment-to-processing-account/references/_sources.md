@@ -6,8 +6,8 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (paths `POST /processing-accounts/{processingAccountId}/attachments`, `GET /attachments/{attachmentId}`; schemas `attachment`, `AttachmentType`, `AttachmentUploadStatus`, `AttachmentEntityType`, `AttachmentEntity`, `ProcessingAccountsProcessingAccountIdAttachmentsPostRequestBodyContentMultipartFormDataSchemaAttachment`) | 2026-06-22 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (paths `POST /processing-accounts/{processingAccountId}/attachments`, `GET /attachments/{attachmentId}`; schemas `attachment`, `AttachmentType`, `AttachmentUploadStatus`, `AttachmentEntityType`, `AttachmentEntity`, `ProcessingAccountsProcessingAccountIdAttachmentsPostRequestBodyContentMultipartFormDataSchemaAttachment`) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 attachment schemas are entirely Payroc-owned, so this skill has no `third-party-derived`

@@ -15,7 +15,7 @@ description: >-
   (that is hardware setup, out of scope). If the user wants to set up or pair a device, say that is
   out of scope and that this skill picks up once a device serial number exists.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   category: transaction
   status: draft
 ---
@@ -171,8 +171,7 @@ curl -X POST https://identity.uat.payroc.com/authorize \
 ```
 
 Response carries `access_token`, `expires_in`, `token_type: "Bearer"`. Send
-`Authorization: Bearer <access_token>` on every subsequent request. The Payroc SDKs handle token
-exchange automatically — see https://docs.payroc.com/api/payroc-sd-ks-beta.
+`Authorization: Bearer <access_token>` on every subsequent request.
 
 ---
 

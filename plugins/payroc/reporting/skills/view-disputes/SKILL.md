@@ -11,7 +11,7 @@ description: >
   write operation — the Disputes API exposes only LIST and GET endpoints. Do NOT use for general
   questions about the chargeback process, dispute notifications, or settlement batches.
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
   category: reporting
   status: eval-complete
 ---

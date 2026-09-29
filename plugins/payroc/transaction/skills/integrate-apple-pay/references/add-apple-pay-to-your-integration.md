@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/guides/take-payments/apple-pay/add-apple-pay-to-your-integration.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-09-16. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Add Apple Pay to your integration
 
@@ -3052,7 +3052,7 @@ components:
       type: string
       enum:
         - fullyAuthenticated
-        - attemptedAuthentication
+        - authAttempted
       description: E-commerce indicator (ECI) result of a the 3-D Secure check.
       title: PaymentRequestThreeDSecureDiscriminatorMappingThirdPartyEci
     PaymentRequestThreeDSecure:
@@ -6981,7 +6981,7 @@ components:
       type: string
       enum:
         - fullyAuthenticated
-        - attemptedAuthentication
+        - authAttempted
       description: E-commerce indicator (ECI) result of a the 3-D Secure check.
       title: PaymentRequestThreeDSecureDiscriminatorMappingThirdPartyEci
     PaymentRequestThreeDSecure:

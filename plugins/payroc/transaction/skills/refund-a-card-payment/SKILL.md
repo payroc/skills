@@ -13,7 +13,7 @@ description: >-
   refund-an-ach-payment instead), voiding or reversing a pre-authorization hold, or
   cancelling an unsettled card payment before capture.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: transaction
   status: draft
 ---

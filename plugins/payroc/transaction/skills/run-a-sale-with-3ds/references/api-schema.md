@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/openapi.yml`
 > (payments + threeDSecure schemas) and `https://docs.payroc.com/guides/take-payments/3-d-secure/run-a-sale-with-3-d-secure.md`
-> (MPI endpoint details and response schema). Last synced: 2026-06-22. This is the offline source of
+> (MPI endpoint details and response schema). Last synced: 2026-09-16. This is the offline source of
 > truth this skill emits from — read enum values and required-field sets from here, not from memory.
 
 3-D Secure is a four-step flow: (1) enrol, (2) tokenize the card, (3) send to the MPI service, (4) post
@@ -133,7 +133,7 @@ Use the third-party variant when 3-D Secure was handled externally (not via Payr
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `serviceProvider` | string | Yes | Must be `"thirdParty"` |
-| `eci` | string | Yes | `"fullyAuthenticated"` or `"attemptedAuthentication"` |
+| `eci` | string | Yes | `"fullyAuthenticated"` or `"authAttempted"` |
 | `xid` | string | No | Unique transaction identifier assigned by the merchant |
 | `cavv` | string | No | Cardholder Authentication Verification Value from the card issuer |
 | `dsTransactionId` | string | No | Directory Server Transaction ID from the processor |
@@ -162,7 +162,7 @@ Use `"gateway"` when using Payroc's MPI service. Use `"thirdParty"` for external
 `"05"` (fully authenticated) | `"06"` (not enrolled or attempted) | `"07"` (failed)
 
 ### `threeDSecure.eci` (thirdParty variant, payment request field — different from MPI response eci)
-`"fullyAuthenticated"` | `"attemptedAuthentication"`
+`"fullyAuthenticated"` | `"authAttempted"`
 
 > **Important:** These are the values for the **payment request** `threeDSecure.eci` field when using
 > `serviceProvider: "thirdParty"`. They are different from the MPI response `eci` values above

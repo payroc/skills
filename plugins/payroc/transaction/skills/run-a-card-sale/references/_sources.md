@@ -6,9 +6,9 @@ file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (payments schemas) + https://docs.payroc.com/api/schema/card-payments/payments/create.md | 2026-06-22 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (payments schemas) + https://docs.payroc.com/api/schema/card-payments/payments/create.md | 2026-09-16 | payroc-verbatim (curated slice) |
 | `run-a-card-sale-guide.md` | https://docs.payroc.com/guides/take-payments/payments/run-a-card-sale.md | 2026-06-22 | payroc-verbatim |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party API surface (none in this skill).

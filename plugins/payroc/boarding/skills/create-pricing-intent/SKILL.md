@@ -19,7 +19,7 @@ description: >
   or transaction management. If the user says "payment intent" but clearly wants a reusable fee
   template, use this skill and confirm.
 metadata:
-  version: "0.3.4"
+  version: "0.3.5"
   category: boarding
   status: draft
 ---
@@ -129,9 +129,7 @@ Response:
 }
 ```
 
-Use `Authorization: Bearer <access_token>` on every subsequent request. The Payroc SDKs
-(TypeScript, Python, C#, PHP, Go, Java, Ruby) handle token exchange automatically — see
-https://docs.payroc.com/api/payroc-sd-ks-beta for installation and SDK usage.
+Use `Authorization: Bearer <access_token>` on every subsequent request.
 
 ---
 

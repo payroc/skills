@@ -11,15 +11,15 @@ there, re-fetch the SDK from the CDN URL, and regenerate `hosted-fields-sdk.js`.
 | `hosted-fields-sdk.js` | https://cdn.uat.payroc.com/js/hosted-fields/hosted-fields-1.7.0.261457.js (UAT) · https://cdn.payroc.com/js/hosted-fields/hosted-fields-1.7.0.261471.js (prod) | 2026-06-01 | payroc-verbatim |
 | `authenticate-your-session.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md | 2026-06-01 | payroc-verbatim |
 | `create-a-payment-form.md` | https://docs.payroc.com/essentials/hosted-fields/create-a-payment-form.md | 2026-06-01 | payroc-verbatim |
-| `run-a-sale.md` | https://docs.payroc.com/essentials/hosted-fields/run-a-sale.md | 2026-06-01 | payroc-verbatim |
+| `run-a-sale.md` | https://docs.payroc.com/essentials/hosted-fields/run-a-sale.md | 2026-09-16 | payroc-verbatim |
 | `style-your-fields.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/style-your-fields.md | 2026-06-01 | payroc-verbatim |
 | `add-your-own-fields.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/add-your-own-fields.md | 2026-06-01 | payroc-verbatim |
 | `close-a-session.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/close-a-session.md | 2026-06-01 | payroc-verbatim |
-| `save-a-customers-payment-details.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/save-a-customers-payment-details.md | 2026-06-01 | payroc-verbatim |
+| `save-a-customers-payment-details.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/save-a-customers-payment-details.md | 2026-09-16 | payroc-verbatim |
 | `update-a-customers-payment-details.md` | https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/update-a-customers-payment-details.md | 2026-06-01 | payroc-verbatim |
 | `3-d-secure.md` | https://docs.payroc.com/guides/take-payments/3-d-secure.md | 2026-06-01 | payroc-verbatim |
 | `run-a-sale-with-3-d-secure.md` | https://docs.payroc.com/guides/take-payments/3-d-secure/run-a-sale-with-3-d-secure.md | 2026-06-01 | payroc-verbatim |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange; cross-skill canonical copy; HF session-token step is in `authenticate-your-session.md`) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange; cross-skill canonical copy; HF session-token step is in `authenticate-your-session.md`) | 2026-09-16 | payroc-verbatim (curated slice) |
 | `idempotency.md` | https://docs.payroc.com/api/idempotency (shared fragment; byte-identical copy of `plugins/payroc/_shared/idempotency.md`) | 2026-07-02 | payroc-verbatim |
 | `pagination.md` | https://docs.payroc.com/api/pagination (shared fragment; byte-identical copy of `plugins/payroc/_shared/pagination.md`) | 2026-07-02 | payroc-verbatim |
 | `run-a-card-sale-guide.md` | https://docs.payroc.com/guides/take-payments/payments/run-a-card-sale.md (reused byte-identical copy from `run-a-card-sale/references/run-a-card-sale-guide.md`) | 2026-06-22 | payroc-verbatim |

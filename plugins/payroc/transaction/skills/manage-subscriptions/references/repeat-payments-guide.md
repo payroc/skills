@@ -2,7 +2,7 @@
 
 > **Local snapshot.** Source: `https://docs.payroc.com/guides/take-payments/repeat-payments/use-our-gateway.md`
 > and `https://docs.payroc.com/guides/take-payments/repeat-payments.md`.
-> Last synced: 2026-06-22.
+> Last synced: 2026-09-24.
 
 ## What are repeat payments?
 
@@ -46,14 +46,14 @@ A subscription links a customer (via their secure token) to a payment plan.
   enrollment (e.g. `"CUST-12345-GYM-2026"`).
 - Optional overrides: you can override the plan's `name`, `description`, `setupOrder`,
   `recurringOrder`, `length`, or `endDate` on a per-subscription basis.
-- `startDate` determines when the first payment is collected.
+- `startDate` determines when the first payment is collected. It must be the current day or later (gateway date: UTC in winter, IST in summer).
 
 ### Step 4 — Collect payments
 
 **Automatic subscriptions:** Payroc's gateway collects payments on the schedule defined in the
 payment plan. No action needed per cycle.
 
-**Manual subscriptions:** Trigger each payment using:
+**Manual subscriptions:** Trigger each payment when it is due. Collect only when a payment is due (the plan's `frequency` sets the period). The gateway rejects a second collection in the same period. Use:
 `POST /v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
 
 Include the `order` object with the amount to collect in that cycle.

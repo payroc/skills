@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/hosted-fields/run-a-sale.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-09-16. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Run a sale
 
@@ -2498,7 +2498,7 @@ components:
       type: string
       enum:
         - fullyAuthenticated
-        - attemptedAuthentication
+        - authAttempted
       description: E-commerce indicator (ECI) result of a the 3-D Secure check.
       title: PaymentRequestThreeDSecureDiscriminatorMappingThirdPartyEci
     PaymentRequestThreeDSecure:
@@ -6286,7 +6286,7 @@ components:
       type: string
       enum:
         - fullyAuthenticated
-        - attemptedAuthentication
+        - authAttempted
       description: E-commerce indicator (ECI) result of a the 3-D Secure check.
       title: PaymentRequestThreeDSecureDiscriminatorMappingThirdPartyEci
     PaymentRequestThreeDSecure:

@@ -11,7 +11,7 @@ description: >
   explicitly. Do NOT use for processing, charging, or refunding an EBT card; those operations
   require separate payment skills.
 metadata:
-  version: "0.1.3"
+  version: "0.1.7"
   category: transaction
   status: draft
 ---
@@ -48,8 +48,9 @@ Before announcing anything or starting the flow, confirm this skill is current:
 ```text
 POST  https://api.uat.payroc.com/v1/cards/balance
 Authorization:   Bearer <token>
-Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
+
+# No Idempotency-Key — this endpoint does not take it (see Core Principle #2).
 ```
 
 ---
@@ -87,7 +88,7 @@ These are local snapshots, authoritative for this skill. Their source URLs and l
 ## Core principles
 
 1. **Read the schema reference before emitting any enum value.** Every field that accepts a fixed set of strings — `card.type`, `cardDetails.entryMethod`, `ebtDetails.benefitCategory`, `responseCode` — is documented in `references/api-schema.md`. Read it before emitting any value. Do not use training-data guesses. In particular, `benefitCategory` has exactly two valid values: `"cash"` and `"foodStamp"`. Do not use `"snap"`, `"food"`, `"ebt"`, or any other variant.
-2. **Idempotency-Key on every POST.** The header value must be a UUID v4 — omitting it causes a 400. Generate a fresh UUID for each distinct operation.
+2. **No `Idempotency-Key` on this skill's POST.** `POST /v1/cards/balance` is a read-only balance inquiry — it creates and modifies nothing, and does not take an `Idempotency-Key` header. Omitting it does **not** cause a 400. Sending it anyway is harmless; the gateway ignores it. Most other Payroc POST endpoints do require the header, so do not carry this exception across to them.
 3. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager.
 4. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement refresh logic.
 5. **Diagnose before proceeding.** If a step fails, pause and work through the error taxonomy before continuing.
@@ -143,8 +144,9 @@ Required headers:
 ```
 Authorization:   Bearer <token>
 Content-Type:    application/json
-Idempotency-Key: <UUID v4>
 ```
+
+> **No `Idempotency-Key` here.** This endpoint does not take the header — see Core Principle #2.
 
 > **Read `references/api-schema.md` before writing the request body.** The values for `card.type`, `cardDetails.entryMethod`, and `ebtDetails.benefitCategory` are all enum-constrained and documented there. Do not emit any enum value from training data.
 
@@ -250,12 +252,9 @@ Is the request body correct? Verify:
 
 ## Step 3 — Send the request
 
-Always generate a fresh UUID v4 for `Idempotency-Key`.
-
 ```bash
 curl -X POST https://api.uat.payroc.com/v1/cards/balance \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
   -d @balance-request.json
 ```
@@ -358,7 +357,6 @@ Use `errors[].parameter` to map each error back to the request body field and fi
 | 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct API key |
 | 400 — validation error mentioning `benefitCategory` | Enum value not from the reference | Read `references/api-schema.md` and use `"cash"` or `"foodStamp"` exactly |
 | 400 — validation error mentioning `entryMethod` | Invalid entry method value | Read `references/api-schema.md` — valid values are `"icc"`, `"swiped"`, `"keyed"`, `"raw"` |
-| 400 — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to the POST |
 | 400 — EBT sharing group / terminal config | Terminal not in EBT sharing group | Contact Payroc Integrations team to configure the terminal for EBT |
 | 404 — terminal not found | `processingTerminalId` wrong or typo | Verify the terminal ID from Payroc's provisioning documentation |
 | `responseCode: "D"` | Card declined by network | Advise customer to contact their EBT issuer; do not retry blindly |
@@ -372,9 +370,8 @@ Use `errors[].parameter` to map each error back to the request body field and fi
 
 - **Wrong `benefitCategory` value:** The only valid values are `"cash"` and `"foodStamp"`. Using `"snap"`, `"food"`, `"stamp"`, or other variants will produce a 400.
 - **Terminal not EBT-enabled:** A standard Payroc terminal will not work for EBT balance checks — the terminal must be in an EBT sharing group. This is the most likely cause of unexpected 400 errors in UAT.
-- **Missing `Idempotency-Key`:** All POST requests require this header as a UUID v4.
-- **Two accounts, two requests:** A single request queries one `benefitCategory`. To check both cash and food stamp balances, make two separate requests — **each with its own distinct UUID `Idempotency-Key`.** Do not reuse the same key for the second request; the payloads differ (different `benefitCategory`) and you will receive a 409.
-- **UUID casing for `Idempotency-Key`:** Generate the UUID in lowercase. Some language UUID libraries (e.g. `Guid.NewGuid().ToString()` in C#, `UUID.randomUUID()` in Java) return uppercase by default — call `.toLowerCase()` / `.ToLower()` before sending.
+- **Sending `Idempotency-Key`:** Harmless but pointless — this endpoint does not take the header, and omitting it does not cause a 400. Do not build key generation, storage, or reuse logic for this call.
+- **Two accounts, two requests:** A single request queries one `benefitCategory`. To check both cash and food stamp balances, make two separate requests.
 - **Amount in lowest denomination:** `amount` in the response is in cents (for USD) — divide by 100 to display to the customer.
 - **Masked PAN only:** The response returns a masked `cardNumber` — never log or store the full PAN.
 - **Hardcoded terminal ID:** `processingTerminalId` must come from an environment variable, not be hardcoded.

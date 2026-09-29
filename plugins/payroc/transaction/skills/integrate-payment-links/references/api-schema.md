@@ -50,8 +50,8 @@ use: patch `expiresOn` to extend/shorten expiration. Requires the
 ### Deactivate a link
 
 `POST /v1/payment-links/{paymentLinkId}/deactivate` — no request body. Transitions `status` to
-`deactivated`; the link stops accepting payments. Requires the
-[`Idempotency-Key` header](./idempotency.md).
+`deactivated`; the link stops accepting payments. This endpoint does **not** require an
+[`Idempotency-Key` header](./idempotency.md), unlike the other POST endpoints here.
 
 ### Share a link by email
 
@@ -208,4 +208,7 @@ Across these endpoints, expect: `400`, `401`, `403`, `404` (unknown `paymentLink
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | token from the identity service; expires in 3600s |
 | `Content-Type: application/json` | POST / PATCH | |
-| `Idempotency-Key: <UUID v4>` | every POST and PATCH | required; fresh UUID per distinct operation (reuse → 409) |
+| `Idempotency-Key: <UUID v4>` | every POST and PATCH — **except** the deactivate sub-endpoint | required; fresh UUID per distinct operation (reuse → 409) |
+
+`POST /v1/payment-links/{paymentLinkId}/deactivate` does not require `Idempotency-Key`. Sending
+the header anyway is harmless; the gateway ignores it.

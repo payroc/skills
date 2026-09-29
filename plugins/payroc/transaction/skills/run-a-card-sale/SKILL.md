@@ -14,7 +14,7 @@ description: >
   ACH/bank-transfer payments, 3-D Secure authentication, or Hosted Fields / Hosted Payment Pages
   (embedded UI card input) — those are separate skills.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   category: transaction
   status: draft
 ---
@@ -206,6 +206,13 @@ Based on intake:
 
 If the developer needs itemised amounts (tips, taxes, surcharge), add a `breakdown` object. Read the breakdown schema from `references/api-schema.md` before writing any `tip.type`, `tax.type`, or `healthcareExpenses[].type` enum values.
 
+> **Level 2/3/CEDP interchange rates.** None of these fields are required by the API, but if the
+> developer is processing B2B or purchasing-card transactions and wants the lower Level 2/Level
+> 3 interchange rates, mention that supplying `taxes`, `dutyAmount`, `freightAmount`, and
+> per-item `commodityCode`/`productCode` on `breakdown.items` is what qualifies a transaction —
+> see "Level 2/3/CEDP fields" in `references/api-schema.md`. Don't add them unprompted; just
+> surface the option when the developer's use case sounds like it would benefit.
+
 ### 2c. Build the paymentMethod object
 
 > **Read `references/api-schema.md` for `paymentMethod.type` enum values and the `cardDetails` entry-method discriminator** before writing. Do not guess these.
@@ -220,7 +227,7 @@ If the developer needs itemised amounts (tips, taxes, surcharge), add a `breakdo
     "keyedData": {
       "dataFormat": "plainText",
       "cardNumber": "4111111111111111",
-      "expiryDate": "2612",
+      "expiryDate": "1226",
       "cvv": "123"
     }
   }
@@ -281,7 +288,7 @@ For **immediate settlement** (funds moved to the merchant account at once rather
       "keyedData": {
         "dataFormat": "plainText",
         "cardNumber": "4111111111111111",
-        "expiryDate": "2612",
+        "expiryDate": "1226",
         "cvv": "123"
       }
     }
@@ -398,7 +405,7 @@ Use `parameter` to identify which field failed and fix it before resubmitting. S
 - **Hardcoded card numbers**: Never include raw card numbers in source code. Use test card numbers from the Payroc UAT documentation during development; production code should accept card details through a secure input mechanism.
 - **Not saving `paymentId`**: The response `paymentId` is your only reference for refunds, reversals, and adjustments. Persist it immediately.
 - **Using production endpoint during testing**: Use `api.uat.payroc.com` for UAT and `identity.uat.payroc.com` for token exchange during development and testing.
-- **`expiryDate` format is `YYMM`, not `MMYY`**: The Payroc API takes `YYMM` — year first, then month. December 2026 is `2612`, not `1226`. This is the reverse of the card scheme convention (`MMYY`) and is a common source of silent card rejections or test failures.
+- **`expiryDate` format is `MMYY`, not `YYMM`**: The Payroc API takes `MMYY` — month first, then year — matching the card scheme convention printed on the card itself. December 2026 is `1226`, not `2612`. Don't confuse this with the bulk token-import CSV's `cardExpiry` column, which does accept multiple formats (including `YYMM`) — that's a different field on a different transport. Getting this wrong on the live API passes schema validation (the `pattern` only checks for 4 digits) but is declined downstream, so the failure is silent rather than a clear 400.
 
 ---
 
