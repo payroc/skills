@@ -12,7 +12,7 @@ description: >-
   "payment links". Also trigger when a developer has a Payroc API key and
   wants to charge customers without embedding a payment form in their site.
 metadata:
-  version: "0.2.0"
+  version: "0.2.3"
   category: integration
   status: draft
 ---
@@ -89,7 +89,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 1. **Inspect before asking** — read the codebase before asking anything; use what you find to skip obvious questions and ask targeted ones.
 2. **Ask before coding** — gather unknowns through intake before writing implementation code; wrong assumptions waste the developer's time.
 3. **Read the schema reference before emitting any enum value.** Every field that accepts a fixed set of strings — `type`, `authType`, `paymentMethods[]` values, `status`, `sharingMethod`, JSON Patch `op` values — is documented in `references/api-schema.md`, the authoritative copy for this skill. Read it before you emit the value. Do not use training-data guesses. A plausible-sounding string that isn't in the documented enum will produce a 400 or silent mismatch. The same rule applies when **reviewing** developer-supplied code: consult `references/api-schema.md` before issuing a verdict on whether enum values or field names are correct — never validate from memory.
-4. **Idempotency-Key on every POST and PATCH.** The header value must be a UUID v4. This is a required header, not optional — omitting it causes a 400. Generate a fresh UUID for each distinct operation (do not reuse the same key across different requests).
+4. **Idempotency-Key on every POST and PATCH except `/deactivate`.** The header value must be a UUID v4. This is a required header, not optional — omitting it causes a 400. Generate a fresh UUID for each distinct operation (do not reuse the same key across different requests). The one exception is `POST /v1/payment-links/{paymentLinkId}/deactivate`, which does not take the header; sending it there is harmless but omitting it does not cause a 400.
 5. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager, never source code or configuration files checked into version control.
 6. **Bearer token expiry.** Tokens from the identity service expire after 3,600 seconds (1 hour). For short scripts this is fine; for long-running services, implement token refresh logic.
 7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
@@ -336,7 +336,7 @@ Returns a paginated list of sharing events with timestamps, recipient details, a
 |---------|-------------|-----|
 | 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
 | 400 — validation error mentioning `type`, `authType`, or `paymentMethods` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
-| 400 — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH; generate a new UUID per operation |
+| 400 — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH except `/deactivate`; generate a new UUID per operation |
 | 400 — single-use link missing required field | A field the schema marks required is absent | Read the create-link schema in `references/api-schema.md`; add every required field (single-use typically needs `orderId` inside `order` and `expiresOn`) |
 | 400 — charge object rejected / malformed | `charge` wrapped in a nested `preset`/`prompt` key (`charge.preset.amount`) | Flatten it: `charge` is one object with `type` (`preset`/`prompt`) and `amount`/`currency` as **siblings** of `type` — no nested wrapper |
 | 409 — duplicate Idempotency-Key | Same key reused across different operations | Generate a fresh UUID for every distinct operation |
@@ -352,7 +352,7 @@ Returns a paginated list of sharing events with timestamps, recipient details, a
 
 - [ ] API key sourced from environment variable — never hardcoded
 - [ ] Bearer token generated from identity service — never hardcoded
-- [ ] `Idempotency-Key` header present and set to a UUID v4 on every POST and PATCH
+- [ ] `Idempotency-Key` header present and set to a UUID v4 on every POST and PATCH except `/deactivate`
 - [ ] `type`, `authType`, `paymentMethods[]` values, and all other enum values read from `references/api-schema.md` — not from training data
 - [ ] `paymentLinkId` captured from creation response and stored for subsequent operations
 - [ ] Single-use links: every required field present in the creation request (confirmed against `references/api-schema.md`, not memory)

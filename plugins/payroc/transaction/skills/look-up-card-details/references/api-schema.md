@@ -1,7 +1,7 @@
 # Look Up Card Details — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (BIN Lookup schema at `#/components/schemas/binLookup`). Last synced: 2026-06-22. This is the
+> (BIN Lookup schema at `#/components/schemas/binLookup`). Last synced: 2026-09-24. This is the
 > offline source of truth this skill emits from — read enum values and required-field sets from
 > here, not from memory. To refresh, re-fetch the source and regenerate this file (see
 > [`_sources.md`](./_sources.md)).
@@ -168,6 +168,13 @@ Full UAT URL: `POST https://api.uat.payroc.com/v1/cards/bin-lookup`
     "amount": 150,               // integer — surcharge in lowest denomination (cents etc.)
     "percentage": 3.0,           // number — configured surcharge rate as a percentage
     "disclosure": "A surcharge of 3.00% will be applied to this transaction."  // string
+  },
+  "serviceFee": {                // optional — only present if the merchant applies a service fee
+    "applicable": true,          // boolean, REQUIRED in the object — whether a service fee applies
+    "amount": 250,               // integer >= 0 — fee in lowest denomination (cents etc.)
+    "percentage": 2.5,           // number, > 0 and <= 100 — absent when basis is "debitAmount"
+    "basis": "creditPercentage", // creditPercentage | debitPercentage | debitAmount
+    "disclosure": "A 2.5% service fee is applied to cover processing fees."  // only if applicable is true
   }
 }
 ```
@@ -179,6 +186,24 @@ Key notes:
   object is present.
 - `amount` and `percentage` inside `surcharging` reflect the surcharge on the requested `amount`
   (if supplied), or the terminal's default rate if not.
+- `serviceFee` is only present if the merchant applies a service fee to transactions. It is also
+  absent if the gateway can't determine which currency to calculate the fee in. If the merchant's
+  account accepts multiple currencies, the fee is calculated in the request `currency`, otherwise
+  in the terminal's currency.
+- `serviceFee.applicable` is `false` if the card is exempt from the program or is an EBT card.
+- `serviceFee.basis` enum:
+
+  | Value | Meaning |
+  |-------|---------|
+  | `creditPercentage` | Percentage of the transaction amount, credit cards |
+  | `debitPercentage` | Percentage of the transaction amount, debit cards |
+  | `debitAmount` | Fixed amount, debit cards. `percentage` is not returned |
+
+  The gateway identifies card type from the BIN file. A credit card that doesn't accept service
+  fees comes back with `debitAmount` or `debitPercentage`.
+- `serviceFee.amount`: a fixed fee is always returned. A percentage fee is returned only if the
+  request included `amount`.
+- `serviceFee.disclosure` is returned only when `applicable` is `true`. Show it to the customer.
 
 ---
 

@@ -2,9 +2,9 @@
 
 Snapshot of the Payroc Boarding API surface for ordering a terminal against an **existing**
 processing account, reading the order back, and (optionally) reading the provisioned processing
-terminal. Sourced from `https://docs.payroc.com/openapi.yml` (see `_sources.md`). Emit field names
-and enum values from this file — not from memory. The `orderItems` array and its nested
-`solutionSetup` are deep and enum-heavy.
+terminal or the terminal order's payment intent. Sourced from `https://docs.payroc.com/openapi.yml`
+(see `_sources.md`). Emit field names and enum values from this file — not from memory. The
+`orderItems` array and its nested `solutionSetup` are deep and enum-heavy.
 
 ---
 
@@ -14,6 +14,7 @@ and enum values from this file — not from memory. The `orderItems` array and i
 - [Headers](#headers)
 - [Enums](#enums)
 - [Request body — `createTerminalOrder`](#request-body--createterminalorder)
+- [paymentIntent object](#paymentintent-object-optional)
 - [Response — `terminalOrder`](#response--terminalorder-201-on-create-200-on-retrieve)
 - [List — `GET /processing-accounts/{id}/terminal-orders`](#list--get-processing-accountsidterminal-orders)
 - [Optional follow-on — read the provisioned terminal](#optional-follow-on--read-the-provisioned-terminal)
@@ -29,6 +30,7 @@ and enum values from this file — not from memory. The `orderItems` array and i
 | Create a terminal order | `POST /v1/processing-accounts/{processingAccountId}/terminal-orders` | `createTerminalOrder` | `201` → `terminalOrder` |
 | List a processing account's orders | `GET /v1/processing-accounts/{processingAccountId}/terminal-orders` | — (query params) | `200` → array of `terminalOrder` |
 | Retrieve one order | `GET /v1/terminal-orders/{terminalOrderId}` | — | `200` → `terminalOrder` |
+| Retrieve a payment intent | `GET /v1/payment-intents/{paymentIntentId}` | — | `200` → `paymentIntent` |
 | List a PA's processing terminals *(follow-on)* | `GET /v1/processing-accounts/{processingAccountId}/processing-terminals` | — | `200` → `paginatedProcessingTerminals` |
 | Retrieve one processing terminal *(follow-on)* | `GET /v1/processing-terminals/{processingTerminalId}` | — | `200` → `processingTerminal` |
 | Retrieve a terminal's host configuration *(follow-on)* | `GET /v1/processing-terminals/{processingTerminalId}/host-configurations` | — | `200` → `hostConfiguration` |
@@ -112,15 +114,56 @@ Identifies the device/solution to order. Spec values:
 ## Request body — `createTerminalOrder`
 
 Required: `orderItems` (array, **1–20** items). Optional top-level: `trainingProvider`
-(default `partner`), `shipping` (**omit to ship to the processing account's DBA address**).
+(default `partner`), `shipping` (**omit to ship to the processing account's DBA address**),
+`paymentIntent` (**omit if you don't need to say who pays for the terminal**).
 
 ```json
 {
   "trainingProvider": "payroc",               // optional, enum, default "partner"
   "shipping": { ... },                         // optional — omit to use the DBA address
-  "orderItems": [ ... ]                        // required, 1–20 orderItem objects
+  "orderItems": [ ... ],                       // required, 1–20 orderItem objects
+  "paymentIntent": { ... }                     // optional — who pays for the terminal, see below
 }
 ```
+
+### paymentIntent object (optional)
+
+Describes who pays for the terminal order and how. Today the only `paymentIntentType` is
+`purchase`.
+
+```json
+{
+  "paymentIntentType": "purchase",             // required, enum — only "purchase" today
+  "payment": {                                 // required — who pays, discriminated on payer
+    "payer": "merchant",                       // "merchant" or "salesPartner" (not "partner")
+    "method": "hostedPaymentPage"               // merchant: hostedPaymentPage | accountOnFile
+                                                 // salesPartner: accountOnFile | residualOffset
+  },
+  "costBreakdown": {                           // required if payment.payer is "merchant"
+    "items": [                                 // required, 1-50 items
+      { "name": "Terminal", "quantity": 1, "unitCost": 4999 }
+    ],
+    "customCharges": [                         // optional, 1-10 entries
+      { "name": "Setup Fee", "value": 4999 }
+    ],
+    "shippingCost": 1999                       // optional, cents
+  },
+  "subTotal": 4999,                            // required if payment.payer is "merchant" — cents, pre-tax
+  "tax": {                                     // optional
+    "isTaxExempt": false,                      // default false — if false, send taxAmount
+    "taxAmount": 217                           // cents
+  }
+}
+```
+
+> **`payer` value trap.** The discriminator schema is named `partner` but the `payer` value you
+> send is `"salesPartner"`, not `"partner"`. The `merchant` variant's `payer` value is
+> `"merchant"` as expected. Read this file, don't guess the string.
+
+The response echoes back a lightweight `paymentIntentSummary` (`paymentIntentId`,
+`paymentIntentType`, and a `link` to `GET /v1/payment-intents/{paymentIntentId}` for the full
+detail) — not the full object you sent. Retrieve it separately if you need the full detail
+back.
 
 ### shipping object (optional)
 
@@ -241,6 +284,11 @@ All fields optional. Configures the terminal at provisioning time.
       ]
     }
   ],
+  "paymentIntent": {                            // present only if you sent one — summary, not the full object
+    "paymentIntentId": "1542",
+    "paymentIntentType": "purchase",
+    "link": { "href": "https://api.payroc.com/v1/payment-intents/1542", "rel": "self", "method": "GET" }
+  },
   "createdDate": "2024-07-02T12:00:00.000Z",   // ISO-8601, read-only
   "lastModifiedDate": "2024-07-02T12:00:00.000Z"
 }

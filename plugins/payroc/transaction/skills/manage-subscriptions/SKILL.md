@@ -13,7 +13,7 @@ description: >
   set-up-a-payment-plan instead), one-time card sales or refunds, saving or tokenizing a payment
   method, event webhook subscriptions, or payment links.
 metadata:
-  version: "0.4.0"
+  version: "0.4.3"
   category: transaction
   status: draft
 ---
@@ -175,9 +175,6 @@ curl -X POST https://identity.payroc.com/authorize \
 Response contains `access_token`, `expires_in` (3600), and `token_type` ("Bearer"). Use
 `Authorization: Bearer <access_token>` on every subsequent request.
 
-The Payroc SDKs (TypeScript, Python, C#, PHP, Go, Java, Ruby) handle token exchange automatically
-— see https://docs.payroc.com/api/payroc-sd-ks-beta.
-
 ### Checkpoint
 Can the auth helper produce a Bearer token without error? If not, verify the `x-api-key` header
 and confirm the API key is correct for the UAT environment.
@@ -269,6 +266,8 @@ The `subscriptionId` is **merchant-assigned** — choose a unique value per cust
   "startDate": "2026-07-01"  // YYYY-MM-DD; first payment collection date
 }
 ```
+
+`startDate`: Must be the current day or a later date. The gateway's calendar runs on Coordinated Universal Time (UTC) in winter and Irish Standard Time (IST) in summer, so near midnight "today" may differ from the caller's local date. Validate this before sending.
 
 Optional overrides (per-subscriber customisation):
 - `name` / `description` — override plan's name and description for this subscriber
@@ -452,6 +451,8 @@ updated `nextDueDate`.
 
 *(For `type: manual` subscriptions only)*
 
+You can collect only when a payment is due. The plan's `frequency` sets how often that is, for example weekly or monthly. If the payment for the current period has already been collected, the gateway rejects the request, so don't retry a rejected collection within the same period.
+
 `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
 
 ```
@@ -539,12 +540,13 @@ cross-skill standard.
 
 - [ ] API key sourced from environment variable — never hardcoded
 - [ ] Bearer token generated from identity service using the URL and header from `references/identity-call.md`
-- [ ] `Idempotency-Key` header present (UUID v4) on every POST and PATCH
+- [ ] `Idempotency-Key` header present (UUID v4) on every POST and PATCH except `/deactivate`, `/reactivate` and DELETE
 - [ ] All enum values (`type`, `frequency`, `onUpdate`, `onDelete`, `accountType`, `secCode`) read from `references/api-schema.md` — not from memory
 - [ ] `paymentPlanId` and `subscriptionId` are merchant-assigned unique strings
 - [ ] `recurringOrder.amount` present in plan when `type: automatic`
 - [ ] Amounts expressed in the lowest currency denomination (cents for USD, pence for GBP)
-- [ ] `startDate` in `YYYY-MM-DD` format
+- [ ] `startDate` in `YYYY-MM-DD` format, and the current day or later (gateway date: UTC in winter, IST in summer)
+- [ ] Manual collections are triggered only when a payment is due, at most once per `frequency` period
 - [ ] UAT endpoints used (`api.uat.payroc.com`) during testing — not production
 
 ---

@@ -1,6 +1,6 @@
 # References — Source Registry
 
-Last synced: 2026-06-22
+Last synced: 2026-09-16
 
 | File | Source URL | Notes |
 | --- | --- | --- |
@@ -13,6 +13,8 @@ Last synced: 2026-06-22
 | Event type | Source URL |
 | --- | --- |
 | `processingAccount.status.changed` | https://docs.payroc.com/knowledge/events/events-list/processing-account-status-changed.md |
+| `processingAccount.riskStatus.changed` | https://docs.payroc.com/knowledge/events/processingaccount-riskstatus-changed.md |
+| `processingAccount.signature.signed` | https://docs.payroc.com/knowledge/events/processingaccount-signature-signed.md |
 | `terminalOrder.status.changed` | https://docs.payroc.com/knowledge/events/events-list/terminal-order-status-changed.md |
 | Events list overview | https://docs.payroc.com/knowledge/events/events-list.md |
 

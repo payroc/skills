@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (Repeat Payments — Secure Tokens, Payment Plans, Subscriptions + the Payments `secureToken` / `standingInstructions`
-> schemas). Last synced: 2026-06-04. This is the offline source of truth this skill emits from for the
+> schemas). Last synced: 2026-09-24. This is the offline source of truth this skill emits from for the
 > **REST-API side of recurring billing** — read enum values and required-field sets from here, not from memory.
 > To refresh, re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -32,7 +32,9 @@ Identity (production): `POST https://identity.payroc.com/authorize` with header 
 
 All requests use **Bearer-token** auth (`Authorization: Bearer <token>`, token from the identity service,
 expires in 3600s) — the same mechanism as the pre-auth Capture API, **not** the HPP HMAC hash. POSTs also
-require `Content-Type: application/json` and an `Idempotency-Key: <UUID v4>`.
+require `Content-Type: application/json` and an `Idempotency-Key: <UUID v4>` — **except** the
+deactivate and reactivate sub-endpoints, which do not require `Idempotency-Key`. Sending the
+header anyway is harmless; the gateway ignores it.
 
 **Dependency order (gateway path):** Subscriptions reference a payment plan and a secure token, so the plan
 and the token must exist first. With HPP save-card, the token already exists — its `token` value is the
@@ -143,7 +145,7 @@ Required: `subscriptionId`, `paymentPlanId`, `paymentMethod`, `startDate`.
 | `description` | string | optional — replaces the description inherited from the plan |
 | `setupOrder` | object (`subscriptionPaymentOrderRequest`) | optional — `orderId`, `amount` (int64), `description`, `breakdown` |
 | `recurringOrder` | object (`subscriptionRecurringOrderRequest`) | optional — `amount` (int64), `description`, `breakdown`. **Send only if `type` is `automatic`.** |
-| `startDate` | string (`date`, **YYYY-MM-DD**) | **required** — subscription start date |
+| `startDate` | string (`date`, **YYYY-MM-DD**) | **required** — subscription start date; must be the current day or later (gateway date: UTC in winter, IST in summer) |
 | `endDate` | string (`date`, **YYYY-MM-DD**) | optional. **If both `length` and `endDate` are sent, the gateway uses `endDate`.** |
 | `length` | integer | optional — total billing cycles; `0` = indefinite. Replaces the plan's `length`. |
 | `pauseCollectionFor` | integer | optional — number of billing cycles to pause (e.g. a free-trial period) |
@@ -166,7 +168,7 @@ summary, a `secureToken` summary, `currentState` (`status` from `SubscriptionSta
 
 For a **`manual`** subscription, collect each payment by calling
 `POST .../subscriptions/{subscriptionId}/pay` (`subscriptionPaymentRequest`: `operator`, `order`,
-`customFields`). For an **`automatic`** subscription the gateway collects on schedule.
+`customFields`). Collect only when a payment is due (the plan's `frequency` sets the period). The gateway rejects a second collection in the same period. For an **`automatic`** subscription the gateway collects on schedule.
 
 ---
 

@@ -14,7 +14,7 @@ description: >-
   merchant-initiated transactions on Payroc — even if they don't explicitly
   mention "integration" or ask for step-by-step guidance.
 metadata:
-  version: "0.6.0"
+  version: "0.6.3"
   category: integration
   status: draft
 ---

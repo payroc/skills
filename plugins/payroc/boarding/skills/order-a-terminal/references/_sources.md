@@ -6,8 +6,8 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST /processing-accounts/{processingAccountId}/terminal-orders`, `GET /processing-accounts/{processingAccountId}/terminal-orders`, `GET /terminal-orders/{terminalOrderId}`, `GET /processing-accounts/{processingAccountId}/processing-terminals`, `GET /processing-terminals/{processingTerminalId}` + `/host-configurations`; schemas `createTerminalOrder`, `terminalOrder`, `orderItem`, `solutionSetup`, `automaticBatchClose`/`manualBatchClose`, `paginatedProcessingTerminals`, `processingTerminal`, `hostConfiguration`, `tsys`) | 2026-06-22 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST /processing-accounts/{processingAccountId}/terminal-orders`, `GET /processing-accounts/{processingAccountId}/terminal-orders`, `GET /terminal-orders/{terminalOrderId}`, `GET /payment-intents/{paymentIntentId}`, `GET /processing-accounts/{processingAccountId}/processing-terminals`, `GET /processing-terminals/{processingTerminalId}` + `/host-configurations`; schemas `createTerminalOrder`, `terminalOrder`, `orderItem`, `solutionSetup`, `automaticBatchClose`/`manualBatchClose`, `createPaymentIntent`, `paymentIntent`, `paymentIntentSummary`, `paginatedProcessingTerminals`, `processingTerminal`, `hostConfiguration`, `tsys`) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 terminal-order and processing-terminal schemas are entirely Payroc-owned, so this skill has no

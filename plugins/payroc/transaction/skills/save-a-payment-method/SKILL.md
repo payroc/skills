@@ -15,7 +15,7 @@ description: >
   using a saved token (use run-a-card-sale), or take a bank transfer/ACH payment right now (use
   take-an-ach-payment).
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   category: transaction
   status: draft
 ---
