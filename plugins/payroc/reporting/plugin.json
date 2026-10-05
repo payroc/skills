@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "reporting",
+  "version": "0.1.1",
+  "description": "Skills for reporting and analytics integration",
+  "author": {
+    "name": "Payroc"
+  },
+  "repository": "https://github.com/payroc/skills",
+  "license": "MIT"
+}

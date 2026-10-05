@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "migrations",
+  "version": "0.1.1",
+  "description": "Skills for migrating an existing integration from a legacy Payroc gateway to the Payroc API",
+  "author": {
+    "name": "Payroc"
+  },
+  "repository": "https://github.com/payroc/skills",
+  "license": "MIT"
+}
