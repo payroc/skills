@@ -1,7 +1,7 @@
 {
   "name": "funding",
   "description": "Skills for funding and settlement integration",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "Payroc" },
   "skills": [
     "./skills/send-funds-to-a-merchant",

@@ -1,7 +1,7 @@
 {
   "name": "transaction",
   "description": "Skills for payment transaction integration",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "Payroc" },
   "skills": [
     "./skills/integrate-apple-pay",

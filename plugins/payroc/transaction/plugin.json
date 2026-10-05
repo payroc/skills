@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "transaction",
+  "version": "0.1.1",
+  "description": "Skills for payment transaction integration",
+  "author": {
+    "name": "Payroc"
+  },
+  "repository": "https://github.com/payroc/skills",
+  "license": "MIT"
+}
