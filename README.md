@@ -28,7 +28,7 @@ Payroc Skills are not currently listed in any tool's built-in marketplace. Every
 
 You need:
 
-- A Payroc account with API credentials
+- A Payroc account with API credentials. Sign up at https://developers.payroc.com.
 - One of the tools above, already installed
 - For the Skills CLI method only: [Node.js](https://nodejs.org), which provides the `npx` command
 
