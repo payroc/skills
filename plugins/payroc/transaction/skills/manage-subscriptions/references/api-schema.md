@@ -1,7 +1,7 @@
 # Manage Subscriptions — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Repeat Payments schemas). Last synced: 2026-09-24. This is the offline source of truth this skill
+> (Repeat Payments schemas). Last synced: 2026-11-03. This is the offline source of truth this skill
 > emits from — read enum values and required-field sets from here, not from memory. To refresh,
 > re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -46,7 +46,7 @@ Payment Plan  →  Secure Token  →  Subscription
 | Reactivate a subscription | POST | `/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate` |
 | Pay manual subscription | POST | `/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 ---
 

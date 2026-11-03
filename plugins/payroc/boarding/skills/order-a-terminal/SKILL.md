@@ -1,23 +1,20 @@
 ---
 name: order-a-terminal
 description: >
-  Guides developers through ordering a physical payment terminal (a card reader / PIN pad / POS
-  device) for an EXISTING Payroc processing account via the Boarding API
-  (POST /processing-accounts/{processingAccountId}/terminal-orders), and through reading the order
-  back. Use this skill whenever the user wants to order a terminal or device, ship a card reader or
-  PIN pad to a merchant, provision hardware for a MID, configure a terminal's gateway/device/app
-  settings (batch closure, tips, taxes, receipts, tokenization) at order time, build the request
-  body for POST .../terminal-orders, check the status of a terminal order, list a processing
-  account's terminal orders (GET /processing-accounts/{id}/terminal-orders), retrieve one order
-  (GET /terminal-orders/{id}), specify who pays for the terminal and how (paymentIntent — merchant
-  or sales partner, hosted payment page / account on file / residual offset), retrieve a payment
-  intent (GET /payment-intents/{id}), or read the provisioned processing terminal and its
-  host-processor configuration — even if they don't say "skill", "terminal order", or "boarding
-  API" explicitly.
-  This is distinct from add-processing-account (creating the MID itself) — reach for this skill once
-  the processing account exists and you have its processingAccountId and want to send it hardware.
+  Guides developers through ordering a physical payment terminal (card reader / PIN pad / POS) for
+  an EXISTING Payroc processing account via the Boarding API (POST
+  /processing-accounts/{processingAccountId}/terminal-orders), and reading the order back. Use to
+  order a terminal or ship a card reader or PIN pad to a merchant, provision hardware for a MID,
+  configure a terminal's settings at order time (batch closure, tips, taxes, receipts,
+  tokenization), build the body for POST .../terminal-orders, check a terminal order's status, list
+  a processing account's terminal orders, retrieve one order (GET /terminal-orders/{id}), specify
+  who pays for the terminal (paymentIntent — merchant or sales partner, hosted payment page /
+  account on file / residual offset), retrieve a payment intent (GET /payment-intents/{id}), or read
+  the provisioned processing terminal and its host-processor configuration. Distinct from
+  add-processing-account (creating the MID itself): use this skill once the processing account
+  exists.
 metadata:
-  version: "0.2.0"
+  version: "0.2.2"
   category: boarding
   status: draft
 ---
@@ -77,8 +74,8 @@ Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 ```
 
-Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat.payroc.com`
-(test) / `https://identity.payroc.com` (production).
+Base URL: `https://api.payroc.com`. Identity: `https://identity.payroc.com`. The same hosts serve test
+and live. Use a test API key for testing; the key, not the URL, decides test or live.
 
 ---
 
@@ -122,7 +119,7 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 
 - A bearer token (see Step 1).
 - An existing `processingAccountId`.
-- The environment-specific base URLs (test vs production).
+- The base URLs (the same for test and live; the API key decides).
 
 ---
 
@@ -133,10 +130,7 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
-# Test / sandbox
-curl -X POST https://identity.uat.payroc.com/authorize -H "x-api-key: YOUR_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize -H "x-api-key: YOUR_API_KEY"
 ```
 
@@ -158,7 +152,7 @@ points worth stating up front, because they're the common mistakes:
 - **`orderItems` is required** — at least one item, each with `type: "solution"` and a valid
   `solutionTemplateId`. `solutionQuantity` defaults to 1 (max 50).
 - **`solutionTemplateId` is an enum, not free text.** Send one of the documented templates (e.g.
-  `Payroc A920Pro`, `Roc Services_DX8000`). **For test/UAT, send `VAR_Only_TSYS`** — it's the
+  `Payroc A920Pro`, `Roc Services_DX8000`). **For testing, send `VAR_Only_TSYS`** — it's the
   template reliably accepted there; the others are environment-gated.
 - **Shipping defaults to the DBA address.** Omit `shipping` entirely to ship to the processing
   account's Doing Business As address. Only send `shipping.address` to ship elsewhere — and when you
@@ -179,9 +173,12 @@ Generate a fresh UUID v4 for `Idempotency-Key`. The key is bound to the request 
 same key *only* to retry a byte-for-byte identical order — the API then returns the original result
 instead of creating a duplicate. A `400` validation error creates nothing, but when you fix the
 payload the body has changed, so resubmit with a **fresh** UUID; reusing the old key with the
-corrected body returns `409 idempotentKeyInUse`. Generate a new UUID for a genuinely separate order
-too. If a resubmit does come back `409 idempotentKeyInUse`, the platform already has an order on file
-under that key — mint a fresh UUID for the corrected attempt rather than forcing the old one.
+corrected body returns `409` (`#idempotency-key-in-use`). Generate a new UUID for a genuinely separate order
+too. If a resubmit does come back `409` (`#idempotency-key-in-use`), the key was already used for a
+different request. That request may have failed with a `400` (no order) or succeeded (an order
+exists). Before minting a fresh UUID, list the account's orders
+(`GET /processing-accounts/{processingAccountId}/terminal-orders`) and check the earlier attempt did
+not create one.
 
 ```bash
 curl -X POST https://api.payroc.com/v1/processing-accounts/287019/terminal-orders \
@@ -242,7 +239,7 @@ GET /v1/processing-terminals/{processingTerminalId}/host-configurations  → hos
 ```
 
 > ⚠️ **Warn the developer before generating this, and let them choose.** These reads are
-> **unverified, and the retrieve currently has a known defect**: a UAT order doesn't return a
+> **unverified, and the retrieve currently has a known defect**: a test-environment order doesn't return a
 > `processingTerminalId` (the test environment uses a non-physical device), so there's nothing to
 > chase there — and even when a known `processingTerminalId` is supplied, retrieving the processing
 > terminal can fail because the terminal's batch-close configuration is incomplete (the terminal-side
@@ -269,12 +266,12 @@ catalog, and the error table in `references/api-schema.md`.
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 validation | Bad `solutionTemplateId`, `solutionQuantity` > 50, malformed `batchCloseTime`, missing shipping field | Fix each `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
-| 403 | Insufficient permissions | Check API key scope |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope |
 | 404 | Unknown `processingAccountId` / `terminalOrderId` | Verify the id via the list endpoints |
 | 406 | Unsupported `Accept` | Request `application/json` |
-| 409 `idempotentKeyInUse` | An order already exists under this idempotency key | Mint a fresh UUID for the new/corrected order (see Step 3) |
+| 409 `#idempotency-key-in-use` | This idempotency key was already used for a different request | Mint a fresh UUID for the new/corrected order (see Step 3) |
 | 500 | Server error | Retry with exponential backoff |
 
 ---
@@ -291,7 +288,7 @@ catalog, and the error table in `references/api-schema.md`.
   `{ type, solutionTemplateId }` item is valid.
 - **Expecting cursor pagination on List Terminal Orders** — it returns a plain array filtered by
   `status`/`fromDateTime`/`toDateTime`, not a `paginated…` envelope.
-- **Assuming a `processingTerminalId` comes back in test** — it doesn't in UAT; the terminal reads
+- **Assuming a `processingTerminalId` comes back in test** — it doesn't in the test environment; the terminal reads
   are a production-only follow-on.
 - **Reusing an idempotency key for a different order** — generate a fresh UUID per distinct order.
 
@@ -301,7 +298,7 @@ catalog, and the error table in `references/api-schema.md`.
 
 - [ ] `processingAccountId` is correct and the account exists
 - [ ] `orderItems` has at least one item, each with `type: "solution"` and a valid `solutionTemplateId`
-- [ ] For test/UAT, `solutionTemplateId` is `VAR_Only_TSYS`
+- [ ] For testing, `solutionTemplateId` is `VAR_Only_TSYS`
 - [ ] `solutionQuantity` (if set) is 1–50; no more than 20 order items
 - [ ] `shipping` is omitted (ships to DBA) **or** `shipping.address` has all required fields
 - [ ] `batchClosure` matches its `batchCloseType` (`automatic` + `batchCloseTime`, or `manual`)

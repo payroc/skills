@@ -11,7 +11,7 @@ description: >
   write operation — the Disputes API exposes only LIST and GET endpoints. Do NOT use for general
   questions about the chargeback process, dispute notifications, or settlement batches.
 metadata:
-  version: "0.3.1"
+  version: "0.3.3"
   category: reporting
   status: eval-complete
 ---
@@ -47,8 +47,8 @@ For the complete field reference, enum values, and schema details, read `referen
 ## Quick reference
 
 ```text
-GET  https://api.uat.payroc.com/v1/disputes?date=YYYY-MM-DD
-GET  https://api.uat.payroc.com/v1/disputes/{disputeId}/statuses
+GET  https://api.payroc.com/v1/disputes?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/disputes/{disputeId}/statuses
 Authorization: Bearer <token>
 ```
 
@@ -96,8 +96,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 Header: `x-api-key: <api-key>`
 
@@ -118,7 +117,7 @@ confirm the API key is correct for the target environment.
 
 ## Step 2 — List disputes
 
-Endpoint: `GET https://api.uat.payroc.com/v1/disputes`
+Endpoint: `GET https://api.payroc.com/v1/disputes`
 
 Required headers:
 ```
@@ -133,7 +132,7 @@ No request body, no `Idempotency-Key` (GET request).
 
 ```bash
 # List disputes for a specific date
-curl "https://api.uat.payroc.com/v1/disputes?date=2024-02-01" \
+curl "https://api.payroc.com/v1/disputes?date=2024-02-01" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -148,7 +147,7 @@ curl "https://api.uat.payroc.com/v1/disputes?date=2024-02-01" \
 
 ```bash
 # Filtered — specific merchant, custom page size
-curl "https://api.uat.payroc.com/v1/disputes?date=2024-02-01&merchantId=M12345&limit=25" \
+curl "https://api.payroc.com/v1/disputes?date=2024-02-01&merchantId=M12345&limit=25" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -201,7 +200,7 @@ If `hasMore` is `true`, the `links` array contains a `next` link object:
 
 ```json
 "links": [
-  { "rel": "next", "href": "https://api.uat.payroc.com/v1/disputes?date=2024-02-01&after=eyJsYXN0SWQiOjEyMzQ1fQ" }
+  { "rel": "next", "href": "https://api.payroc.com/v1/disputes?date=2024-02-01&after=eyJsYXN0SWQiOjEyMzQ1fQ" }
 ]
 ```
 
@@ -209,7 +208,7 @@ The cursor is the value of the `after` query parameter **inside** the `href` URL
 
 ```bash
 # Subsequent page — pass the cursor token extracted from links[rel=next].href's after= param
-curl "https://api.uat.payroc.com/v1/disputes?date=2024-02-01&after=eyJsYXN0SWQiOjEyMzQ1fQ" \
+curl "https://api.payroc.com/v1/disputes?date=2024-02-01&after=eyJsYXN0SWQiOjEyMzQ1fQ" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -228,12 +227,12 @@ present and in `YYYY-MM-DD` format. If you receive a 401, exchange a new token.
 
 To see the full lifecycle of a specific dispute, fetch its status history.
 
-Endpoint: `GET https://api.uat.payroc.com/v1/disputes/{disputeId}/statuses`
+Endpoint: `GET https://api.payroc.com/v1/disputes/{disputeId}/statuses`
 
 `disputeId` is an **integer** from the list response — use it as a path segment, not a query parameter.
 
 ```bash
-curl "https://api.uat.payroc.com/v1/disputes/12345/statuses" \
+curl "https://api.payroc.com/v1/disputes/12345/statuses" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -274,8 +273,8 @@ correct (integer, from the list response). If you receive a 401, exchange a new 
 | 400 — missing `date` | The `date` query parameter was not provided on list disputes | Add `?date=YYYY-MM-DD` to the request |
 | 400 — invalid `date` format | Date not in `YYYY-MM-DD` format | Reformat date; ISO 8601 only |
 | 400 — both `after` and `before` sent | Mutually exclusive pagination parameters | Use only one cursor direction per request |
-| 401 | Token missing, expired, or API key wrong | Re-exchange API key for a new Bearer token; verify `x-api-key` header is the correct key for this environment |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
+| 401 | Token missing, expired, or API key wrong | Re-exchange API key for a new Bearer token; verify `x-api-key` header is the correct key for this environment, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | Dispute not found (status history endpoint) | Verify `disputeId` is an integer from a valid list-disputes response |
 | 406 | Not acceptable | Ensure `Accept` header is not set to an unsupported type (or omit it entirely) |
 | 500 | Server error | Retry with exponential backoff |

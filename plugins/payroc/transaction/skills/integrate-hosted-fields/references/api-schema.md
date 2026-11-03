@@ -1,7 +1,7 @@
 # Hosted Fields — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Hosted Fields / Payments schemas). Last synced: 2026-06-01. This is the offline source of truth this
+> (Hosted Fields / Payments schemas). Last synced: 2026-11-03. This is the offline source of truth this
 > skill emits from — read enum values and required-field sets from here, not from memory. To refresh,
 > re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -16,16 +16,14 @@ and the objects they reference (`transactionResult`, `card`, `secureTokenSummary
 
 | Operation | Method & path |
 | --- | --- |
-| Authenticate (Bearer token) | `POST https://identity.uat.payroc.com/authorize` (UAT) / `https://identity.payroc.com/authorize` (prod) with header `x-api-key` |
+| Authenticate (Bearer token) | `POST https://identity.payroc.com/authorize` with header `x-api-key` |
 | Create session token | `POST /v1/hosted-fields/sessions` (see authenticate-your-session.md for exact path) |
 | Run a payment | `POST /v1/payments` |
 | 3-D Secure MPI check | `GET /merchant/mpi` (payments host) |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-UAT payments/MPI host: `https://payments.uat.payroc.com`  ·  Production: `https://payments.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
-(Note the UAT identity host carries the `.uat` segment; production does not.)
+REST API host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+The 3-D Secure MPI endpoint is not part of the REST API and still has a separate test host: test `https://payments.uat.payroc.com`  ·  production `https://payments.payroc.com`.
 
 ---
 
@@ -114,7 +112,7 @@ Required: `libVersion`, `scenario`.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `libVersion` | string | required — four-part version (e.g. `1.7.0.261457` UAT / `1.7.0.261471` prod). Spec names `1.7.0.261471` as the current production version. Read the current value from `create-a-payment-form.md` / `hosted-fields-sdk.js`. |
+| `libVersion` | string | required — four-part version (e.g. `1.7.0.261457` test / `1.7.0.261471` prod). Spec names `1.7.0.261471` as the current production version. Read the current value from `create-a-payment-form.md` / `hosted-fields-sdk.js`. |
 | `scenario` | enum | required — `payment` \| `tokenization` |
 | `secureTokenId` | string | optional — include when updating a customer's saved payment details |
 

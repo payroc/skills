@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative narrative for this skill.**
 > Source: https://docs.payroc.com/guides/fund-merchants/set-up-a-funding-recipient.md
-> Last synced: 2026-06-22. Use this for process guidance and context; use `api-schema.md` for
+> Last synced: 2026-11-03. Use this for process guidance and context; use `api-schema.md` for
 > all field names, enum values, and request/response schemas.
 
 ---
@@ -69,7 +69,7 @@ reflects the outcome:
 | `rejected` | Failed KYC | Contact Payroc support — do not retry blindly |
 | `hold` | Flagged by Risk team | Contact Payroc support |
 
-In UAT, KYC checks are simulated and may fail or stay pending — this is expected test behaviour and
+In the test environment, KYC checks are simulated and may fail or stay pending — this is expected test behaviour and
 does not reflect a production data problem.
 
 ---
@@ -116,8 +116,8 @@ Once the recipient is created:
 
 ## Test Environment Notes
 
-In UAT (`https://api.uat.payroc.com/v1`):
+In the test environment (`https://api.payroc.com/v1`):
 - KYC checks may return `pending` or `rejected` regardless of input data — this is simulated behaviour
 - `recipientId` values are plain integers (not prefixed strings like in some other Payroc resources)
 - Bank account numbers in responses are masked (asterisks) — this is expected
-- Contact Payroc's Integrations team if UAT credentials do not work for funding endpoints
+- Contact Payroc's Integrations team if test credentials do not work for funding endpoints

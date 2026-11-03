@@ -13,7 +13,7 @@ description: >
   (use view-ach-deposits), disputes (use view-disputes), or authorizations
   (use view-authorizations).
 metadata:
-  version: "0.2.1"
+  version: "0.2.3"
   category: reporting
   status: draft
 ---
@@ -41,10 +41,10 @@ Settlement batches are daily groupings of card transactions submitted to the car
 settlement. The Payroc Reporting API exposes two endpoints for batch data:
 
 - **List batches** (`GET /v1/batches`) — returns all batches for a given date, optionally filtered
-  by merchant. Fully testable against UAT.
+  by merchant. Fully testable in the test environment.
 - **Retrieve a batch** (`GET /v1/batches/{batchId}`) — returns the details of one specific batch by
-  its ID. The UAT environment periodically wipes data, so this endpoint may return 404 for batches
-  that existed earlier; it is documented here but cannot always be confirmed live in UAT.
+  its ID. The test environment periodically wipes data, so this endpoint may return 404 for batches
+  that existed earlier; it is documented here but cannot always be confirmed live in the test environment.
 
 Batch amounts are integers in the currency's **lowest denomination** (e.g. `saleAmount: 100` means
 $1.00, not $100.00). For the complete field reference and example responses, read
@@ -55,8 +55,8 @@ $1.00, not $100.00). For the complete field reference and example responses, rea
 ## Quick reference
 
 ```text
-GET  https://api.uat.payroc.com/v1/batches?date=YYYY-MM-DD
-GET  https://api.uat.payroc.com/v1/batches/{batchId}
+GET  https://api.payroc.com/v1/batches?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/batches/{batchId}
 Authorization: Bearer <token>
 ```
 
@@ -105,15 +105,15 @@ These are local snapshots; their source URLs and last-synced dates are in
 
 These are needed to **run and test** the integration — not to write the code.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by
-   the Payroc Integrations team.
-2. **UAT environment access** — Payroc's test environment. Terminals are provisioned manually by
-   the Payroc Integrations team. Note: the UAT environment periodically wipes data, so some batch
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing,
+   create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Test environment access** — Payroc's test environment. Terminals are provisioned manually by
+   the Payroc Integrations team. Note: the test environment periodically wipes data, so some batch
    records may not persist long-term.
 
 **If the API key is missing — warn, don't block.** Wire the code to read from `PAYROC_API_KEY` (or
 the existing env var convention in the codebase) and tell the developer plainly what they need to
-obtain from the Integrations team.
+obtain: a test API key from the Developer Portal, and a test terminal from the Integrations team.
 
 ---
 
@@ -124,11 +124,7 @@ obtain from the Integrations team.
 Exchange your API key for a Bearer token:
 
 ```bash
-# Test / UAT
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: $PAYROC_API_KEY"
-
-# Production
+# Same host for test and live. A test API key decides test; a live key decides live.
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
@@ -141,7 +137,7 @@ Store the API key in an environment variable — never inline it.
 ### Checkpoint
 
 Can the token exchange return a non-empty `access_token`? If not, verify the `x-api-key` header
-value and confirm the API key is provisioned for the UAT environment.
+value and confirm the API key is provisioned for the test environment, or is not an older test key issued for the `.uat.` hosts (see `references/identity-call.md`).
 
 ---
 
@@ -150,7 +146,7 @@ value and confirm the API key is provisioned for the UAT environment.
 ### Endpoint
 
 ```text
-GET https://api.uat.payroc.com/v1/batches?date=YYYY-MM-DD
+GET https://api.payroc.com/v1/batches?date=YYYY-MM-DD
 Authorization: Bearer <token>
 ```
 
@@ -170,7 +166,7 @@ Authorization: Bearer <token>
 ### Example request
 
 ```bash
-curl "https://api.uat.payroc.com/v1/batches?date=2024-07-02" \
+curl "https://api.payroc.com/v1/batches?date=2024-07-02" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -254,7 +250,7 @@ full URL for the next page — extract the `after` query parameter value from it
     {
       "rel": "next",
       "method": "GET",
-      "href": "https://api.uat.payroc.com/v1/batches?date=2024-07-02&after=<cursor>"
+      "href": "https://api.payroc.com/v1/batches?date=2024-07-02&after=<cursor>"
     }
   ],
   "data": [ ... ]
@@ -265,7 +261,7 @@ Retrieve the next page using the `after` cursor from the top-level `response.lin
 (not from `data[n].links`):
 
 ```bash
-curl "https://api.uat.payroc.com/v1/batches?date=2024-07-02&after=<cursor-from-response.links>" \
+curl "https://api.payroc.com/v1/batches?date=2024-07-02&after=<cursor-from-response.links>" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -282,15 +278,15 @@ present and in `YYYY-MM-DD` format.
 
 ## Step 3 — Retrieve a specific batch
 
-> **UAT data note:** The UAT environment periodically wipes data. `GET /v1/batches/{batchId}`
-> may return 404 for a batch that existed earlier in the same UAT session. This is expected
-> UAT behaviour — it does not indicate a production limitation. In production, batch records
+> **Test data note:** The test environment periodically wipes data. `GET /v1/batches/{batchId}`
+> may return 404 for a batch that existed earlier in the same test session. This is expected
+> test-environment behaviour — it does not indicate a production limitation. In production, batch records
 > persist.
 
 ### Endpoint
 
 ```text
-GET https://api.uat.payroc.com/v1/batches/{batchId}
+GET https://api.payroc.com/v1/batches/{batchId}
 Authorization: Bearer <token>
 ```
 
@@ -299,7 +295,7 @@ Authorization: Bearer <token>
 ### Example request
 
 ```bash
-curl "https://api.uat.payroc.com/v1/batches/65" \
+curl "https://api.payroc.com/v1/batches/65" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -311,7 +307,7 @@ descriptions.
 ### Checkpoint
 
 HTTP 200 with the expected `batchId` in the response. If you receive 404, the batch ID either
-doesn't exist or has been wiped in UAT. Use the list endpoint with the batch's date to confirm
+doesn't exist or has been wiped in the test environment. Use the list endpoint with the batch's date to confirm
 whether the batch still exists.
 
 ---
@@ -326,13 +322,13 @@ whether the batch still exists.
 | 400 — missing `date` parameter | The `date` query parameter was omitted | Add `?date=YYYY-MM-DD` to the list request |
 | 400 — invalid `date` format | `date` not in `YYYY-MM-DD` format | Reformat to ISO 8601 date (e.g. `2024-07-02`) |
 | 400 — `before` and `after` both set | Cursor conflict in pagination | Use only one of `before` or `after` per request |
-| 401 — Unauthorized | Bearer token missing, expired, or malformed | Re-authenticate via the identity service; check `x-api-key` header |
-| 403 — Forbidden | API key scope does not include reporting | Contact Payroc Integrations team to confirm the API key has reporting access |
-| 404 — Batch not found | `batchId` does not exist or was wiped in UAT | Use list endpoint with the date to confirm the batch still exists |
+| 401 — Unauthorized | Bearer token missing, expired, or malformed; or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-authenticate via the identity service; check `x-api-key` header |
+| 403 — Forbidden | API key scope does not include reporting; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc Integrations team to confirm the API key has reporting access |
+| 404 — Batch not found | `batchId` does not exist or was wiped in the test environment | Use list endpoint with the date to confirm the batch still exists |
 | 406 — Not acceptable | `Accept` header mismatch (not `Content-Type`) | Remove the custom `Accept` header or set it to `application/json`. Do **not** add or change `Content-Type` — that header has no effect on GET requests and will not fix a 406. |
 | 500 — Server error | Transient server issue | Retry with exponential backoff |
 | Amounts seem wrong (e.g. 100 for $1.00) | Amounts are in lowest denomination (cents) | Divide by minor unit factor: `saleAmount / 100` for USD/GBP |
-| Empty `data` array | No batches on that date | Try a different date; UAT data may be sparse after a wipe |
+| Empty `data` array | No batches on that date | Try a different date; test-environment data may be sparse after a wipe |
 | `before`/`after` cursor pagination returns wrong page | Wrong cursor value | Use the cursor from the `links` array in the response, not a manually constructed value |
 
 ---

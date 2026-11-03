@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/openapi.yml`
 > (payments + threeDSecure schemas) and `https://docs.payroc.com/guides/take-payments/3-d-secure/run-a-sale-with-3-d-secure.md`
-> (MPI endpoint details and response schema). Last synced: 2026-09-16. This is the offline source of
+> (MPI endpoint details and response schema). Last synced: 2026-11-03. This is the offline source of
 > truth this skill emits from — read enum values and required-field sets from here, not from memory.
 
 3-D Secure is a four-step flow: (1) enrol, (2) tokenize the card, (3) send to the MPI service, (4) post
@@ -16,11 +16,10 @@ the payment with the MPI reference. Steps 3 and 4 involve two separate APIs with
 | --- | --- | --- |
 | 3 | MPI authentication request | `GET https://payments.uat.payroc.com/merchant/mpi` (test) |
 | 3 | MPI authentication request | `GET https://payments.payroc.com/merchant/mpi` (production) |
-| 4 | Create payment | `POST https://api.uat.payroc.com/v1/payments` (test) |
-| 4 | Create payment | `POST https://api.payroc.com/v1/payments` (production) |
+| 4 | Create payment | `POST https://api.payroc.com/v1/payments` (test and production; a test API key selects test) |
 
 Note the different host for the MPI service (`payments.uat.payroc.com`) vs the Payments API
-(`api.uat.payroc.com`). Do not swap these.
+(`api.payroc.com`, same host for test and live). Do not swap these.
 
 ---
 

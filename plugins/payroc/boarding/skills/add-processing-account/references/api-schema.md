@@ -35,7 +35,7 @@ Snapshot of the Payroc Boarding API surface for adding and reading processing ac
 | List its funding accounts | `GET /v1/processing-accounts/{processingAccountId}/funding-accounts` | — | `200` → funding accounts list |
 | Create a signing reminder | `POST /v1/processing-accounts/{processingAccountId}/reminders` | `createReminder` | `201` → reminder |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (test and live). Use a test API key for testing; the key, not the URL, decides test or live.
 
 > **Two different path roots.** You *add* and *list* accounts under the **merchant platform**
 > (`/merchant-platforms/{merchantPlatformId}/processing-accounts`), but once an account exists
@@ -288,22 +288,22 @@ Required: `transactionAmounts`, `monthlyAmounts`, `volumeBreakdown`. Optional: `
 ```
 
 > **`cardsAccepted` enum** is `visa` | `mastercard` | `discover` | `amexOptBlue` — American Express
-> is `amexOptBlue`, **not** `amex`. **Cross-rule (verified against UAT):** the default
+> is `amexOptBlue`, **not** `amex`. **Cross-rule (verified in the test environment):** the default
 > `cardsAccepted` *includes* `amexOptBlue`, and if `amexOptBlue` is accepted the `pricing` must
 > carry Amex OptBlue fees (and vice versa) — so omitting `cardAcceptance` entirely still requires
 > Amex pricing. Drop `amexOptBlue` from `cardsAccepted` if the pricing has no Amex fees.
 >
 > **`processing.ach` is optional and not gathered by this skill's intake.** Don't emit it unless
 > the merchant genuinely takes ACH. If you do, note it is *not* a `{naicsCode, transactionTypes}`
-> stub. Verified against UAT (2026-06-19), the `ach` object uses the field name `naics` (not
+> stub. Verified in the test environment (2026-06-19), the `ach` object uses the field name `naics` (not
 > `naicsCode`) and **requires** `estimatedMonthlyTransactions` (integer), `previouslyTerminatedForAch`
 > (boolean), `refunds` (e.g. `{ "writtenRefundPolicy": false }`), and `limits` (e.g.
 > `{ "singleTransaction", "dailyDeposit", "monthlyDeposit" }`, cents). Its `transactionTypes` enum is
 > `prearrangedPayment` | `corpCashDisbursement` | `telephoneInitiatedPayment` |
-> `webInitiatedPayment` | `other` (not `web`/`ppd`). **Cross-rule (bi-directional, verified UAT
+> `webInitiatedPayment` | `other` (not `web`/`ppd`). **Cross-rule (bi-directional, verified in the test environment
 > 2026-06-19):** if `processing.ach` is present, the `pricing` must include `processor.ach`; AND
 > if the pricing intent carries `processor.ach` fees, `processing.ach` must be declared on the
-> account (UAT error: `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is populated."`).
+> account (test environment error: `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is populated."`).
 > Use a card-only pricing intent when the account does not take ACH.
 
 ### funding object (`createFunding`)
@@ -426,7 +426,7 @@ approval is asynchronous.
 
 **IDs are opaque.** The `PA-XXXX` / `MP-XXXX` / `PI-XXXX` forms in these examples are for
 readability only. Treat every ID as an opaque string whose format is not guaranteed and varies
-by environment — in UAT they come back as plain integers (e.g. `287019`). Don't validate or
+by environment — in the test environment they come back as plain integers (e.g. `287019`). Don't validate or
 parse them against a `PREFIX-XXXX` pattern.
 
 > The response `owners`/`funding`/`pricing` are **summaries with HATEOAS links**, not the full
@@ -515,7 +515,7 @@ catalog. Example `400` from adding an empty account body:
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/merchant-platforms/MP-XXXX/processing-accounts",
+  "instance": "https://api.payroc.com/v1/merchant-platforms/MP-XXXX/processing-accounts",
   "errors": [
     { "parameter": "processingAccount.owners", "detail": "Required field not populated", "message": "'owners' must not be empty." }
   ]
@@ -535,15 +535,15 @@ recognize these rather than treating them as an opaque failure:
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 validation | Field issues | Fix each `errors[].parameter` path; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
-| 403 | Insufficient permissions / account not email-signing (reminders) | Check API key scope; confirm `requestedViaEmail` for reminders |
+| 403 | Insufficient permissions / account not email-signing (reminders); or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`identity-call.md`, Client notes). Otherwise check API key scope; confirm `requestedViaEmail` for reminders |
 | 404 | Unknown `merchantPlatformId` or `processingAccountId` | Verify the id; use List Merchant Platforms / List Processing Accounts to find it |
 | 409 | Conflict (duplicate, or reminder when already signed) | Inspect existing state before retrying |
 | 500 | Server error | Retry with exponential backoff; surface `errors` if present |
 
 (The published OpenAPI `ErrorsItems` schema lists only `message`; the live API also returns
-`parameter` + `detail` + a top-level `instance` — verified against UAT, 2026-06-16.)
+`parameter` + `detail` + a top-level `instance` — verified in the test environment, 2026-06-16.)
 
 ---
 

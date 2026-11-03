@@ -1,22 +1,18 @@
 ---
 name: view-funding-activity
 description: >
-  Guides developers through querying merchant funding balances and funding activity via the
-  Payroc Funding API (GET /v1/funding-balance and GET /v1/funding-activity). Use this skill
-  when the user wants to view funding activity, check a merchant's current funding balance
-  for reporting or reconciliation purposes, query the history of credits and debits to a
-  funding balance, see what funds are available or pending, filter funding activity records
-  by date range or merchant, paginate through funding records, or understand why a funding
-  balance changed. Also use when the user asks about funding-balance, funding-activity,
-  a merchant's available or pending funds, or how to monitor funding flows — even if they
-  don't use the exact endpoint names. Do NOT use this skill for processing payment
-  transactions, looking up individual payment transaction history, checking individual
-  payment settlement status, creating or sending funding instructions (use
-  send-funds-to-a-merchant), tracking the status of a specific funding instruction,
-  setting up a funding recipient or funding account (use set-up-a-funding-recipient),
-  or viewing ACH deposits (use view-ach-deposits).
+  Guides developers through querying merchant funding balances and funding activity via the Payroc
+  Funding API (GET /v1/funding-balance and GET /v1/funding-activity). Use when the user wants to
+  view funding activity, check a merchant's current funding balance for reconciliation, query the history of credits
+  and debits to a funding balance, see what funds are available or pending, filter funding activity
+  records by date range or merchant, paginate through funding records, or understand why a funding
+  balance changed. Also use for monitoring funding flows. Do NOT use for processing payment
+  transactions, looking up individual payment transaction history, checking individual payment
+  settlement status, creating or sending funding instructions (use send-funds-to-a-merchant),
+  tracking the status of a specific funding instruction, setting up a funding recipient or funding
+  account (use set-up-a-funding-recipient), or viewing ACH deposits (use view-ach-deposits).
 metadata:
-  version: "0.5.1"
+  version: "0.5.3"
   category: funding
   status: draft
 ---
@@ -40,9 +36,9 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-## Empty results in UAT
+## Empty results in the test environment
 
-> If `GET /v1/funding-activity` returns no activity in UAT, it's likely because no funding
+> If `GET /v1/funding-activity` returns no activity in the test environment, it's likely because no funding
 > recipient or funding instruction has been created yet in that environment — funding
 > activity only appears once a KYC-approved recipient has received funds. See the
 > `set-up-a-funding-recipient` skill's KYC validation note. The endpoints and schemas
@@ -53,8 +49,8 @@ Before announcing anything or starting the flow, confirm this skill is current:
 ## Quick reference
 
 ```text
-GET  https://api.uat.payroc.com/v1/funding-balance
-GET  https://api.uat.payroc.com/v1/funding-activity?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+GET  https://api.payroc.com/v1/funding-balance
+GET  https://api.payroc.com/v1/funding-activity?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
 Authorization: Bearer <token>
 ```
 
@@ -117,15 +113,15 @@ Use what you find to pre-fill obvious answers and ask targeted questions. Then c
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, proceed. If not, wire the code to read from environment variables and keep building.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, proceed. If not, wire the code to read from environment variables and keep building.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team along with UAT access.
-2. **UAT environment** — Payroc's test environment. There is no self-serve signup; UAT access is provisioned manually by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Test environment** — Payroc's test environment. Test terminals and accounts are provisioned manually by the Payroc Integrations team.
 3. **Merchant ID(s)** — optional, only needed if filtering by a specific merchant. The Payroc Integrations team provides these.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY`. Write the code to read credentials from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc UAT API key to actually run or test this — contact the Payroc Integrations team to get it, and set the variable before testing. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc test API key to actually run or test this. Create one in the Developer Portal (https://developers.payroc.com) and set the variable before testing. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -137,9 +133,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding 
 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
-Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+Endpoint: `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 Header: `x-api-key: <api-key>`
 
@@ -149,11 +143,11 @@ Implement a token-generation helper in the developer's language. For production 
 
 Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inline it.
 
-**Production vs UAT API keys are different.** A UAT API key cannot be used against the production identity service — it will return `401`. When switching environments, the developer must use a production API key provisioned by the Payroc Integrations team.
+**Test and live API keys are different.** The host is the same for both and the key decides which environment you reach. An older test key issued for the `.uat.` hosts gets a `401` from `identity.payroc.com` (see `references/identity-call.md`). Before going live, swap the test API key for a live key provisioned by the Payroc Integrations team.
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment, or is not an older test key issued for the `.uat.` hosts (see `references/identity-call.md`).
 
 ---
 
@@ -161,7 +155,7 @@ Can the helper generate a Bearer token without error? If not, check the `x-api-k
 
 > **Read `references/api-schema.md` before writing this request.** The response schema, field names, and what `available`/`pending`/`funds` mean are all defined there. Do not emit field names from training-data memory.
 
-Endpoint: `GET https://api.uat.payroc.com/v1/funding-balance`
+Endpoint: `GET https://api.payroc.com/v1/funding-balance`
 
 Required headers:
 ```
@@ -177,7 +171,7 @@ Optional query parameters:
 
 Example request:
 ```bash
-curl -G https://api.uat.payroc.com/v1/funding-balance \
+curl -G https://api.payroc.com/v1/funding-balance \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "merchantId=123456"
 ```
@@ -212,7 +206,7 @@ Example response (200 OK):
 
 ### Checkpoint
 
-Does the API return HTTP 200 with a `data` array? If the array is empty, there are no merchants linked to the account. If you get a `401`, check the Bearer token. If you get a `403`, check the API key permissions.
+Does the API return HTTP 200 with a `data` array? If the array is empty, there are no merchants linked to the account. If you get a `401`, check the Bearer token. If you get a `403`, check the API key permissions (unless the body is the plain-text `error code: 1010`: then your client's `User-Agent` was refused; see the error table).
 
 ---
 
@@ -220,7 +214,7 @@ Does the API return HTTP 200 with a `data` array? If the array is empty, there a
 
 > **Read `references/api-schema.md` before writing this request.** The `dateFrom` and `dateTo` required parameters, the `type` enum values (`credit` / `debit`), and the conditional `recipient` field are all documented there. Do not emit field names or enum values from training-data memory.
 
-Endpoint: `GET https://api.uat.payroc.com/v1/funding-activity`
+Endpoint: `GET https://api.payroc.com/v1/funding-activity`
 
 Required headers:
 ```
@@ -238,7 +232,7 @@ Optional query parameters:
 
 Example request:
 ```bash
-curl -G https://api.uat.payroc.com/v1/funding-activity \
+curl -G https://api.payroc.com/v1/funding-activity \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "dateFrom=2026-06-01" \
   --data-urlencode "dateTo=2026-06-22" \
@@ -334,8 +328,8 @@ Recompute both values at the start of each poll cycle. This ensures the date ran
 | `400` mentioning `dateFrom` or `dateTo` | Required date parameters missing or wrong format | Add both `dateFrom` and `dateTo` in `YYYY-MM-DD` format to the `/funding-activity` request |
 | `400` mentioning `before`/`after` conflict | Both pagination cursors sent | Use only one of `after` or `before` per request, not both |
 | `400` other validation error | Malformed query parameter | Check each parameter against `references/api-schema.md` — read the `errors[].parameter` field in the response to identify which parameter failed |
-| `401` on any request | Token missing, expired, or invalid API key | Re-generate Bearer token; verify `x-api-key` header value is the correct UAT API key |
-| `403` | Insufficient permissions | Check API key scope; contact Payroc support |
+| `401` on any request | Token missing, expired, or invalid API key | Re-generate Bearer token; verify `x-api-key` header value is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| `403` | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | `406` | Not acceptable | Ensure the request does not include an `Accept` header that rejects `application/json` |
 | `500` | Server error | Retry with exponential backoff |
 | Empty `data` array | No records match the query | Widen the date range, remove `merchantId` filter, or confirm the account has funding activity |

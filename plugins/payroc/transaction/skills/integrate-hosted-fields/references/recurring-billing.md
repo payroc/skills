@@ -161,7 +161,7 @@ Differences from the first transaction:
 
 ### Checkpoint
 
-Does a subsequent charge return HTTP 201 in UAT using the saved secure token and the persisted reference data?
+Does a subsequent charge return HTTP 201 in the test environment using the saved secure token and the persisted reference data?
 
 ---
 

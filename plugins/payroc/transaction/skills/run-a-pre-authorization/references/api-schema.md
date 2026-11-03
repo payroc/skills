@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (Card Payments — Create Payment, Capture, and `transactionResult` schemas).
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory. To refresh, re-fetch the source and
 > regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -18,9 +18,8 @@
 | Adjust a payment (before capture) | `POST /v1/payments/{paymentId}/adjust` |
 | Reverse a payment (void) | `POST /v1/payments/{paymentId}/reverse` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -327,7 +326,7 @@ Optional response fields:
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | Bearer token from identity service; expires in 3600s |
 | `Content-Type: application/json` | POST requests | |
-| `Idempotency-Key: <UUID v4>` | every POST | Required — omitting causes a 400. Generate a fresh UUID per distinct operation; reuse the same key when retrying a failed request |
+| `Idempotency-Key: <UUID v4>` | every POST | Required — omitting causes a 400. Generate a fresh UUID per distinct operation; reuse the same key to resend the identical request after a timeout, a network error or a `401` (with a new token); use a new key only for a changed body, such as a fixed `400` |
 
 ---
 
@@ -341,7 +340,7 @@ Optional response fields:
 ## Worked example — plain-text keyed card pre-authorization
 
 ```jsonc
-// POST https://api.uat.payroc.com/v1/payments
+// POST https://api.payroc.com/v1/payments
 // Authorization: Bearer <token>
 // Idempotency-Key: <uuid-v4>
 // Content-Type: application/json
@@ -377,7 +376,7 @@ Optional response fields:
 Successful create response (HTTP 201) includes `paymentId` — persist it for capture.
 
 ```jsonc
-// POST https://api.uat.payroc.com/v1/payments/{paymentId}/capture
+// POST https://api.payroc.com/v1/payments/{paymentId}/capture
 // Authorization: Bearer <token>
 // Idempotency-Key: <fresh-uuid-v4>
 // Content-Type: application/json

@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.**
 > Source: `https://docs.payroc.com/guides/take-payments/payments/run-a-pre-authorization.md`
-> Last synced: 2026-06-22.
+> Last synced: 2026-11-03.
 
 ---
 
@@ -40,7 +40,7 @@ If a pre-auth appears to succeed but processes like a sale, check with the Payro
 
 ## Step 1 — Create the pre-authorization
 
-**Endpoint:** `POST https://api.uat.payroc.com/v1/payments` (UAT) / `https://api.payroc.com/v1/payments` (production)
+**Endpoint:** `POST https://api.payroc.com/v1/payments` (same host for test and live; the API key decides)
 
 **Critical fields for pre-authorization (not a sale):**
 
@@ -59,7 +59,7 @@ Check `transactionResult.status` and `transactionResult.responseCode` in the res
 
 ## Step 2 (optional) — Adjust the pre-authorization
 
-**Endpoint:** `POST https://api.uat.payroc.com/v1/payments/{paymentId}/adjust`
+**Endpoint:** `POST https://api.payroc.com/v1/payments/{paymentId}/adjust`
 
 Call this endpoint if the final amount differs from the originally authorized amount — for example, a hotel adding charges for room service.
 
@@ -71,7 +71,7 @@ Call this endpoint if the final amount differs from the originally authorized am
 
 ## Step 3 — Capture the pre-authorization
 
-**Endpoint:** `POST https://api.uat.payroc.com/v1/payments/{paymentId}/capture`
+**Endpoint:** `POST https://api.payroc.com/v1/payments/{paymentId}/capture`
 
 **Full capture:** Omit the request body (or send `{}`) to capture the full pre-authorized amount.
 
@@ -91,7 +91,7 @@ A successful capture returns **HTTP 200** with a `payment` object containing `tr
 
 ## Step 4 (alternative to capture) — Reverse/void the pre-authorization
 
-**Endpoint:** `POST https://api.uat.payroc.com/v1/payments/{paymentId}/reverse`
+**Endpoint:** `POST https://api.payroc.com/v1/payments/{paymentId}/reverse`
 
 Call reverse instead of capture when the merchant wants to release the held funds without collecting payment (e.g. booking cancelled).
 

@@ -5,8 +5,8 @@ a file, re-fetch its source, regenerate it, then update the "Last synced" date h
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding → merchant-platforms paths + schemas) | 2026-09-16 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding → merchant-platforms paths + schemas) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 merchant-platform schemas are entirely Payroc-owned, so this skill has no `third-party-derived` references.

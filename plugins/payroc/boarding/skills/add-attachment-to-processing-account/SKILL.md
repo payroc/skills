@@ -1,22 +1,20 @@
 ---
 name: add-attachment-to-processing-account
 description: >
-  Guides developers through uploading a document file (PDF, image, spreadsheet, etc.) to a
-  Payroc processing account (also called a merchant account) via the Boarding API multipart
-  POST /v1/processing-accounts/{processingAccountId}/attachments endpoint. Use this skill when
-  the user wants to upload or attach a document to a processing account, submit a supporting
-  document file for merchant boarding or compliance, upload a bank statement or banking evidence
-  document, attach merchant statements, tax documents, an MPA or amendment, proof of business,
-  financial statements, personal identification documents, or any other file attachment to a
-  Payroc processing account. Also use when the user asks how to use the
-  /processing-accounts/{id}/attachments API endpoint, how to send a multipart/form-data
-  upload to a processing account, how to retrieve attachment metadata or check the status of a
-  previously uploaded file, or how to check the uploadStatus of an attachment. Do NOT use for
-  creating or registering a new processing account, adding a bank account or funding account to
-  a merchant, running payments or transactions, or any operation that does not involve uploading
-  or retrieving file attachment metadata for an existing processing account.
+  Guides developers through uploading a file (PDF, image, spreadsheet) to a Payroc
+  processing account (also called a merchant account) via the Boarding API multipart
+  POST /v1/processing-accounts/{processingAccountId}/attachments endpoint. Use to upload or attach
+  a document to a processing account, submit a supporting document for merchant boarding or
+  compliance, upload a bank statement or banking evidence, attach merchant statements, tax
+  documents, an MPA or amendment, proof of business, financial statements, or identification
+  documents. Also use for how to send a multipart/form-data upload to the
+  /processing-accounts/{id}/attachments endpoint, retrieve attachment metadata, or check an
+  uploaded file's status (uploadStatus). Do NOT use for creating a new processing
+  account, adding a bank or funding account to a merchant, running payments or
+  transactions, or anything not about uploading or retrieving attachment metadata for an existing
+  processing account.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: boarding
   status: draft
 ---
@@ -116,16 +114,16 @@ Then ask the developer:
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, proceed. If not, wire the code to read each value from an environment variable and keep building.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, proceed. If not, wire the code to read each value from an environment variable and keep building.
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Processing account ID (`processingAccountId`)** — the ID of the processing account to attach the document to. This is a hard dependency — the upload endpoint path requires it.
-3. **UAT environment** — Payroc's test environment. There is no self-serve signup; terminals and accounts are provisioned by the Payroc Integrations team.
+3. **Test environment** — terminals and accounts come from Payroc and are provisioned by the Payroc Integrations team.
 4. **A test file** — any small document in an allowed format (PDF, JPEG, PNG, etc.) for testing.
 
 **If anything is missing — warn, don't block.** Propose env var names like `PAYROC_API_KEY` and `PAYROC_PROCESSING_ACCOUNT_ID`. Write the code to read from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY` and the processing account ID from `PAYROC_PROCESSING_ACCOUNT_ID`. You'll need a Payroc UAT processing account to test this. Contact the Payroc Integrations team to get access.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY` and the processing account ID from `PAYROC_PROCESSING_ACCOUNT_ID`. You'll need a Payroc test processing account to test this. Contact the Payroc Integrations team to get access.
 
 ### Checkpoint
 
@@ -140,11 +138,7 @@ Either the developer has confirmed the `processingAccountId` and API key, or the
 Tokens expire after 3600 seconds (1 hour). Exchange your API key once per session.
 
 ```bash
-# Test / UAT
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: $PAYROC_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
@@ -214,14 +208,14 @@ reuse the same key *only* to retry a byte-for-byte identical submission. On a ne
 corrected re-upload after a `400`/`rejected` — generate a new UUID; reusing the old key with a
 changed body returns `409`.
 
-**Header name and casing.** The header must be spelled `Idempotency-Key` (capital I, capital K, hyphen). HTTP transit is case-insensitive, but some frameworks and API clients lowercase all header names before sending (e.g. a config map with `idempotency-key` or a camelCase SDK key `idempotencyKey`). If the server receives a missing or unrecognisable `Idempotency-Key` it returns `400 idempotencyKeyMissing`. Verify your HTTP client preserves the canonical casing.
+**Header name and casing.** The header must be spelled `Idempotency-Key` (capital I, capital K, hyphen). HTTP transit is case-insensitive, but some frameworks and API clients lowercase all header names before sending (e.g. a config map with `idempotency-key` or a camelCase SDK key `idempotencyKey`). If the server receives a missing or unrecognisable `Idempotency-Key` it returns a `400` whose `type` ends `#idempotency-key-missing`. Verify your HTTP client preserves the canonical casing.
 
 **UUID value casing.** Standard UUID v4 generators often produce uppercase hex (e.g. `550E8400-E29B-41D4-A716-446655440000`). The curl examples pipe through `tr '[:upper:]' '[:lower:]'` as a defensive measure. If your language's UUID library produces uppercase and the API returns a 400, try lowercasing the value.
 
 ### curl example
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/processing-accounts/$PAYROC_PROCESSING_ACCOUNT_ID/attachments \
+curl -X POST https://api.payroc.com/v1/processing-accounts/$PAYROC_PROCESSING_ACCOUNT_ID/attachments \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -F 'attachment={"type":"bankingEvidence","description":"Q4 bank statement"};type=application/json' \
@@ -275,7 +269,7 @@ The `metadata` field is optional and is echoed back in the response if you suppl
 **Persist `attachmentId` immediately.** The initial `uploadStatus` is `"pending"` — the file
 has been received but not yet processed. Poll the retrieve endpoint to check for transition.
 
-**IDs are opaque.** The `ATT-XXXX` / `PA-XXXX` forms in examples are for readability. In UAT,
+**IDs are opaque.** The `ATT-XXXX` / `PA-XXXX` forms in examples are for readability. In the test environment,
 IDs may be plain integers or UUID-like strings. Do not parse or validate them against a pattern.
 
 ---
@@ -287,7 +281,7 @@ IDs may be plain integers or UUID-like strings. Do not parse or validate them ag
 > **Different path root.** The retrieve endpoint lives under `/v1/attachments/{attachmentId}`, **not** under `/v1/processing-accounts/{id}/attachments/{attachmentId}`. A REST client with a base path of `/v1/processing-accounts/{id}` must use the standalone `/v1/attachments/{id}` path for retrieval.
 
 ```bash
-curl https://api.uat.payroc.com/v1/attachments/$ATTACHMENT_ID \
+curl https://api.payroc.com/v1/attachments/$ATTACHMENT_ID \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -314,12 +308,12 @@ Is `uploadStatus` `"accepted"`? If `"rejected"`, diagnose the cause and re-uploa
 |---------|-------------|-----|
 | 400 — missing required field | `attachment` part missing `type`, or `file` part absent | Ensure both `attachment` and `file` parts are in the multipart body; `type` is required on the `attachment` part |
 | 400 — invalid `type` value | Enum value not from the reference | Read `references/api-schema.md` `AttachmentType` section; use only the documented values |
-| 400 — `idempotencyKeyMissing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <uuid-v4>` to every POST |
-| 401 | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header is the correct UAT API key |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
+| 400 — `#idempotency-key-missing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <uuid-v4>` to every POST |
+| 401 | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header is the correct API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | Unknown `processingAccountId` | Verify the ID; use List Processing Accounts to find the correct ID |
 | 406 | Not acceptable | Omit `Accept` header or set it to `application/json` |
-| 409 — duplicate idempotency key | Same UUID reused with different payload | Generate a fresh UUID for a new upload |
+| 409 — duplicate idempotency key | Same UUID reused with different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for a new upload |
 | 413 — payload too large | File exceeds 50 MB | Split or reduce the document to under 50 MB uncompressed. Do **not** compress it — compressed formats (`.zip`, `.gz`, `.rar`, etc.) are not accepted and will cause a 415 |
 | 415 — unsupported media type | File format not in the allowed list, or wrong `Content-Type` on request | Verify file extension is in the allowed list; check that the request `Content-Type` is `multipart/form-data` (not `application/json`) |
 | `uploadStatus: rejected` | File failed backend processing | Check file integrity; verify the file is uncompressed; retry with a corrected file and a new idempotency key |
@@ -344,7 +338,7 @@ catalog.
   - `questionnairesAndLicenses` — both nouns are **plural** (`questionnaires`, not `questionnaire`; `Licenses`, not `License`). Common misspellings: `questionnaireAndLicense`, `questionnairesAndLicense`.
   - `mpaOrAmendment` — the conjunction `Or` has a **capital O** (it is part of the camelCase word boundary). Common misspelling: `mpaorAmendment` or `mpa_or_amendment`.
 - **Missing `processingAccountId`** — this ID is required in the URL path. There is no attachment endpoint that doesn't require it.
-- **Missing idempotency key** — all POST requests require `Idempotency-Key` or you get a `400 idempotencyKeyMissing`.
+- **Missing idempotency key** — all POST requests require `Idempotency-Key` or you get a `400` whose `type` ends `#idempotency-key-missing`.
 - **`uploadStatus: pending` is not a failure** — the file is received and queued for processing. Wait and poll before concluding the upload failed.
 
 ---
@@ -381,7 +375,7 @@ If a developer asks to list all attachments, or to download file bytes, tell the
 - [ ] `file` part is the binary file content, not a path string
 - [ ] File is under 50 MB uncompressed and in an allowed format
 - [ ] `attachmentId` captured from creation response for follow-on retrieval
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 

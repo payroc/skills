@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/payment-links/create-and-share-a-payment-link.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Create and share a payment link
 
@@ -26,7 +26,7 @@ Use our Identity Service to generate a Bearer token to include in the header of 
 1. Include your API key in the x-api-key parameter in the header of a POST request.
 2. Send your request to [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize).
 
-> **Note (skill annotation, not part of the source page):** The URL above is the **production** identity host. For **UAT/test**, use `https://identity.uat.payroc.com/authorize` — the UAT host carries the `.uat` segment, production does not. Use the UAT host while testing and swap to production at go-live.
+> **Note (skill annotation, not part of the source page):** The identity host is the same for test and live. Use a test API key while testing; the key, not the URL, decides test or live.
 
 **Note:** You need to generate a new Bearer token before the previous Bearer token expires.
 
@@ -85,8 +85,7 @@ To create a payment link, send a POST request to our Processing Terminals endpoi
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                  |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/payment-links)         |
 
 ### Request parameters
 
@@ -215,7 +214,6 @@ paths:
               $ref: '#/components/schemas/paymentLinks_create_Request'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -1305,7 +1303,6 @@ paths:
               $ref: '#/components/schemas/paymentLinks_create_Request'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -2144,8 +2141,7 @@ To share a payment link, send a POST request to our Payment Links endpoint that 
 
 | Endpoint   | Prefix     | URL                                                                                                                                                        |
 | :--------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events](https://api.uat.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events) |
-| Production | `api.`     | [https://api.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events](https://api.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events](https://api.payroc.com/v1/payment-links/\{paymentLinkId}/sharing-events)         |
 
 ### Request parameters
 
@@ -2269,7 +2265,6 @@ paths:
               $ref: '#/components/schemas/paymentLinks_sharingEvents_share_Request'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -2863,7 +2858,6 @@ paths:
               $ref: '#/components/schemas/paymentLinks_sharingEvents_share_Request'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':

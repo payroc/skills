@@ -1,7 +1,7 @@
 # Hosted Payment Pages — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Card Payments — Capture + `transactionResult` schemas). Last synced: 2026-06-01. This is the offline
+> (Card Payments — Capture + `transactionResult` schemas). Last synced: 2026-11-03. This is the offline
 > source of truth this skill emits from for the **REST-API side** — read enum values and required-field
 > sets from here, not from memory. To refresh, re-fetch the source and regenerate this file (see
 > [`_sources.md`](./_sources.md)).
@@ -24,10 +24,8 @@ narrative copies (`load-hosted-payment-page.md`, `build-receipt-page.md`, `authe
 | --- | --- |
 | Capture a pre-authorization | `POST /payments/{paymentId}/capture` |
 
-UAT host: `https://api.uat.payroc.com/v1`  ·  Production host: `https://api.payroc.com/v1`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
-(Note the UAT identity host carries the `.uat` segment; production does not.)
+REST API host (test and live): `https://api.payroc.com/v1`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 The `paymentId` path parameter is the value HPP returns as `UNIQUEREF` on the receipt callback. The capture
 request body is **optional**: omit it to capture the full pre-authorized amount; send `amount` (integer, the
@@ -143,4 +141,4 @@ For the capture call (`POST /payments/{paymentId}/capture`), expect: `400`, `401
 | --- | --- | --- |
 | `Authorization: Bearer <token>` | every request | token from the identity service; expires in 3600s |
 | `Content-Type: application/json` | POST | |
-| `Idempotency-Key: <UUID v4>` | every POST | required; UUID v4. Retrying a failed request? Reuse the same key — the gateway returns the original result rather than processing a duplicate. |
+| `Idempotency-Key: <UUID v4>` | every POST | required; UUID v4. Resending the identical request after a timeout, a network error or a `401` (with a new token)? Reuse the same key — the gateway returns the original result rather than processing a duplicate. Use a new key only for a changed body, such as a fixed `400`. |

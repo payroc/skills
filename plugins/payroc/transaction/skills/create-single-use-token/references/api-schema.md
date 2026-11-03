@@ -1,7 +1,7 @@
 # Single-Use Tokens — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/api/schema/tokenization/single-use-tokens/create.md`
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory. To refresh, re-fetch the source and
 > regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -13,9 +13,9 @@
 | --- | --- |
 | Create a single-use token | `POST /v1/processing-terminals/{processingTerminalId}/single-use-tokens` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Full UAT URL: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/single-use-tokens`
+Full URL: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/single-use-tokens`
 
 ---
 
@@ -254,7 +254,7 @@ singleUseToken:
 | `201 Created` | Token created successfully |
 | `400 Bad Request` | Validation failure (see `errors[]`) |
 | `401 Unauthorized` | Bearer token missing, expired, or invalid |
-| `403 Forbidden` | API key lacks permission |
+| `403 Forbidden` | API key lacks permission; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | `406 Not Acceptable` | Accept header mismatch |
 | `409 Conflict` | Idempotency key conflict (see `errors[]` + HATEOAS link) |
 | `415 Unsupported Media Type` | Content-Type not `application/json` |

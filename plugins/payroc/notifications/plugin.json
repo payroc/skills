@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "notifications",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Skills for event notifications and webhook subscriptions",
   "author": {
     "name": "Payroc"

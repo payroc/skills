@@ -1,7 +1,7 @@
 # Look Up Card Details — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (BIN Lookup schema at `#/components/schemas/binLookup`). Last synced: 2026-09-24. This is the
+> (BIN Lookup schema at `#/components/schemas/binLookup`). Last synced: 2026-11-03. This is the
 > offline source of truth this skill emits from — read enum values and required-field sets from
 > here, not from memory. To refresh, re-fetch the source and regenerate this file (see
 > [`_sources.md`](./_sources.md)).
@@ -14,9 +14,9 @@
 | --- | --- |
 | Look up card details (BIN lookup) | `POST /v1/cards/bin-lookup` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Full UAT URL: `POST https://api.uat.payroc.com/v1/cards/bin-lookup`
+Full URL: `POST https://api.payroc.com/v1/cards/bin-lookup`
 
 ---
 
@@ -144,7 +144,7 @@ Full UAT URL: `POST https://api.uat.payroc.com/v1/cards/bin-lookup`
   "card": {
     "type": "digitalWallet",
     "serviceProvider": "apple",           // REQUIRED — apple | google
-    "encryptedData": "BASE64_DATA",       // REQUIRED
+    "encryptedData": "HEX_ENCODED_WALLET_DATA", // REQUIRED — wallet data as hex
     "cardholderName": "Jane Smith",       // optional
     "accountType": "checking"             // optional
   }
@@ -221,7 +221,7 @@ Example error body:
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/cards/bin-lookup",
+  "instance": "https://api.payroc.com/v1/cards/bin-lookup",
   "errors": [
     { "parameter": "card", "detail": "Required field not populated", "message": "'card' must not be empty." }
   ]

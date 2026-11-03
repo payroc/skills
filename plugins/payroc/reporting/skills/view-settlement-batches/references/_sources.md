@@ -6,5 +6,7 @@ every invocation. Re-sync from the sources below if the files look stale.
 
 | File | Source URL | Last synced |
 | --- | --- | --- |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 |
-| `api-schema.md` | https://docs.payroc.com/api/schema/reporting/settlement/list-batches.md · https://docs.payroc.com/api/schema/reporting/settlement/retrieve-batch.md | 2026-06-22 |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 |
+| `api-schema.md` | https://docs.payroc.com/api/schema/reporting/settlement/list-batches.md · https://docs.payroc.com/api/schema/reporting/settlement/retrieve-batch.md | 2026-11-03 |
+
+`api-schema.md` notes: hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03); the docs guide page still lists UAT hosts.

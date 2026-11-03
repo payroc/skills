@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/guides/take-payments/apple-pay/add-apple-pay-to-your-integration.md
-> Last synced: 2026-09-16. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Add Apple Pay to your integration
 
@@ -19,19 +19,14 @@ Step 2b - Run a sale.
 Use our Identity Service to generate a Bearer token to include in the header of your requests. To generate your Bearer token, complete the following steps:
 
 1. Include your API key in the x-api-key parameter in the header of a POST request.
-2. Send your request to the identity endpoint for your environment:
-   - UAT/test: [https://identity.uat.payroc.com/authorize](https://identity.uat.payroc.com/authorize)
-   - Production: [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize)
+2. Send your request to the identity endpoint. The host is the same for test and live; use a test API key for testing, because the key decides test or live:
+   - [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize)
 
 **Note:** You need to generate a new Bearer token before the previous Bearer token expires.
 
 #### Example request
 
 ```sh
-# UAT/test
-curl --location --request POST  'https://identity.uat.payroc.com/authorize' --header 'x-api-key: <api key>'
-
-# Production
 curl --location --request POST  'https://identity.payroc.com/authorize' --header 'x-api-key: <api key>'
 ```
 
@@ -97,8 +92,7 @@ To start an Apple Pay session with Apple, send a request to our Apple Pay sessio
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                            |
 | :--------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/apple-pay-sessions)         |
 
 In the body of your request, include the following parameters:
 
@@ -168,7 +162,6 @@ paths:
               $ref: '#/components/schemas/applePaySessions'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -482,7 +475,6 @@ paths:
               $ref: '#/components/schemas/applePaySessions'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -591,8 +583,7 @@ After you retrieve the cardholder's encrypted payment details from Apple, use ou
 
 | Endpoint   | Prefix     | URL                                                                              |
 | :--------- | :--------- | :------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/payments](https://api.uat.payroc.com/v1/payments) |
-| Production | `api.`     | [https://api.payroc.com/v1/payments](https://api.payroc.com/v1/payments)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/payments](https://api.payroc.com/v1/payments)         |
 
 In your request, send the following parameters in the paymentMethod object:
 
@@ -687,7 +678,6 @@ paths:
               $ref: '#/components/schemas/paymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -4616,7 +4606,6 @@ paths:
               $ref: '#/components/schemas/paymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':

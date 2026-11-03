@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (payment-features/cards balance schema) and `https://docs.payroc.com/api/schema/payment-features/cards/view-ebt-balance.md`.
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory. To refresh, re-fetch the source and
 > regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -14,11 +14,9 @@
 | --- | --- |
 | Check EBT card balance | `POST /v1/cards/balance` |
 
-UAT host: `https://api.uat.payroc.com`
-Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Full UAT URL: `POST https://api.uat.payroc.com/v1/cards/balance`
-Full production URL: `POST https://api.payroc.com/v1/cards/balance`
+Full URL: `POST https://api.payroc.com/v1/cards/balance`
 
 ---
 
@@ -268,6 +266,6 @@ Status codes this endpoint returns: `400`, `401`, `403`, `404`, `406`, `409`, `4
 
 `POST /v1/cards/balance` returns `400 Bad Request` if the terminal is not configured in an
 EBT sharing group. EBT functionality requires a terminal that has been provisioned by Payroc
-into a sharing group with the EBT network — this applies in both UAT and production. The API
+into a sharing group with the EBT network — this applies in both the test environment and production. The API
 and schema documented here are correct; a `400` here means the terminal needs EBT provisioning,
 not that the request is malformed.

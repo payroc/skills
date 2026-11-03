@@ -10,7 +10,7 @@ description: >
   merchant registration, owner/control-prong requirements, pricing agreements, or signature
   capture during boarding — even if they don't use the word "skill" or "boarding API" explicitly.
 metadata:
-  version: "0.2.0"
+  version: "0.2.2"
   category: boarding
   status: draft
 ---
@@ -63,11 +63,7 @@ Content-Type:    application/json
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
-# Test / sandbox
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: YOUR_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: YOUR_API_KEY"
 ```
@@ -215,7 +211,7 @@ the create response value.
 
 **IDs are opaque.** The `MP-XXXX` / `PA-XXXX` / `PI-XXXX` forms in these examples are for
 readability only. Treat every ID as an opaque string whose format is not guaranteed and varies by
-environment — in UAT they come back as plain integers (e.g. `9815`). Don't validate or parse them
+environment — in the test environment they come back as plain integers (e.g. `9815`). Don't validate or parse them
 against a `PREFIX-XXXX` pattern.
 
 ---
@@ -228,13 +224,13 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 validation | Field issues | Fix each field in `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
 | 400 addendum/processor validation | Unrecognized or duplicate `addendums[].type`, an addendum missing a required field, or an unrecognized `processor` | Not a fatal or unexpected error — see the addendum/processor error table in `references/api-schema.md`; fix the flagged field and resubmit |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
-| 409 `resourceAlreadyExists` | Duplicate merchant | Check if merchant was already boarded; retrieve existing record |
-| 409 `idempotencyKeyInUse` | Key reused with different payload | Generate a new UUID for the new submission |
-| 409 `taxIdInUse` | Merchant with that Tax ID exists | Retrieve existing merchant platform instead |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
+| 409 `#national-id-in-use` | A supplied national ID (an owner's or a contact's) is already in use | Check whether this merchant was already boarded; otherwise correct the national ID |
+| 409 `#idempotency-key-in-use` | Key reused with different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a new UUID for the new submission |
+| 409 `#tax-id-in-use` | Merchant with that Tax ID exists | Retrieve existing merchant platform instead |
 | 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
 
 **Reading validation errors** — the response uses the **RFC 7807 problem-details envelope** (`type`,
@@ -242,7 +238,7 @@ URL linking to Payroc docs, plus an `errors` array for validation failures.
 does not define. Each `errors[]` item has a `parameter` (the JSON path of the failing field), a
 `detail` (short reason — distinct from the top-level `detail`), and a `message` (human-readable
 explanation). See `references/error-response-format.md` for the envelope shape and the canonical
-error `type` catalog. A real `400` from UAT (an empty body):
+error `type` catalog. A real `400` captured in the test environment (an empty body; captured on the earlier `api.uat.payroc.com` test host, as `instance` shows; the API host is now `api.payroc.com`):
 ```json
 {
   "type": "https://docs.payroc.com/api/errors#bad-request",
@@ -268,7 +264,7 @@ error `type` catalog. A real `400` from UAT (an empty body):
 Each `parameter` path maps to the request body field that failed — use it to pinpoint and fix each
 issue. Fix all flagged fields in a single corrected payload and resubmit. (The published OpenAPI
 spec lists only `message` on each item, but the live API also returns `parameter` and `detail` —
-verified against UAT, 2026-06-16.)
+verified in the test environment, 2026-06-16.)
 
 ---
 

@@ -5,7 +5,7 @@
 > `https://docs.payroc.com/guides/take-payments/payments/re-present-an-ach-payment.md`,
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/referenced-refunds/bank.md`,
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/reversals/bank.md`.
-> Last synced: 2026-09-24.
+> Last synced: 2026-11-03.
 
 ---
 
@@ -33,7 +33,7 @@ The Payroc Bank Transfer Payments API allows merchants to:
 | SEC code required | Yes (`secCode` field) | No |
 | Account types | `checking`, `savings` | `checking`, `savings` |
 
-**Note on UAT availability:** ACH payments have limited UAT testability in the current test environment. PAD representment is known to be broken in UAT. Test ACH where possible but be aware UAT coverage may be incomplete.
+**Note on test environment availability:** ACH payments have limited testability in the current test environment. PAD representment is known to be broken in the test environment. Test ACH where possible but be aware test coverage may be incomplete.
 
 ---
 
@@ -123,9 +123,9 @@ it after resolving the issue with the customer.
 4. Optionally supply updated bank account details in the request body if the customer's account changed
 5. Payments can be re-presented a maximum of **two times**
 
-**UAT note:** PAD representment is known to be broken in the current UAT environment. ACH representment
+**Test environment note:** PAD representment is known to be broken in the current test environment. ACH representment
 may also have limited testability. These operations are documented here for completeness; test against
-UAT where possible.
+the test environment where possible.
 
 ---
 

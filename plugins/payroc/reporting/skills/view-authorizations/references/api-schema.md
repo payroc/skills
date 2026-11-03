@@ -1,7 +1,7 @@
 # View Authorizations — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Authorizations schemas). Last synced: 2026-06-22. This is the offline source of truth this skill
+> (Authorizations schemas). Last synced: 2026-11-03. This is the offline source of truth this skill
 > emits from — read enum values and required-field sets from here, not from memory. To refresh,
 > re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -18,7 +18,7 @@ the published schema pages.
 | List authorizations | `GET /v1/authorizations` |
 | Retrieve an authorization | `GET /v1/authorizations/{authorizationId}` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 **Note:** These are GET-only endpoints. There are no POST/PATCH/DELETE operations on the
 `/authorizations` resource — authorizations are created implicitly by payment transactions, not
@@ -222,7 +222,7 @@ free string; do not assume a fixed set of values.
 | 200 | Success — returns authorization object or paginated list |
 | 400 | Bad request — validation error (see RFC 7807 error format) |
 | 401 | Authentication failed — token missing, expired, or invalid |
-| 403 | Forbidden — insufficient permissions for this resource |
+| 403 | Forbidden — insufficient permissions for this resource; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | 404 | Not found — `authorizationId` does not exist (retrieve endpoint only) |
 | 406 | Not acceptable — content type issue |
 | 500 | Server error |

@@ -6,9 +6,9 @@ file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/api/schema/tokenization/secure-tokens/create.md + retrieve + list + delete + update-account (curated slice) | 2026-06-22 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/api/schema/tokenization/secure-tokens/create.md + retrieve + list + delete + update-account (curated slice) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03); the docs guide page still lists UAT hosts |
 | `save-payment-details-guide.md` | https://docs.payroc.com/guides/take-payments/save-payment-details.md | 2026-06-22 | payroc-verbatim |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly; `third-party-derived`
 = our own-words notes on third-party API surface (none in this skill).

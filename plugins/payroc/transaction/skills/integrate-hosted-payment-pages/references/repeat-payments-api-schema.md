@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (Repeat Payments — Secure Tokens, Payment Plans, Subscriptions + the Payments `secureToken` / `standingInstructions`
-> schemas). Last synced: 2026-09-24. This is the offline source of truth this skill emits from for the
+> schemas). Last synced: 2026-11-03. This is the offline source of truth this skill emits from for the
 > **REST-API side of recurring billing** — read enum values and required-field sets from here, not from memory.
 > To refresh, re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -25,10 +25,8 @@ path).
 
 ## Hosts, auth, and ordering
 
-UAT host: `https://api.uat.payroc.com/v1`  ·  Production host: `https://api.payroc.com/v1`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
-(Note the UAT identity host carries the `.uat` segment; production does not.)
+REST API host (test and live): `https://api.payroc.com/v1`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 All requests use **Bearer-token** auth (`Authorization: Bearer <token>`, token from the identity service,
 expires in 3600s) — the same mechanism as the pre-auth Capture API, **not** the HPP HMAC hash. POSTs also

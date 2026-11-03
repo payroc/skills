@@ -2,7 +2,7 @@
 
 > **Narrative reference for the view-settled-transactions skill.**
 > Source: `https://docs.payroc.com/solutions/full-stack/view-reports/settlement-data.md`
-> Last synced: 2026-06-22.
+> Last synced: 2026-11-03.
 
 ## Overview
 
@@ -82,4 +82,4 @@ For reporting on what has been paid out, use the Reporting API. For checking whe
 - **`date` or `batchId` required** — the transactions endpoint rejects requests without either parameter. This is by design; querying all transactions without a date or batch scope would be unbounded.
 - **Read-only** — these are GET-only endpoints; there are no write operations in the Reporting API.
 - **No `Idempotency-Key` required** — idempotency headers are only required for state-changing (POST/PATCH) operations.
-- **UAT data availability** — UAT settlement data is periodically wiped. If queries return empty results in UAT, this is likely the cause (see UAT status note in SKILL.md).
+- **Test-environment data availability** — Test-environment settlement data is periodically wiped. If queries return empty results in the test environment, this is likely the cause (see the test data note in SKILL.md).

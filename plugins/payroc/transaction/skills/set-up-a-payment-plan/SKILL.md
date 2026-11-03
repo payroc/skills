@@ -13,7 +13,7 @@ description: >
   a payment method (use save-a-payment-method), managing or updating existing subscriptions
   (use manage-subscriptions), or one-time card or ACH payments.
 metadata:
-  version: "0.1.4"
+  version: "0.1.6"
   category: transaction
   status: draft
 ---
@@ -60,20 +60,20 @@ On first invocation, announce to the developer:
 
 ```text
 # Payment Plans
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
-PATCH  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
-DELETE https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+PATCH  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+DELETE https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
 
 # Subscriptions
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
-PATCH  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
+PATCH  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay
 
 Required headers (POST / PATCH, except /deactivate and /reactivate):
   Authorization:   Bearer <token>
@@ -109,7 +109,7 @@ These are local snapshots, authoritative for this skill. Their source URLs and l
 4. **Idempotency-Key on every POST and PATCH except `/deactivate` and `/reactivate`.** The value must be a UUID v4. Omitting it causes a 400. Generate a fresh UUID for each distinct operation; do not reuse the same key across different requests. The subscription `/deactivate` and `/reactivate` POSTs do not take the header — sending it there is harmless, but omitting it does not cause a 400.
 5. **Never hardcode credentials.** API keys, terminal IDs, and secure tokens must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement token refresh logic.
-7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 8. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
 
 ---
@@ -148,16 +148,16 @@ Use the answers to skip sections that don't apply. If the use case is ambiguous,
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, keep building and tell them to populate credentials before testing.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, keep building and tell them to populate credentials before testing.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team along with UAT access.
-2. **Processing terminal ID** — the `processingTerminalId` used in all endpoint paths. The developer should know this from their UAT setup.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — the `processingTerminalId` used in all endpoint paths. The developer should know this from their test setup.
 3. **Secure token** — for each subscription, you need a `secureTokenId` representing the customer's saved payment method. This is obtained by first calling the Tokenization API (the `save-a-payment-method` skill). **A subscription cannot be created without a valid secure token** — if the developer does not yet have one, point them to the save-a-payment-method skill before proceeding to subscription creation.
-4. **UAT environment** — Payroc's test environment. UAT terminals are provisioned by the Payroc Integrations team; there is no self-serve signup.
+4. **Test environment** — Payroc's test environment. Test terminals are provisioned by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read credentials from environment variables, then tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal and API key to actually run or test this — contact the Payroc Integrations team to get them. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal) to actually run or test this. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -169,9 +169,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding 
 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
-Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+Endpoint: `POST https://identity.payroc.com/authorize`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 Header: `x-api-key: <api-key>`
 
@@ -183,13 +181,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is a valid test key for the test environment.
 
 ---
 
 ## Step 2 — Create a payment plan
 
-Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
+Endpoint: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
 
 Required headers:
 ```
@@ -260,7 +258,7 @@ Does the developer have a `secureTokenId` from the Tokenization API? If yes, pro
 
 ## Step 4 — Create a subscription
 
-Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
+Endpoint: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
 
 Required headers:
 ```
@@ -325,7 +323,7 @@ Monitor subscription state by polling `GET /v1/processing-terminals/{processingT
 
 For `manual`-type plans, your system must trigger each payment. You can collect only when a payment is due. The plan's `frequency` sets how often that is, for example weekly or monthly. If the payment for the current period has already been collected, the gateway rejects the request, so don't retry a rejected collection within the same period.
 
-Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
+Endpoint: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
 
 Required headers:
 ```
@@ -357,7 +355,7 @@ Does the payment response return HTTP 201 with a `payment.paymentId`? Check `pay
 
 ### Retrieve a subscription
 
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -367,7 +365,7 @@ Returns the full subscription object. Check `currentState.status` to see if the 
 
 ### List subscriptions
 
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -377,7 +375,7 @@ Query parameters: `paymentPlanId` (filter by plan), `limit` (max results, defaul
 
 ### Deactivate a subscription
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate`
 
 Required headers:
 ```
@@ -397,7 +395,7 @@ If the developer only wants to pause temporarily, `pauseCollectionFor` (on subsc
 
 ### Reactivate a subscription
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate`
 
 Required headers:
 ```
@@ -412,7 +410,7 @@ Reactivation resumes a previously deactivated subscription. The `currentState.st
 
 ### Delete a payment plan
 
-`DELETE https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
+`DELETE https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
 
 Headers: `Authorization: Bearer <token>` (no body required)
 
@@ -431,18 +429,18 @@ Successful deletion returns HTTP 204 with an empty body.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header uses the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header uses a valid test API key (or an older test key issued for the `.uat.` hosts; see `references/identity-call.md`) |
 | 400 — validation error mentioning `type`, `frequency`, `onUpdate`, `onDelete` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — validation error mentioning `paymentMethod.type` | Wrong discriminator value | The only valid value is `"secureToken"` — read `references/api-schema.md` |
-| 400 — `idempotencyKeyMissing` | Idempotency-Key header absent on a POST or PATCH | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH — except the body-less `/deactivate` and `/reactivate` POSTs, which do not take it and never raise this error |
+| 400 — `#idempotency-key-missing` | Idempotency-Key header absent on a POST or PATCH | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH — except the body-less `/deactivate` and `/reactivate` POSTs, which do not take it and never raise this error |
 | 400 — `recurringOrder` missing or empty | Automatic plan with no recurring amount | Send `recurringOrder.amount` when `type` is `"automatic"` |
 | 400 — `paymentPlanId` not found when creating subscription | Referenced plan doesn't exist yet | Create the plan first, then create the subscription |
 | 400 — secure token invalid | Token not yet validated or wrong format | Ensure the `secureTokenId` from the Tokenization API is valid (`cardNumberValidated` or `bankAccountValidated`) |
 | 400 — amounts in wrong unit | Amount sent as major currency unit (e.g. 49.99) | All amounts are integers in the lowest denomination (e.g. `4999` for $49.99) |
 | 409 — `paymentPlanId` or `subscriptionId` already exists | Merchant-assigned ID not unique | Choose a unique ID value per terminal |
-| 409 — duplicate Idempotency-Key | Same key used across different operations | Generate a fresh UUID v4 for each distinct request |
+| 409 — duplicate Idempotency-Key | Same key used across different operations | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID v4 for each distinct request |
 | 404 — plan or subscription not found | Wrong ID, wrong terminal, or resource deleted | Verify the IDs and confirm `processingTerminalId` matches |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc Integrations |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc Integrations |
 | 500 | Server error | Retry with exponential backoff; if persistent, contact Payroc support |
 
 **Reading validation errors** — the response uses the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`); Payroc **extends** it with an `errors` array. Each `errors[]` item has a `parameter` (the JSON path of the failing field), a `detail` (short reason), and a `message` (human-readable explanation). Use `parameter` to identify which field to fix.
@@ -475,7 +473,7 @@ Successful deletion returns HTTP 204 with an empty body.
 - [ ] Dates use `YYYY-MM-DD` format (`startDate`, `endDate`)
 - [ ] `startDate` is the current day or later (gateway date: UTC in winter, IST in summer)
 - [ ] Manual collections are triggered only when a payment is due, at most once per `frequency` period
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 - [ ] Deletion: developer explicitly confirmed the plan deletion is permanent before code was written
 
 ---
@@ -491,9 +489,9 @@ Once all checklist items pass:
 > - **Subscriptions** — [summarise: how customers are enrolled, payment method type, start date logic]
 > - **Payment collection** — [automatic: gateway manages | manual: your system triggers via /pay endpoint]
 > - **Lifecycle management** (list what was built) — retrieve, list, deactivate, reactivate, delete.
-> - **Validated in UAT** — end-to-end flow confirmed.
+> - **Validated in the test environment** — end-to-end flow confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal.
 
 Offer next steps:
 - **Webhook notifications** — receive server-side subscription events rather than polling

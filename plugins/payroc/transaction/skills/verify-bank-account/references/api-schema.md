@@ -1,7 +1,7 @@
 # Verify Bank Account — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Payment Features / Bank Verification schema). Last synced: 2026-06-22. This is the offline source
+> (Payment Features / Bank Verification schema). Last synced: 2026-11-03. This is the offline source
 > of truth this skill emits from — read enum values and required-field sets from here, not from memory.
 > To refresh, re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -13,10 +13,9 @@
 | --- | --- |
 | Verify a bank account | `POST /v1/bank-accounts/verify` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Full UAT endpoint: `POST https://api.uat.payroc.com/v1/bank-accounts/verify`
-Full production endpoint: `POST https://api.payroc.com/v1/bank-accounts/verify`
+Full endpoint (test and live): `POST https://api.payroc.com/v1/bank-accounts/verify`
 
 ---
 
@@ -126,7 +125,7 @@ Status codes for these endpoints: `400`, `401`, `403`, `409`, `500`.
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/bank-accounts/verify",
+  "instance": "https://api.payroc.com/v1/bank-accounts/verify",
   "errors": [
     {
       "parameter": "bankAccount.routingNumber",

@@ -2,7 +2,7 @@
 name: integrate-hosted-fields
 description: >-
   Guide an ISV developer or merchant through integrating Payroc's Hosted Fields
-  from credential setup to first successful UAT test transaction. Use this skill
+  from credential setup to first successful test transaction. Use this skill
   whenever someone asks about integrating Payroc Hosted Fields, embedding card
   input fields or a payment form in their own checkout page, using the Payroc JS
   payment library, generating a Payroc session token, tokenizing payment details
@@ -11,7 +11,7 @@ description: >-
   guidance. Also use it when a developer has HPP working and asks about the
   embedded alternative.
 metadata:
-  version: "0.2.2"
+  version: "0.2.4"
   category: integration
   status: draft
 ---
@@ -40,7 +40,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 On first invocation, announce to the developer:
 
 > **Payroc Hosted Fields Integration**
-> I'll guide you from credential setup through a successful UAT test transaction.
+> I'll guide you from credential setup through a successful test transaction.
 > This covers card-not-present payments via Payroc's Hosted Fields — where Payroc-hosted card input widgets are embedded directly in your own checkout page.
 >
 > **How Hosted Fields works (three parts):**
@@ -57,18 +57,18 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-# Identity service (Bearer token)
-POST https://identity.uat.payroc.com/authorize
+# Identity service (Bearer token). Same hosts for test and live: the API key decides which.
+POST https://identity.payroc.com/authorize
 x-api-key: <api-key>
 
 # Session token
-POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/hosted-fields-sessions
+POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/hosted-fields-sessions
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Payments API
-POST https://api.uat.payroc.com/v1/payments
+POST https://api.payroc.com/v1/payments
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -111,13 +111,13 @@ The local snapshots' source URLs and last-synced dates are in [`references/_sour
 
 1. **Inspect before asking** — read the codebase before asking anything; use what you find to skip obvious questions and ask targeted ones.
 2. **Ask before coding** — ask the intake questions and wait for the developer's answers before writing any implementation code. Posing a question while simultaneously providing code "assuming" the answer defeats the gate; the intake is a decision point, not a preamble.
-3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in UAT.
+3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in the test environment.
 4. **Read the local references, don't guess — and pick the right one for the question.** There are *three* kinds of source, not two. Using the wrong one for a question is how memorised-but-wrong values leak through.
    - **Schemas, field names, enums, required fields → `references/api-schema.md`.** Anything that crosses the wire to the API. Names you'll meet most often: `paymentRequest`, `payment` (response), `transactionResult`, `card`, `secureTokenSummary`, `schemas-credentialOnFile`, `standingInstructions`, `firstTxnReferenceData`, `hostedFieldsCreateSessionRequest`, `HostedFieldsCreateSessionRequestScenario`, `StandingInstructionsSequence`, `StandingInstructionsProcessingModel`. Looking these up by name in the schema reference is faster than scanning narrative docs for shape.
    - **Approach, sequencing, library wiring → the narrative guides** (`references/<page>.md`). "Which call comes first?" and "how do I attach the JS library?" are guide questions, not schema questions.
    - **SDK config shape, accepted child keys, public API method names → the SDK JS file itself** (`references/hosted-fields-sdk.js`). This local snapshot is the same JS you load in `<script>`. The SDK validates `fields.card[key]` against a fixed iteration list and silently ignores keys it doesn't recognise; it exposes a fixed set of methods on the `hostedFields` instance. Narrative docs have been documented as ambiguous on exact placement and method naming — the SDK source is not. Read the JS as text whenever you need to confirm a property name, an accepted child key inside `fields.card`, or a method on `cardForm`.
    - **Request and response schemas diverge — read both.** Don't assume the response mirrors the request. For Hosted Fields the response uses `card` (not `paymentMethod`); `cardSchemeReferenceId` lives on `transactionResult`, not on the card. Inferring the response from the request name is a known footgun.
-   - **The JS library CDN URL, SRI hash, and `libVersion` are four-part version strings.** Don't emit the version from memory — read it from `references/create-a-payment-form.md` (and the snapshot in `references/hosted-fields-sdk.js`) and use the full four-part string (e.g. `1.7.0.261457` in UAT, `1.7.0.261471` in production). UAT and production may publish different versions.
+   - **The JS library CDN URL, SRI hash, and `libVersion` are four-part version strings.** Don't emit the version from memory — read it from `references/create-a-payment-form.md` (and the snapshot in `references/hosted-fields-sdk.js`) and use the full four-part string (e.g. `1.7.0.261457` in test, `1.7.0.261471` in production). The test and production CDNs may publish different versions.
 5. **Read-then-emit, per value.** Before emitting any enum value (e.g. `channel`, `scenario`, `paymentMethod.type`, `transactionResult.status`, `standingInstructions.sequence`, `processingModel`, `secCode`, `accountType`), any SDK config property or accepted child key, or any method call on `cardForm`, read the relevant local reference. Don't treat this skill's failure-pattern callouts (see Step 3, Step 4, error taxonomy, anti-patterns) as authoritative — they exist so you recognise mistakes by symptom, not so you can skip reading the reference. Read enums from `references/api-schema.md`, not from memory. A plausible English-sounding enum value (e.g. `"internet"` for `channel`, `"approved"` as the only success status) is the most common form this failure takes.
 6. **Never hardcode credentials** — API keys and terminal IDs must come from environment variables or a secrets manager, never source code.
 7. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
@@ -176,14 +176,14 @@ Only ask this for **card** flows. ACH and PAD are out of scope for 3DS.
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
 
-1. **API key** — used to obtain a Bearer token from Payroc's identity service. This is different from the HPP terminal secret; it is a longer-lived API credential provisioned by the Payroc Integrations team.
-2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team. UAT is Payroc's test environment; there is no self-serve signup.
-3. **UAT access confirmed** — Hosted Fields does not require Self-Care Portal configuration for the core sale flow (no receipt URL to register, unlike HPP).
+1. **API key** — used to obtain a Bearer token from Payroc's identity service. This is different from the HPP terminal secret; it is a longer-lived API credential. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — a test terminal ID provisioned by the Payroc Integrations team.
+3. **Test access confirmed** — Hosted Fields does not require Self-Care Portal configuration for the core sale flow (no receipt URL to register, unlike HPP).
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer what's outstanding and how to get it:
-- API key / UAT access → contact the Payroc Integrations team; set the variables before testing. I can keep building in the meantime.
+- Test API key → create one in the Developer Portal; test terminal → contact the Payroc Integrations team; set the variables before testing. I can keep building in the meantime.
 - If the developer already has Payroc credentials from an existing HPP integration, the same API key and processing terminal ID work for Hosted Fields too — the API key is what generates the Bearer token here. Flag this explicitly so they know they don't need to request new credentials; whatever they've named their existing environment variables, those are the right ones.
 
 **If the developer answered "yes" to Question 4 (3DS / SCA):** add two more prerequisites that must be in motion before 3DS can be tested end-to-end:
@@ -191,7 +191,7 @@ These are needed to **run and test** the integration in UAT — not to write the
 4. **Terminal enabled for 3DS** — Payroc support enables 3DS on the processing terminal. The MPI endpoint (`/merchant/mpi`) will not respond until this is done.
 5. **Webhook URL registered with Payroc support** — Payroc posts the MPI result (`mpiReference`, `result`, `status`, `eci`) to a URL the merchant provides. The URL must be reachable from Payroc's network and registered with support before any 3DS sale will complete.
 
-Tell the developer to email **cs@payroc.com** now to kick both items off, since they require a human turnaround. Building the code does not depend on them — it can proceed in parallel — but you cannot complete an end-to-end UAT 3DS transaction until both are in place.
+Tell the developer to email **cs@payroc.com** now to kick both items off, since they require a human turnaround. Building the code does not depend on them — it can proceed in parallel — but you cannot complete an end-to-end 3DS transaction in the test environment until both are in place.
 
 ### Checkpoint
 
@@ -208,7 +208,7 @@ Read: `references/identity-call.md` (canonical Bearer token exchange reference �
 
 Read the pages before writing anything. From the local references, confirm and use:
 
-- The identity service endpoint (test vs production)
+- The identity service endpoint (one host for test and live; the API key decides)
 - The required header and its format
 - The response field containing the access token
 - The token expiry and what to do when it expires
@@ -227,11 +227,11 @@ Read: `references/authenticate-your-session.md` (same page covers both auth call
 
 A session token authorises the JS library to render fields for a specific checkout session. Read the reference to confirm:
 
-- The session token endpoint (test vs production)
+- The session token endpoint (one host for test and live)
 - The required request body fields: `libVersion`, `scenario`, and the `Idempotency-Key` header
 - The `libVersion` value — **do not hardcode this from memory; read it from `references/create-a-payment-form.md` in Step 3 first, then come back and use the current value**
-- The `libVersion` is a **four-part** string (e.g. `1.7.0.261457` in UAT, `1.7.0.261471` in production). The same four-part version appears in the CDN URL the create-a-payment-form page emits — they must match. Do not truncate it to three parts or substitute a different version from memory. The `hostedFieldsCreateSessionRequest.libVersion` description in `references/api-schema.md` also names the current production version.
-- **`libVersion` is environment-specific.** UAT and production may publish different four-part versions. "Use the same value everywhere" is true *within* an environment but not *across* environments — when cutting over to production, re-read `libVersion`, the CDN URL, and the SRI hash from the production `create-a-payment-form.md` together. Never carry the UAT version across.
+- The `libVersion` is a **four-part** string (e.g. `1.7.0.261457` in test, `1.7.0.261471` in production). The same four-part version appears in the CDN URL the create-a-payment-form page emits — they must match. Do not truncate it to three parts or substitute a different version from memory. The `hostedFieldsCreateSessionRequest.libVersion` description in `references/api-schema.md` also names the current production version.
+- **`libVersion` is environment-specific.** The test and production CDNs may publish different four-part versions. "Use the same value everywhere" is true *within* an environment but not *across* environments — when cutting over to production, re-read `libVersion`, the CDN URL, and the SRI hash from the production `create-a-payment-form.md` together. Never carry the test version across.
 - The valid `scenario` values come from the `HostedFieldsCreateSessionRequestScenario` enum in `references/api-schema.md` (`payment` for sale or sale-and-tokenize, `tokenization` for save-only). Use `payment` whenever you intend to actually charge the card — even if you *also* want to save it on the same call.
 - The session expiry (10 minutes from creation)
 - The response field containing the session token
@@ -278,7 +278,7 @@ Implement the front-end integration:
 
 The narrative `create-a-payment-form.md` is the right starting point, but the docs portal has been documented as ambiguous on at least one SDK-shape question (a prior run hedged between `cardForm.submitFields()` and `cardForm.submit()` — neither of which exists). **The SDK JS you put in `<script>` is also a readable JS file, snapshotted locally.** Read `references/hosted-fields-sdk.js` and grep it before emitting the config:
 
-1. **What to read.** The local snapshot `references/hosted-fields-sdk.js` — the same JS you'll load in `<script>` (its header records the UAT/prod CDN URLs and the four-part `libVersion`). Don't paraphrase the SDK from training data; read the bytes.
+1. **What to read.** The local snapshot `references/hosted-fields-sdk.js` — the same JS you'll load in `<script>` (its header records the test and prod CDN URLs and the four-part `libVersion`). Don't paraphrase the SDK from training data; read the bytes.
 2. **What to verify.**
    - The list of keys the SDK iterates inside `fields.card` (and equivalent containers for `fields.ach` / `fields.pad`). Anything outside that list is silently ignored. Search for the iteration over `fields.card` and read off the accepted keys.
    - The set of methods exposed on the `hostedFields` instance — i.e. what `cardForm.*` calls are legal. Search for the constructor and the prototype / `Object.assign` / class body.
@@ -306,7 +306,7 @@ Read: `references/run-a-sale-with-3-d-secure.md`
 
 Read the page before writing anything. The 3DS path inserts one extra server call and adds one block to the payment request:
 
-1. After `submissionSuccess` fires (Step 3), your server calls `GET /merchant/mpi` (test: `payments.uat.payroc.com`, prod: `payments.payroc.com`) with the single-use token, amount, currency, orderId, email, processingTerminalId, and optionally `cardholderChallenge` (`REQUIRED` to force a challenge, `OPTIONAL` to let the issuer decide).
+1. After `submissionSuccess` fires (Step 3), your server calls `GET /merchant/mpi` (test: `payments.uat.payroc.com`, prod: `payments.payroc.com`; unlike the REST API, this gateway endpoint has a separate test host) with the single-use token, amount, currency, orderId, email, processingTerminalId, and optionally `cardholderChallenge` (`REQUIRED` to force a challenge, `OPTIONAL` to let the issuer decide).
 2. Payroc performs the 3DS challenge and posts the result to **the webhook URL you registered with cs@payroc.com**. The payload includes `mpiReference`, `result`, `status`, `eci`.
 3. Your webhook persists the `mpiReference` keyed by `orderId` (or similar) so Step 4 can look it up.
 4. In Step 4's payment request, add a `threeDSecure` block: `{ "serviceProvider": "gateway", "mpiReference": "<from webhook>" }`. This is what carries the authentication through to the acquirer for liability shift.
@@ -325,7 +325,7 @@ Read: `references/run-a-sale.md`
 
 Read the page before writing anything. From the local reference, confirm:
 
-- The payments API endpoint (test vs production)
+- The payments API endpoint (one host for test and live)
 - The required headers: `Content-Type`, `Authorization: Bearer <token>`, `Idempotency-Key`
 - The minimum request body: `channel`, `processingTerminalId`, `order` (orderId, amount in lowest denomination, currency), and `paymentMethod`
 - The `paymentMethod` structure for a single-use token: `type: "singleUseToken"`, `token: <value from submissionSuccess>`
@@ -356,7 +356,7 @@ From the `submissionSuccess` handler, send the single-use token to your server. 
 
 ### Checkpoint
 
-Does the payments API return HTTP 201 in UAT with a test card? If not, use the error taxonomy below.
+Does the payments API return HTTP 201 with a test card? If not, use the error taxonomy below.
 
 ---
 
@@ -372,16 +372,16 @@ All steps (session token generation, form rendering, payment API call) work with
 | --- | --- | --- |
 | Form fields don't render; no `submissionSuccess` ever fires | Session token expired (>10 min since generation), or `initialize()` not called | Regenerate session token on page load; check `error` events for `type: "init"` or `type: "config"` |
 | `error` event with `type: "config"` | Session token missing or invalid in constructor | Confirm session token is passed to `new Payroc.hostedFields({sessionToken: ...})` correctly |
-| Payment API 401 | Bearer token expired or wrong API key | Re-fetch Bearer token; verify the `x-api-key` value used with the identity service |
-| Payment API 409 | Idempotency key reused | Generate a fresh UUID v4 per payment request — never reuse idempotency keys |
+| Payment API 401 | Bearer token expired or wrong API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-fetch Bearer token; verify the `x-api-key` value used with the identity service |
+| Payment API 409 | Idempotency key reused | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID v4 per payment request — never reuse a key for a different request |
 | Payment API 400/422 | Single-use token already consumed or expired (30-min window or already used) | Token is one-time; the customer must re-enter card details — generate new session token and re-initialise form |
 | CDN script fails to load | Stale or incorrect CDN URL | Read the current URL and SRI hash from `references/create-a-payment-form.md` |
 | `libVersion` mismatch error | `libVersion` in session token request doesn't match the loaded JS library version | Read both from `references/create-a-payment-form.md` to ensure they match |
 | Field containers are visible (styled borders/backgrounds rendered by CSS) but non-interactable — no iframes injected, no console error | Init code executed before the Payroc SDK script loaded. `new Payroc.hostedFields(...)` throws `ReferenceError: Payroc is not defined`; because `cardForm` is never created, the `.on('error', ...)` handler is never wired, so the error is silently swallowed | Ensure the SDK `<script>` tag is rendered and executed before the init code runs. In any layout that defers scripts, keep both the SDK tag and the init block in the same deferred section, SDK tag first |
 | SDK begins initialising (iframes start loading) then immediately fires: `"CVV wrapper is required for card forms. If you do not have a wrapper, please provide false."` | The `cvv` field config is missing the `wrapperTarget` property, or the wrong key name was used (`wrapper` instead of `wrapperTarget`) | Add `wrapperTarget: false` to the `cvv` field config. If a wrapper element exists, pass its CSS selector string instead of `false`. Note: `wrapper: false` (wrong key) is silently ignored — the property name must be `wrapperTarget` |
-| Payment declined (non-201 status or decline flag in response) | Test card not valid for UAT | Use a Payroc UAT test card; check `transactionResult.status` and `transactionResult.responseCode` in the response body |
+| Payment declined (non-201 status or decline flag in response) | Test card not valid in the test environment | Use a Payroc test card; check `transactionResult.status` and `transactionResult.responseCode` in the response body |
 | HTTP 201 returned but customer says card was declined | Confusing HTTP 201 with approval | 201 means Payroc accepted and processed the request, not that the issuer approved. The approval/decline outcome is in `transactionResult.status` (enum includes `declined`) and `transactionResult.responseCode` (e.g. `A`=approved, `D`=declined, `R`=referral, `C`=CVV failure). Branch on the body, not on 201. |
-| CSP blocks the Payroc CDN host — script never loads, no `error` event fires | Content Security Policy missing the Payroc CDN host | Add the Payroc CDN host (the host of the `<script>` src — see the snapshot header in `references/hosted-fields-sdk.js` for the exact UAT and prod hosts) to `script-src` (for the JS file) AND to `frame-src` / `child-src` (for the iFrames the library injects). Also add `connect-src` for the tokenization XHRs. Remember to swap the UAT host for the prod host when going live. |
+| CSP blocks the Payroc CDN host — script never loads, no `error` event fires | Content Security Policy missing the Payroc CDN host | Add the Payroc CDN host (the host of the `<script>` src — see the snapshot header in `references/hosted-fields-sdk.js` for the exact test and prod hosts) to `script-src` (for the JS file) AND to `frame-src` / `child-src` (for the iFrames the library injects). Also add `connect-src` for the tokenization XHRs. Remember to swap the test CDN host for the prod CDN host when going live. |
 | MPI endpoint returns 404 or auth error | Terminal not enabled for 3DS, or webhook URL not registered | Email cs@payroc.com to enable 3DS on the terminal and register the webhook URL; no MPI / 3DS call will succeed until both are done. |
 | Payments API returns HTTP 400 naming `"channel"` (or any other enum-typed field) in the error detail, with a list of accepted values | A non-enum value was emitted (past failures: `channel: "internet"`, `"online"`, `"ecommerce"`); the skill produced a plausible-sounding cousin instead of reading the schema reference | Read `paymentRequest.channel` (or the relevant field) from `references/api-schema.md` and emit one of the listed values. Do not infer enum values from English plausibility. |
 | SDK fires `error` with `"A submit button is required for payment forms"` even though a submit-target property is present at the top level of the config | The property is at the top level and the SDK only reads submit-related keys from inside `fields.card`; anything outside the iteration list is silently ignored | Read `references/hosted-fields-sdk.js` and grep for the iteration over `fields.card[...]`. Place the submit target where the SDK actually reads it. Top-level submit-shaped keys are not in the schema. |
@@ -399,7 +399,7 @@ All steps (session token generation, form rendering, payment API call) work with
 - [ ] `libVersion` in session token request matches the version in the CDN URL
 - [ ] `submissionSuccess` confirmed to fire with a token before the payment API is called
 - [ ] Idempotency key is a fresh UUID v4 per payment request
-- [ ] HTTP 201 confirmed in UAT with a test card
+- [ ] HTTP 201 confirmed in the test environment with a test card
 - [ ] Single-use token not logged or stored beyond the immediate API call
 - [ ] Every enum value in the request body (`channel`, `paymentMethod.type`, `standingInstructions.*`, etc.) was read from `references/api-schema.md`, not from memory
 - [ ] SDK config keys and any `cardForm.*` method calls were verified against `references/hosted-fields-sdk.js` (read as text)
@@ -454,9 +454,9 @@ Once HTTP 201 is confirmed and all checklist items pass:
 > - **Hosted Fields form** — Payroc's JS library renders iFrame card input fields in your page; card data never touches your server.
 > - **Single-use token** — generated client-side by the library on form submit; passed to your server to execute the charge.
 > - **Payment API call** — your server POSTs the single-use token to Payroc's payments API; HTTP 201 confirms the charge.
-> - **Validated in UAT** — end-to-end transaction confirmed with a test card.
+> - **Validated in the test environment** — end-to-end transaction confirmed with a test card.
 >
-> **Before going live:** swap the UAT endpoint URLs for production URLs (identity, session token, payments API) and point credentials to the production terminal. Re-read `libVersion`, the CDN URL, and the SRI hash from the **production** `create-a-payment-form.md` page — these values are environment-specific and a UAT version will not work in production.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal (the REST hosts, identity, session token and payments API, stay the same). Swap the CDN host and the 3DS MPI host (`payments.uat.payroc.com`) for their production hosts. Re-read `libVersion`, the CDN URL, and the SRI hash from the **production** `create-a-payment-form.md` page — these values are environment-specific and a test version will not work in production.
 
 Offer next steps (based on what wasn't already implemented):
 

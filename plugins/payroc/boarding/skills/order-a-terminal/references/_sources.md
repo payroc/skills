@@ -6,30 +6,30 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST /processing-accounts/{processingAccountId}/terminal-orders`, `GET /processing-accounts/{processingAccountId}/terminal-orders`, `GET /terminal-orders/{terminalOrderId}`, `GET /payment-intents/{paymentIntentId}`, `GET /processing-accounts/{processingAccountId}/processing-terminals`, `GET /processing-terminals/{processingTerminalId}` + `/host-configurations`; schemas `createTerminalOrder`, `terminalOrder`, `orderItem`, `solutionSetup`, `automaticBatchClose`/`manualBatchClose`, `createPaymentIntent`, `paymentIntent`, `paymentIntentSummary`, `paginatedProcessingTerminals`, `processingTerminal`, `hostConfiguration`, `tsys`) | 2026-09-16 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST /processing-accounts/{processingAccountId}/terminal-orders`, `GET /processing-accounts/{processingAccountId}/terminal-orders`, `GET /terminal-orders/{terminalOrderId}`, `GET /payment-intents/{paymentIntentId}`, `GET /processing-accounts/{processingAccountId}/processing-terminals`, `GET /processing-terminals/{processingTerminalId}` + `/host-configurations`; schemas `createTerminalOrder`, `terminalOrder`, `orderItem`, `solutionSetup`, `automaticBatchClose`/`manualBatchClose`, `createPaymentIntent`, `paymentIntent`, `paymentIntentSummary`, `paginatedProcessingTerminals`, `processingTerminal`, `hostConfiguration`, `tsys`) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 terminal-order and processing-terminal schemas are entirely Payroc-owned, so this skill has no
 `third-party-derived` references.
 
-## Divergence from spec / UAT
+## Divergence from spec / test environment
 
-- **`solutionTemplateId` reliably accepted in UAT is `VAR_Only_TSYS`.** The spec lists 25+ device
+- **`solutionTemplateId` reliably accepted in the test environment is `VAR_Only_TSYS`.** The spec lists 25+ device
   templates, but most are environment/config-gated. Live testing found `VAR_Only_TSYS` is reliably
-  accepted for create/list/retrieve in UAT. `api-schema.md` documents this as a **testing aid** —
+  accepted for create/list/retrieve in the test environment. `api-schema.md` documents this as a **testing aid** —
   send the template the merchant actually ordered in production. Don't bake `VAR_Only_TSYS` into
   production guidance.
 
-- **UAT orders don't return a `processingTerminalId`.** Because the UAT rig uses a non-physical
+- **Test-environment orders don't return a `processingTerminalId`.** Because the test rig uses a non-physical
   device, the order's `orderItems[].links` (and the `processingTerminalId` within) is not populated,
-  so the three follow-on reads can't be exercised end-to-end in UAT:
+  so the three follow-on reads can't be exercised end-to-end in the test environment:
   - **Retrieve processing terminal:** even with a valid, known `processingTerminalId`, the retrieve
     currently fails to deserialize `batchClosure`. The cause is a schema mismatch — the
     terminal-side `automaticBatchClose` schema requires **both** `batchCloseType` *and*
     `batchCloseTime`, while the order-create-side `automaticBatchClose` schema requires only
     `batchCloseType`, so a terminal whose batch config omits the time won't deserialize. So this read
-    is not merely "untestable in UAT" — it has an open defect. The skill's Step 6 warning reflects
+    is not merely "untestable in the test environment" — it has an open defect. The skill's Step 6 warning reflects
     this.
   - **Retrieve host processor configuration:** not available in the test environment.
 
@@ -51,7 +51,7 @@ terminal-order and processing-terminal schemas are entirely Payroc-owned, so thi
   10 order items" but the actual `maxItems` constraint is **20** (matching `terminalOrder.orderItems`).
   `api-schema.md` uses the real constraint, 1–20.
 
-- **IDs are opaque integers in UAT.** Consistent with the sibling boarding skills, UAT returns plain
+- **IDs are opaque integers in the test environment.** Consistent with the sibling boarding skills, the test environment returns plain
   integer IDs (e.g. `processingAccountId` `287019`), not the `PA-XXXX` forms used in docs examples.
   Treat all IDs as opaque strings.
 

@@ -11,7 +11,7 @@ description: >
   explicitly. Do NOT use for processing, charging, or refunding an EBT card; those operations
   require separate payment skills.
 metadata:
-  version: "0.1.7"
+  version: "0.1.9"
   category: transaction
   status: draft
 ---
@@ -37,16 +37,16 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ## EBT terminal provisioning
 
-> **This requires a terminal provisioned for EBT.** `POST /v1/cards/balance` returns `400 Bad Request` if the terminal isn't configured in an EBT sharing group — this is a terminal-provisioning requirement, not an API validation issue. If you have a Payroc terminal provisioned for EBT, these instructions work against UAT or production. The endpoint URL, request schema, response schema, required headers, and enum values documented here are all derived from the published Payroc OpenAPI spec and the endpoint reference at `https://docs.payroc.com/api/schema/payment-features/cards/view-ebt-balance.md`.
+> **This requires a terminal provisioned for EBT.** `POST /v1/cards/balance` returns `400 Bad Request` if the terminal isn't configured in an EBT sharing group — this is a terminal-provisioning requirement, not an API validation issue. If you have a Payroc terminal provisioned for EBT, these instructions work with a test or live API key on the same host. The endpoint URL, request schema, response schema, required headers, and enum values documented here are all derived from the published Payroc OpenAPI spec and the endpoint reference at `https://docs.payroc.com/api/schema/payment-features/cards/view-ebt-balance.md`.
 >
-> **To unblock UAT testing:** Contact the Payroc Integrations team and request that your UAT terminal be added to an EBT sharing group.
+> **To unblock testing:** Contact the Payroc Integrations team and request that your test terminal be added to an EBT sharing group.
 
 ---
 
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/cards/balance
+POST  https://api.payroc.com/v1/cards/balance
 Authorization:   Bearer <token>
 Content-Type:    application/json
 
@@ -100,9 +100,9 @@ These are local snapshots, authoritative for this skill. Their source URLs and l
 
 These are needed to run and test the integration — not to write the code. If the developer already has them, great. If not, wire the code to read from environment variables and keep building.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **EBT-enabled processing terminal ID** — the `processingTerminalId` sent in the request. Must be provisioned in an EBT sharing group by the Payroc Integrations team.
-3. **UAT environment** — `api.uat.payroc.com`. EBT testing in UAT requires a terminal explicitly configured for EBT by Payroc.
+3. **Test environment** — `api.payroc.com` with a test API key. EBT testing requires a terminal explicitly configured for EBT by Payroc.
 
 **If anything is missing — warn, don't block.** Propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID` as env var names if no convention exists. Tell the developer:
 
@@ -119,8 +119,7 @@ Either credentials are confirmed, or the developer knows what's outstanding and 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; the API key decides which)
 
 Header: `x-api-key: <api-key>`
 
@@ -138,7 +137,7 @@ Can the helper generate a Bearer token without error? If not, check the `x-api-k
 
 ## Step 2 — Build the balance inquiry request
 
-Endpoint: `POST https://api.uat.payroc.com/v1/cards/balance`
+Endpoint: `POST https://api.payroc.com/v1/cards/balance`
 
 Required headers:
 ```
@@ -253,7 +252,7 @@ Is the request body correct? Verify:
 ## Step 3 — Send the request
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/cards/balance \
+curl -X POST https://api.payroc.com/v1/cards/balance \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d @balance-request.json
@@ -330,12 +329,12 @@ Errors follow [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) and Payr
 | --- | --- | --- |
 | 400 validation | Field missing or invalid | Read `errors[].parameter` to identify the failing field; fix and resubmit. **Reuse the same `Idempotency-Key` only if the payload body is otherwise unchanged** (e.g. you only corrected a header). If you changed any body field (including `benefitCategory` or `entryMethod`) the payload is now different — generate a fresh UUID, or the next request will receive a 409. |
 | 400 EBT sharing group | Terminal not configured for EBT | This is a configuration issue — contact Payroc Integrations to add the terminal to an EBT sharing group |
-| 400 `idempotencyKeyMissing` | Missing `Idempotency-Key` header | Add `Idempotency-Key: <uuid-v4>` to the request |
+| 400 `#idempotency-key-missing` | Missing `Idempotency-Key` header | Add `Idempotency-Key: <uuid-v4>` to the request |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh Bearer token |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | Terminal not found | Verify `processingTerminalId` is correct for the environment |
 | 406 | Not acceptable content type | Ensure `Accept: application/json` is set (or omit the `Accept` header entirely to use the default) |
-| 409 `idempotencyKeyInUse` | Key reused with a different payload | Generate a new UUID for the new request. **When making two requests to check both benefit categories, each request must use its own distinct UUID.** |
+| 409 `#idempotency-key-in-use` | Key reused with a different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a new UUID for the new request. **When making two requests to check both benefit categories, each request must use its own distinct UUID.** |
 | 415 | Unsupported media type | Ensure `Content-Type: application/json` is set on the POST request |
 | 500 | Server error | Retry with exponential backoff |
 
@@ -354,7 +353,7 @@ Use `errors[].parameter` to map each error back to the request body field and fi
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | 400 — validation error mentioning `benefitCategory` | Enum value not from the reference | Read `references/api-schema.md` and use `"cash"` or `"foodStamp"` exactly |
 | 400 — validation error mentioning `entryMethod` | Invalid entry method value | Read `references/api-schema.md` — valid values are `"icc"`, `"swiped"`, `"keyed"`, `"raw"` |
 | 400 — EBT sharing group / terminal config | Terminal not in EBT sharing group | Contact Payroc Integrations team to configure the terminal for EBT |
@@ -369,7 +368,7 @@ Use `errors[].parameter` to map each error back to the request body field and fi
 ## Common pitfalls
 
 - **Wrong `benefitCategory` value:** The only valid values are `"cash"` and `"foodStamp"`. Using `"snap"`, `"food"`, `"stamp"`, or other variants will produce a 400.
-- **Terminal not EBT-enabled:** A standard Payroc terminal will not work for EBT balance checks — the terminal must be in an EBT sharing group. This is the most likely cause of unexpected 400 errors in UAT.
+- **Terminal not EBT-enabled:** A standard Payroc terminal will not work for EBT balance checks — the terminal must be in an EBT sharing group. This is the most likely cause of unexpected 400 errors in the test environment.
 - **Sending `Idempotency-Key`:** Harmless but pointless — this endpoint does not take the header, and omitting it does not cause a 400. Do not build key generation, storage, or reuse logic for this call.
 - **Two accounts, two requests:** A single request queries one `benefitCategory`. To check both cash and food stamp balances, make two separate requests.
 - **Amount in lowest denomination:** `amount` in the response is in cents (for USD) — divide by 100 to display to the customer.

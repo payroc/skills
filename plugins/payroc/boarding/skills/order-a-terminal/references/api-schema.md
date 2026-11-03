@@ -35,14 +35,14 @@ terminal or the terminal order's payment intent. Sourced from `https://docs.payr
 | Retrieve one processing terminal *(follow-on)* | `GET /v1/processing-terminals/{processingTerminalId}` | — | `200` → `processingTerminal` |
 | Retrieve a terminal's host configuration *(follow-on)* | `GET /v1/processing-terminals/{processingTerminalId}/host-configurations` | — | `200` → `hostConfiguration` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (test and live). Use a test API key for testing; the key, not the URL, decides test or live.
 
 > **Two different path roots.** You *create* and *list* orders under the **processing account**
 > (`/processing-accounts/{processingAccountId}/terminal-orders`), but once an order exists you
 > retrieve it directly by its own id under **`/terminal-orders/{terminalOrderId}`**. The provisioned
 > *processing terminal* (a separate resource) is addressed under `/processing-terminals/{id}`.
 
-> **The three follow-on reads are unverified in UAT** — a UAT order does not surface a
+> **The three follow-on reads are unverified in the test environment** — a test-environment order does not surface a
 > `processingTerminalId` (the test rig uses a non-physical device), so the processing-terminal and
 > host-configuration reads can't be validated end-to-end. The shapes below are from the spec. Warn
 > the developer before emitting these calls and let them choose to include or skip them; see
@@ -84,8 +84,8 @@ Identifies the device/solution to order. Spec values:
 `BBPOS Chipper 3X` | `Augusta EMV` | `Ingenico - AXIUM Full Functional Base` |
 `Pax A920 Charging Base` | `Pax A920 Comms Base` | `A920 Pro Ethernet` | `Axium Bundle`
 
-> **UAT note:** most of these templates are environment/config-gated. The one reliably accepted by
-> UAT is **`VAR_Only_TSYS`**. Use it for test/UAT calls; for production, send the template the
+> **Test environment note:** most of these templates are environment/config-gated. The one reliably accepted by
+> the test environment is **`VAR_Only_TSYS`**. Use it for test calls; for production, send the template the
 > merchant actually ordered. This is a testing
 > aid, not a production constraint.
 
@@ -299,12 +299,12 @@ Persist `terminalOrderId` immediately — it's how you retrieve the order later.
 `dispatched`/`fulfilled` rather than relying on the create-response value.
 
 > **`orderItems[].links` carries the provisioned `processingTerminalId`** — the handle you'd use for
-> the follow-on processing-terminal reads. **In UAT this `links`/`processingTerminalId` is not
+> the follow-on processing-terminal reads. **In the test environment this `links`/`processingTerminalId` is not
 > populated** (non-physical device), so don't assume it's present when testing. See the follow-on
 > section and `_sources.md`.
 
 **IDs are opaque.** The `12345` / `1234001` forms here are for readability only. Treat every ID as
-an opaque string whose format is not guaranteed and varies by environment — in UAT they come back
+an opaque string whose format is not guaranteed and varies by environment — in the test environment they come back
 as plain integers. Don't validate or parse them against a `PREFIX-XXXX` pattern.
 
 ---
@@ -334,9 +334,9 @@ GET /v1/processing-accounts/{processingAccountId}/terminal-orders?status=open&fr
 
 ## Optional follow-on — read the provisioned terminal
 
-> ⚠️ **Unverified in UAT, and the retrieve has a known defect.** A UAT terminal order doesn't return
+> ⚠️ **Unverified in the test environment, and the retrieve has a known defect.** A test-environment terminal order doesn't return
 > a `processingTerminalId` (the test environment uses a non-physical device), so these reads can't be
-> exercised against UAT. Separately, even with a valid `processingTerminalId`, retrieving the
+> exercised against the test environment. Separately, even with a valid `processingTerminalId`, retrieving the
 > processing terminal currently fails to deserialize `batchClosure` — the terminal-side
 > `automaticBatchClose` requires a `batchCloseTime` that isn't always returned (see below). The host
 > processor configuration is likewise not available in the test environment. The shapes are from the
@@ -371,9 +371,9 @@ out of scope for this skill.)
 
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
 
-Status codes these endpoints return: `400` (validation, incl. `idempotencyKeyMissing`), `401`
+Status codes these endpoints return: `400` (validation, incl. `#idempotency-key-missing`), `401`
 (auth/expired token), `403` (permissions), `404` (unknown `processingAccountId`/`terminalOrderId`),
-`406` (content negotiation), `409` (`idempotentKeyInUse` — an order already exists under this key),
+`406` (content negotiation), `409` (`#idempotency-key-in-use` — the key was already used for a different request),
 `500` (server — retry with backoff). Example `400` from posting an order with no `orderItems`:
 
 ```json
@@ -382,7 +382,7 @@ Status codes these endpoints return: `400` (validation, incl. `idempotencyKeyMis
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/processing-accounts/287019/terminal-orders",
+  "instance": "https://api.payroc.com/v1/processing-accounts/287019/terminal-orders",
   "errors": [
     { "parameter": "createTerminalOrder.orderItems", "detail": "Required field not populated", "message": "'orderItems' must not be empty." }
   ]
@@ -392,12 +392,12 @@ Status codes these endpoints return: `400` (validation, incl. `idempotencyKeyMis
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 validation | Field issues (bad `solutionTemplateId`, `solutionQuantity` > 50, malformed `batchCloseTime`, missing shipping field) | Fix each `errors[].parameter` path; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
-| 403 | Insufficient permissions | Check the API key's scope |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`identity-call.md`, Client notes). Otherwise check the API key's scope |
 | 404 | Unknown `processingAccountId` / `terminalOrderId` | Verify the id; list the PA's orders to find it |
 | 406 | Unsupported `Accept` | Request `application/json` |
-| 409 `idempotentKeyInUse` | An order already exists under this idempotency key | Mint a fresh UUID for the new/corrected order |
+| 409 `#idempotency-key-in-use` | This idempotency key was already used for a different request | Mint a fresh UUID for the new/corrected order |
 | 500 | Server error | Retry with exponential backoff; surface `errors` if present |
 
 (The published OpenAPI `ErrorsItems` schema lists only `message`; the live API also returns
@@ -428,7 +428,7 @@ Status codes these endpoints return: `400` (validation, incl. `idempotencyKeyMis
   "orderItems": [
     {
       "type": "solution",
-      "solutionTemplateId": "Payroc A920Pro",   // for UAT, send "VAR_Only_TSYS" (the reliably-accepted template)
+      "solutionTemplateId": "Payroc A920Pro",   // for testing, send "VAR_Only_TSYS" (the reliably-accepted template)
       "solutionQuantity": 1,
       "deviceCondition": "new",
       "solutionSetup": {

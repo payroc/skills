@@ -12,7 +12,7 @@ description: >
   how to know when a merchant's boarding status changes or when a terminal order ships — without
   polling. NOT for managing recurring billing subscriptions or payment plans.
 metadata:
-  version: "0.2.0"
+  version: "0.2.3"
   category: notifications
   status: draft
 ---
@@ -36,7 +36,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-> **UAT access is key-scoped.** `POST /v1/event-subscriptions` requires a key with event access enabled — if you get an access error, you're most likely using a key that isn't event-scoped (e.g. a general-purpose key) rather than hitting a platform-wide limitation. Contact the Payroc Integrations team to get an event-enabled key. In the meantime, you can test your webhook endpoint independently using a synthetic CloudEvents 1.0 payload.
+> **Test access is key-scoped.** `POST /v1/event-subscriptions` requires a key with event access enabled — if you get an access error, you're most likely using a key that isn't event-scoped (e.g. a general-purpose key) rather than hitting a platform-wide limitation. Contact the Payroc Integrations team to get an event-enabled key. In the meantime, you can test your webhook endpoint independently using a synthetic CloudEvents 1.0 payload.
 
 ---
 
@@ -56,12 +56,12 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST   https://api.uat.payroc.com/v1/event-subscriptions     (create)
-GET    https://api.uat.payroc.com/v1/event-subscriptions     (list)
-GET    https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}   (retrieve)
-PUT    https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}   (full update)
-PATCH  https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}   (partial update)
-DELETE https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}   (delete)
+POST   https://api.payroc.com/v1/event-subscriptions     (create)
+GET    https://api.payroc.com/v1/event-subscriptions     (list)
+GET    https://api.payroc.com/v1/event-subscriptions/{subscriptionId}   (retrieve)
+PUT    https://api.payroc.com/v1/event-subscriptions/{subscriptionId}   (full update)
+PATCH  https://api.payroc.com/v1/event-subscriptions/{subscriptionId}   (partial update)
+DELETE https://api.payroc.com/v1/event-subscriptions/{subscriptionId}   (delete)
 
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>   (required on POST and PATCH)
@@ -92,7 +92,8 @@ These are local snapshots. Source URLs and last-synced dates are in [`references
 3. **Idempotency-Key on every POST and PATCH.** The header value must be a UUID v4. Omitting it on POST causes a 400.
 4. **Never hardcode credentials.** API keys must come from environment variables or a secrets manager.
 5. **Secret is write-only.** The `secret` you set in the subscription is masked in all responses (first 10 characters replaced with `*`) — store it securely before creating the subscription. If the secret is lost, you cannot retrieve it from the API; you must update the subscription (via PUT or PATCH) to set a new known secret value, then update your webhook endpoint's env var to match.
-6. **Return 200 from your webhook immediately.** Acknowledge receipt synchronously; process the payload asynchronously. Non-200 responses are treated as delivery failures.
+6. **Return 200 from your webhook immediately.** Acknowledge receipt synchronously; process the payload asynchronously. Non-200 responses, and responses that take longer than 15 seconds, are treated as delivery failures.
+7. **Validate the webhook `uri` before sending.** It must be an absolute `https://` URI that resolves to a public host, at most 4000 characters. Check this client-side on create, full update (PUT) and partial update (PATCH), and still surface the API's 400 cleanly.
 
 ---
 
@@ -129,7 +130,7 @@ Then ask the developer:
 
 ## Prerequisites
 
-1. **API key** — exchanged for a Bearer token. Provisioned by the Payroc Integrations team.
+1. **API key** — exchanged for a Bearer token. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Publicly reachable HTTPS endpoint** — your webhook receiver must be accessible from the internet. For local development, use ngrok or a similar tool.
 3. **Webhook secret** — you choose a secret string to set in the subscription; Payroc echoes it in the `Payroc-Secret` header on every notification so you can verify authenticity.
 
@@ -142,8 +143,7 @@ If the webhook endpoint isn't built yet, help the developer implement it (Step 2
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints (from `references/identity-call.md`):
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, the key decides test or live)
 
 Header: `x-api-key: <api-key>`
 
@@ -162,7 +162,7 @@ Can the helper generate a Bearer token without error? If not, check the `x-api-k
 Before registering the subscription, the webhook receiver must be ready. Implement an HTTP handler that:
 
 1. **Verifies the `Payroc-Secret` header** — compare against the secret you'll set in the subscription. Reject with 401 if it doesn't match.
-2. **Returns HTTP 200 immediately** — do not wait for event processing to complete before responding. Payroc treats any non-200 as a delivery failure.
+2. **Returns HTTP 200 immediately** — do not wait for event processing to complete before responding. Payroc treats any non-200, or no response within 15 seconds, as a delivery failure.
 3. **Processes the payload asynchronously** — parse the CloudEvents 1.0 payload and handle it outside the HTTP response cycle.
 4. **Handles duplicate deliveries** — use the `id` field in the CloudEvents envelope (the unique identifier of the event) to detect and skip duplicates. Store each processed CloudEvents `id` in a database or cache (e.g. a Redis set with a TTL, or a deduplication table) and skip processing for any `id` already seen.
 
@@ -239,7 +239,7 @@ Is the endpoint returning 200 for a test POST? Use a tool like curl or Postman t
 
 ## Step 3 — Create the event subscription
 
-**Endpoint:** `POST https://api.uat.payroc.com/v1/event-subscriptions`
+**Endpoint:** `POST https://api.payroc.com/v1/event-subscriptions`
 
 **Required headers:**
 ```
@@ -257,7 +257,7 @@ Content-Type:    application/json
 
 **Notification object** (all fields required):
 - `type` — must be `"webhook"` (only documented value)
-- `uri` — your publicly reachable HTTPS endpoint
+- `uri` — your publicly reachable HTTPS endpoint: an absolute `https://` URI that resolves to a public host, max 4000 characters (so `http://` URIs and private hosts such as `localhost` don't qualify)
 - `secret` — the string Payroc will echo in `Payroc-Secret` header on every delivery
 - `supportEmailAddress` — Payroc contacts this address if delivery fails after all retries
 
@@ -268,7 +268,7 @@ Generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* submissio
 
 **Example request:**
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/event-subscriptions \
+curl -X POST https://api.payroc.com/v1/event-subscriptions \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -336,7 +336,7 @@ Is the subscription listed as `registered` and `enabled: true`? Is your webhook 
 
 ### List subscriptions
 
-`GET https://api.uat.payroc.com/v1/event-subscriptions`
+`GET https://api.payroc.com/v1/event-subscriptions`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -352,7 +352,7 @@ Returns a paginated response: `{ limit, count, hasMore, links, data[] }`.
 
 ### Retrieve a subscription
 
-`GET https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}`
+`GET https://api.payroc.com/v1/event-subscriptions/{subscriptionId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -362,7 +362,7 @@ Returns the full subscription object. `subscriptionId` is the integer `id` from 
 
 ### Update a subscription (full replacement)
 
-`PUT https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}`
+`PUT https://api.payroc.com/v1/event-subscriptions/{subscriptionId}`
 
 Required headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
@@ -376,7 +376,7 @@ Returns **204 No Content** on success (no body).
 
 ### Partially update a subscription
 
-`PATCH https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}`
+`PATCH https://api.payroc.com/v1/event-subscriptions/{subscriptionId}`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <uuid-v4>`, `Content-Type: application/json`
 
@@ -399,7 +399,7 @@ Returns 200 with the full updated subscription object.
 
 ### Delete a subscription
 
-`DELETE https://api.uat.payroc.com/v1/event-subscriptions/{subscriptionId}`
+`DELETE https://api.payroc.com/v1/event-subscriptions/{subscriptionId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -419,10 +419,11 @@ Returns **204 No Content** on success.
 | 400 — validation error on `notification.type` | Value other than `"webhook"` used | Use `"webhook"` exactly — the only documented value |
 | 400 — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH |
 | 400 — validation errors on notification fields | Missing `uri`, `secret`, or `supportEmailAddress` | All four notification fields are required: `type`, `uri`, `secret`, `supportEmailAddress` |
-| 401 — authentication failed | Token expired or API key wrong | Re-exchange the API key for a fresh Bearer token |
+| 400 — `notifications[0].uri`: "'URI' must be an absolute 'https://' URI." | `uri` is `http://`, relative, or doesn't resolve to a public host | Use an absolute `https://` URI on a public host (max 4000 characters); for local development, expose your endpoint with a tunnel such as ngrok |
+| 401 — authentication failed | Token expired or API key wrong | Re-exchange the API key for a fresh Bearer token. Also check for an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | 406 — not acceptable | Request format rejected (e.g. unsupported `Accept` header) | Omit the `Accept` header or set it to `application/json` |
 | 404 — subscription not found | Wrong `subscriptionId` or subscription was deleted | Verify the ID from the create/list response |
-| 409 — conflict | Duplicate subscription | List existing subscriptions to check whether one already covers these event types |
+| 409 — conflict | `Idempotency-Key` already used for a different request (the 409 Payroc documents on create and PATCH), or possibly a duplicate subscription | Use a new UUID for a new submission, and resend the identical body when retrying. If the key isn't the cause, list existing subscriptions to check whether one already covers these event types |
 | 500 — server error | Transient error | Retry with exponential backoff |
 | Notifications not received | Subscription status `failed` | Check `supportEmailAddress` for a Payroc notification; fix your endpoint; update the subscription to re-enable |
 | Notifications not received | `enabled: false` | PATCH the subscription to `{ "op": "replace", "path": "/enabled", "value": true }` |
@@ -441,14 +442,15 @@ Returns **204 No Content** on success.
 - [ ] `eventTypes[]` values read from `references/api-schema.md` — not from memory
 - [ ] `notification.type` is `"webhook"` (only documented value)
 - [ ] `uri`, `secret`, and `supportEmailAddress` all provided in each notification object
+- [ ] `uri` checked client-side: absolute `https://`, public host, at most 4000 characters
 - [ ] Webhook secret stored in an environment variable — never hardcoded
-- [ ] Webhook endpoint returns HTTP 200 immediately on receipt
+- [ ] Webhook endpoint returns HTTP 200 immediately on receipt (well within the 15-second delivery timeout)
 - [ ] Webhook endpoint verifies `Payroc-Secret` header against expected secret
 - [ ] `data` field parsing uses event-type-specific field names from `references/api-schema.md`
 - [ ] Status enum values read from `references/api-schema.md` — not inferred from names
 - [ ] Subscription `id` (integer) persisted after creation
 - [ ] Duplicate delivery handling implemented: CloudEvents `id` checked against a persistent store (DB table or cache) before processing
-- [ ] UAT endpoints used (`api.uat.payroc.com`) during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -463,7 +465,7 @@ Once all checklist items pass:
 > - **Secret verification** — `Payroc-Secret` header checked against env var.
 > - **Duplicate handling** — CloudEvents `id` used to detect and discard duplicate deliveries.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Ensure your webhook endpoint is deployed and reachable in production.
+> **Before going live:** swap the test API key for a live one. The host stays `api.payroc.com`. Ensure your webhook endpoint is deployed and reachable in production.
 
 Offer next steps:
 - **Boarding integration** — use `processingAccount.status.changed` events to drive merchant onboarding status in your platform

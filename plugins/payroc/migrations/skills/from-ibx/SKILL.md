@@ -2,18 +2,18 @@
 name: from-ibx
 description: >
   Guides developers through porting an existing IBX gateway integration to the Payroc API. Use this
-  skill when the user wants to: migrate, port, or re-platform an integration off IBX; find the Payroc
-  equivalent of an IBX SOAP operation or REST endpoint; understand what a TransType value maps to;
-  work out what changes in a request when moving from transact.asmx, cardsafe.asmx, recurring.asmx or
-  the IBX /api/v1 REST surface to Payroc; translate IBX identifiers such as PNRef, CustomerKey,
-  ContractKey or CardToken into their Payroc counterparts; find out whether a capability they rely on
-  today still exists on Payroc; or plan the cutover for stored tokens and historical transaction
-  references. Do NOT use this skill when the user is building a new Payroc integration with no legacy
-  IBX code (use the relevant task skill such as run-a-card-sale, save-a-payment-method, or
-  take-an-ach-payment), when they are migrating from a different provider, or when they already know
-  the Payroc operation they need and only want to implement it (go straight to that skill).
+  skill to: migrate, port, or re-platform an integration off IBX; find the Payroc equivalent of an
+  IBX SOAP operation or REST endpoint; understand what a TransType value maps to; work out what
+  changes in a request when moving from transact.asmx, cardsafe.asmx, recurring.asmx or the IBX
+  /api/v1 REST surface; translate IBX identifiers (PNRef, CustomerKey, ContractKey, CardToken) into
+  Payroc counterparts; find out whether a capability the integration relies on still exists on
+  Payroc; or plan the cutover for stored tokens and historical transaction references. Do NOT use
+  this skill when building a new Payroc integration with no legacy IBX code (use a task skill such
+  as run-a-card-sale, save-a-payment-method, or take-an-ach-payment), when migrating from a
+  different provider, or when the user already knows the Payroc operation and only wants to
+  implement it (go straight to that skill).
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: migration
   status: draft
 ---
@@ -55,8 +55,7 @@ On first invocation, announce to the developer:
 ```text
 IBX SOAP        →  /ws/transact.asmx, /ws/cardsafe.asmx, /vt/ws/recurring.asmx, and 13 more
 IBX REST        →  /api/v1/{transactions|cardsafe|customers|contracts|batch|reporting|...}
-Payroc API      →  https://api.uat.payroc.com/v1/...   (UAT)
-                   https://api.payroc.com/v1/...       (production)
+Payroc API      →  https://api.payroc.com/v1/...       (test and production; a test API key selects test)
 ```
 
 The dominant shape of this migration is **not** one-to-one. An IBX operation-type discriminator
@@ -422,7 +421,7 @@ These are migration-specific. For Payroc API errors, use the error taxonomy in t
 - [ ] Stored-token migration started, or consciously deferred with the fallback understood
 - [ ] Historical referenced-refund strategy decided before cutover
 - [ ] Credentials for both platforms sourced from environment variables — never hardcoded
-- [ ] UAT endpoints used (`api.uat.payroc.com`) during testing — not production endpoints
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -438,8 +437,8 @@ Once the checklist passes:
 > - **Configured rather than called** — [list]
 > - **Unresolved** — [list, with what's needed to close each]
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com`, point credentials at the
-> production terminal and API key, and confirm the stored-token migration has completed.
+> **Before going live:** swap the test API key for a live one, point the terminal ID at the
+> production terminal, and confirm the stored-token migration has completed.
 
 Offer next steps:
 

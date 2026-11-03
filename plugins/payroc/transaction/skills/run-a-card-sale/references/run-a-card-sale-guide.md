@@ -1,7 +1,7 @@
 # Run a Card Sale — Narrative Guide
 
 > **Local snapshot.** Source: https://docs.payroc.com/guides/take-payments/payments/run-a-card-sale.md
-> Last synced: 2026-06-22. Use this for conceptual context. Emit field names and enum values from
+> Last synced: 2026-11-03. Use this for conceptual context. Emit field names and enum values from
 > `api-schema.md`, not this file.
 
 ## Overview
@@ -13,8 +13,7 @@ the default).
 A single endpoint handles all card payments:
 
 ```
-POST https://api.uat.payroc.com/v1/payments    (test)
-POST https://api.payroc.com/v1/payments         (production)
+POST https://api.payroc.com/v1/payments    (same host for test and live; the API key decides)
 ```
 
 The gateway returns a payment object containing a `paymentId`, which is required for all follow-on
@@ -30,9 +29,8 @@ operations (refund, reversal, adjustment).
 | `web` | Online / e-commerce. Card details entered in a web checkout form |
 | `moto` | Mail order or telephone order. Agent manually enters card details on behalf of the customer |
 
-The `channel` value affects which card entry methods are valid. For `web` and `moto`, `keyed` is
-the standard entry method. For `pos`, use the appropriate hardware-specific method (`icc`, `swiped`,
-`contactlessIcc`, etc.).
+For `web` and `moto`, `keyed` is the usual entry method. For `pos`, use the device-read method
+(`icc` or `swiped`).
 
 ---
 
@@ -71,11 +69,10 @@ For card sales the most common `paymentMethod.type` values are:
 On **201 Created**, the response contains:
 
 - `paymentId` — save this immediately; it is required for refund, reversal, and adjust.
-- `transactionStatus` — the current status of the payment (e.g. `authorized`, `settled`).
-- `order` — echo of the submitted order with final amounts applied.
-- `paymentMethod` — masked card information (last 4 digits, card type).
-- `breakdown` — final itemised amounts if a breakdown was submitted.
-- `links` — HATEOAS links pointing to available follow-on operations.
+- `transactionResult` — the outcome. `status` is `ready` (or `complete`, once funds have moved) when approved; `declined`, `referral` or `pickup` when declined; `accepted` or `admin` when not final yet. HTTP 201 is returned either way. If the request allowed a partial approval (`order.acceptPartialAmount: true`), a `responseCode` of `P` means `authorizedAmount` is lower than the amount requested.
+- `order` — echo of the submitted order with final amounts applied, including `breakdown` if one was submitted.
+- `card` — masked card information (card type, masked card number, expiry date).
+- `supportedOperations` — the follow-on operations this payment allows.
 
 ---
 

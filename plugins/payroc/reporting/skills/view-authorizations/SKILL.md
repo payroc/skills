@@ -1,21 +1,19 @@
 ---
 name: view-authorizations
 description: >
-  Guides developers through querying Payroc authorization records via the Reporting API
-  (GET /v1/authorizations and GET /v1/authorizations/{authorizationId}). Use this skill
-  when the user wants to view, list, or retrieve authorization records, check pre-authorization
-  responses, look up card authorization history, filter authorizations by date or batch ID,
-  retrieve a specific authorization by its integer ID, build a reporting integration for
-  authorization data, inspect the bank's authorizationResponse codes, view open or pending
-  authorizations, check which card transactions were approved or declined by the issuing bank,
-  or query the /v1/authorizations endpoint. Also use for any read-only authorization reporting
-  feature — even if the user does not use the word "skill" explicitly. Do NOT use for creating
+  Guides developers through querying Payroc authorization records via the Reporting API (GET
+  /v1/authorizations and GET /v1/authorizations/{authorizationId}). Use when the user wants to view,
+  list, or retrieve authorization records, check pre-authorization responses, look up card
+  authorization history, filter authorizations by date or batch ID, retrieve a specific
+  authorization by its integer ID, build a reporting integration for authorization data, inspect the
+  bank's authorizationResponse codes, view open or pending authorizations, or check which card
+  transactions were approved or declined by the issuing bank. Do NOT use for creating
   pre-authorizations or card payments (use run-a-pre-authorization or run-a-card-sale), viewing
   settlement batches or batch totals (use view-settlement-batches), viewing settled transactions
-  (use view-settled-transactions), ACH deposits (use view-ach-deposits), or disputes
-  (use view-disputes).
+  (use view-settled-transactions), ACH deposits (use view-ach-deposits), or disputes (use
+  view-disputes).
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: reporting
   status: draft
 ---
@@ -53,8 +51,8 @@ For all enum values, field types, and response schemas, read `references/api-sch
 ## Quick reference
 
 ```
-GET  https://api.uat.payroc.com/v1/authorizations
-GET  https://api.uat.payroc.com/v1/authorizations/{authorizationId}
+GET  https://api.payroc.com/v1/authorizations
+GET  https://api.payroc.com/v1/authorizations/{authorizationId}
 Authorization: Bearer <token>
 ```
 
@@ -123,14 +121,14 @@ Use the answers to skip sections that don't apply.
 
 ## Prerequisites
 
-These are needed to run and test the integration in UAT. If the developer already has them, skip ahead.
+These are needed to run and test the integration in the test environment. If the developer already has them, skip ahead.
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **A date or batch ID** — required for the list endpoint. The developer must know which batch
    or date they want to query.
 3. **`authorizationId`** (retrieve only) — the integer ID of a specific authorization record. This
    comes from a prior list call or from transaction metadata.
-4. **UAT environment** — `api.uat.payroc.com`. No self-serve signup; provisioned by Payroc.
+4. **Test environment** — `api.payroc.com` (the same host as live; the test API key selects it). Create the test API key in the Developer Portal.
 
 **If anything is missing — warn, don't block.** Write the code to read credentials from environment
 variables (e.g. `PAYROC_API_KEY`), then tell the developer what they'll need to run or test it.
@@ -143,8 +141,7 @@ variables (e.g. `PAYROC_API_KEY`), then tell the developer what they'll need to 
 
 Exchange your API key for a Bearer token at the identity service:
 
-- UAT: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 Header: `x-api-key: <api-key>`
 
@@ -159,13 +156,13 @@ expiry — a token that expires mid-operation causes a 401 on an otherwise valid
 ### Checkpoint
 
 Can the helper generate a Bearer token without error? If not, verify the `x-api-key` header and
-confirm the API key is valid for the UAT environment.
+confirm the API key is valid for the test environment, or is not an older test key issued for the `.uat.` hosts (see `references/identity-call.md`).
 
 ---
 
 ## Step 2 — List Authorizations
 
-Endpoint: `GET https://api.uat.payroc.com/v1/authorizations`
+Endpoint: `GET https://api.payroc.com/v1/authorizations`
 
 Required headers:
 ```
@@ -194,7 +191,7 @@ Authorization: Bearer <token>
 ### Example request — filter by date
 
 ```bash
-curl -G https://api.uat.payroc.com/v1/authorizations \
+curl -G https://api.payroc.com/v1/authorizations \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "date=2024-07-02" \
   --data-urlencode "limit=20"
@@ -220,8 +217,8 @@ Example — next-page link in a paginated response:
 ```json
 {
   "links": [
-    { "rel": "self",   "method": "get", "href": "https://api.uat.payroc.com/v1/authorizations?date=2024-07-02&limit=20" },
-    { "rel": "next",   "method": "get", "href": "https://api.uat.payroc.com/v1/authorizations?date=2024-07-02&limit=20&after=<cursor>" }
+    { "rel": "self",   "method": "get", "href": "https://api.payroc.com/v1/authorizations?date=2024-07-02&limit=20" },
+    { "rel": "next",   "method": "get", "href": "https://api.payroc.com/v1/authorizations?date=2024-07-02&limit=20&after=<cursor>" }
   ]
 }
 ```
@@ -237,7 +234,7 @@ the error taxonomy.
 
 ## Step 3 — Retrieve a Specific Authorization
 
-Endpoint: `GET https://api.uat.payroc.com/v1/authorizations/{authorizationId}`
+Endpoint: `GET https://api.payroc.com/v1/authorizations/{authorizationId}`
 
 `authorizationId` is an **integer** — not a string or UUID.
 
@@ -249,7 +246,7 @@ Authorization: Bearer <token>
 ### Example request
 
 ```bash
-curl https://api.uat.payroc.com/v1/authorizations/65 \
+curl https://api.payroc.com/v1/authorizations/65 \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -322,8 +319,8 @@ navigable URLs to related records. Use these rather than constructing URLs manua
 | 400 | Missing `date` and `batchId` | Add at least one of `date` (YYYY-MM-DD) or `batchId` (integer) as a query parameter |
 | 400 | Malformed `date` | Use ISO 8601 format: `YYYY-MM-DD` |
 | 400 | `before` and `after` used together | Use one cursor at a time — not both |
-| 401 | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` header uses the correct UAT API key |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
+| 401 | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` header uses the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | `authorizationId` not found (retrieve only) | Verify the integer ID from a prior list response |
 | 406 | Not acceptable | Check `Accept` header — omit it entirely for the default JSON response |
 | 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
@@ -342,7 +339,7 @@ navigable URLs to related records. Use these rather than constructing URLs manua
 - [ ] `card.type`, `transaction.type`, and `transaction.entryMethod` enum values read from `references/api-schema.md`
 - [ ] `batch` field handled for the null case (unbatched authorization)
 - [ ] Amounts displayed correctly (lowest denomination ÷ 100 for USD/GBP/EUR)
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -356,7 +353,7 @@ Once all checklist items pass:
 > - **List authorizations** (if built) — filters by [date / batchId]; pagination via cursor; processes all fields.
 > - **Retrieve authorization** (if built) — fetches single record by integer `authorizationId`.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Use production credentials.
+> **Before going live:** swap the test API key for a live one. The hosts do not change.
 
 Offer next steps:
 - **View disputes** — retrieve and list dispute records linked to transactions

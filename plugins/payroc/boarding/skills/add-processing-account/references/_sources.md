@@ -6,8 +6,8 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST`/`GET /merchant-platforms/{merchantPlatformId}/processing-accounts`, `GET /processing-accounts/{processingAccountId}` + `/pricing`,`/owners`,`/contacts`,`/funding-accounts`, `POST /processing-accounts/{processingAccountId}/reminders`; schemas `createProcessingAccount`, `processingAccount`, `paginatedProcessingAccounts`, `owner`, `ownerRelationship`, `identifier`, `processing`, `createFunding`, `fundingAccount`, `paymentMethods`, `pricing`, `signature`, `contactMethod`, `address`, `createReminder` request/response) | 2026-09-16 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding paths `POST`/`GET /merchant-platforms/{merchantPlatformId}/processing-accounts`, `GET /processing-accounts/{processingAccountId}` + `/pricing`,`/owners`,`/contacts`,`/funding-accounts`, `POST /processing-accounts/{processingAccountId}/reminders`; schemas `createProcessingAccount`, `processingAccount`, `paginatedProcessingAccounts`, `owner`, `ownerRelationship`, `identifier`, `processing`, `createFunding`, `fundingAccount`, `paymentMethods`, `pricing`, `signature`, `contactMethod`, `address`, `createReminder` request/response) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 processing-account schemas are entirely Payroc-owned, so this skill has no
@@ -17,7 +17,7 @@ processing-account schemas are entirely Payroc-owned, so this skill has no
 
 - **Funding payment methods are nested under `value`.** The spec's `paymentMethods` is a
   discriminated array: `{ "type": "ach", "value": { "routingNumber", "accountNumber" } }`. Live
-  UAT testing of create/retrieve/list confirmed this shape. The older
+  testing in the test environment of create/retrieve/list confirmed this shape. The older
   `create-merchant-platform/references/api-schema.md` documents the bank numbers **flat** on the
   payment method; that reference predates this check and should be reconciled. `api-schema.md`
   here follows the spec.
@@ -33,47 +33,47 @@ processing-account schemas are entirely Payroc-owned, so this skill has no
 
 The OpenAPI `ErrorsItems` schema documents only `message` on each `errors[]` item, but the live
 API returns `parameter` + `detail` + `message` (and a top-level `instance`). Verified by
-`POST`ing an empty body to boarding endpoints on UAT. The error-schema section of
+`POST`ing an empty body to boarding endpoints in the test environment. The error-schema section of
 `api-schema.md` reflects the live shape, not the spec.
 
-## Live corrections (verified 2026-06-19, UAT — end-to-end run)
+## Live corrections (verified 2026-06-19, test environment — end-to-end run)
 
-Found while live-testing the full chain against UAT (pricing intent → merchant platform →
+Found while live-testing the full chain in the test environment (pricing intent → merchant platform →
 processing account). The references/SKILL guidance was corrected to match:
 
 - **An owner cannot be both control prong and authorized signatory.** Earlier guidance said one
-  owner could hold both; UAT rejects it (*"it must be one or the other or neither"*). At least two
+  owner could hold both; the test environment rejects it (*"it must be one or the other or neither"*). At least two
   owners are required — one control prong, a different authorized signatory. The ownership rules
   and worked examples now reflect this.
-- **`website` is required when `processing.volumeBreakdown.ecommerce > 0`.** UAT rejects the
+- **`website` is required when `processing.volumeBreakdown.ecommerce > 0`.** The test environment rejects the
   account without it (*"Website must be a valid address when Ecommerce volume is greater than
   zero"*), even though `website` is otherwise optional.
-- **IDs are opaque integers in UAT** (`merchantPlatformId` `9815`, `processingAccountId`
+- **IDs are opaque integers in the test environment** (`merchantPlatformId` `9815`, `processingAccountId`
   `287019`), not the `PA-XXXX`/`MP-XXXX` forms shown in examples.
 - **`processing.ach` shape** (verified by posting account `287022`): uses `naics` (not `naicsCode`)
   and requires `estimatedMonthlyTransactions`, `previouslyTerminatedForAch`, `refunds`
   (`{ writtenRefundPolicy }`), and `limits` (`{ singleTransaction, dailyDeposit, monthlyDeposit }`);
   the `transactionTypes` enum excludes `web`/`ppd`. Declaring `processing.ach` requires the pricing
   to include `processor.ach`. The `create-merchant-platform` reference's old `naicsCode`/`web`/`ppd`
-  example was rejected by UAT and has been corrected.
+  example was rejected by the test environment and has been corrected.
 - **`processing.cardAcceptance` shape:** uses a `cardsAccepted` enum array (plus `debitOnly`,
   `hsaFsa`), not per-brand booleans. The default `cardsAccepted` includes `amexOptBlue`, which
   requires Amex OptBlue fees in the pricing (and vice versa).
 
-## Live corrections (verified 2026-06-19, UAT — regression re-test)
+## Live corrections (verified 2026-06-19, test environment — regression re-test)
 
-Re-test of the full boarding chain against UAT. Two new findings:
+Re-test of the full boarding chain in the test environment. Two new findings:
 
 - **Processing account initial `status` may be `"entered"` or `"pending"` depending on timing.**
   Both the create-merchant-platform 201 response and the add-processing-account 201 response
-  returned `"status": "entered"` in the 2026-06-19 UAT run, but this is timing-dependent —
+  returned `"status": "entered"` in the 2026-06-19 test-environment run, but this is timing-dependent —
   either value is valid. The status enum already documented both; example snippets and prose
   have been updated to show `"entered"` as a representative value with a note that `"pending"`
   is also possible. Don't assert a specific value from the create response.
 - **ACH cross-rule is bi-directional.** The rule was previously documented in one direction only
-  ("if `processing.ach` is present, pricing must include `processor.ach`"). UAT also enforces the
+  ("if `processing.ach` is present, pricing must include `processor.ach`"). The test environment also enforces the
   reverse: if the pricing intent carries `processor.ach` fees, the processing account MUST declare
-  `processing.ach` (UAT error: `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is
+  `processing.ach` (test environment error: `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is
   populated."`). Use a card-only pricing intent when the account does not take ACH payments.
 
 ## Related guide pages (not snapshotted; fetch if narrative copy is needed)

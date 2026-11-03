@@ -15,7 +15,7 @@ description: >-
   explicitly. Do NOT use for card sales without 3DS authentication, refunds,
   ACH payments, or card tokenization alone.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: transaction
   status: draft
 ---
@@ -50,7 +50,7 @@ On first invocation, announce to the developer:
 > 3. The MPI result arrives asynchronously at your callback URL (delivered as a GET request — your handler must accept GET, not POST).
 > 4. If the result is approved (`"A"`), you post the payment including the `mpiReference`.
 >
-> **Important:** 3-D Secure uses two different Payroc API hosts — `payments.payroc.com` for the MPI step and `api.payroc.com` for the payment step. Don't mix them up.
+> **Important:** 3-D Secure uses two different Payroc hosts — `payments.payroc.com` for the MPI step and `api.payroc.com` for the payment step. Don't mix them up. The MPI step still has a separate test host (`payments.uat.payroc.com`); the REST API (`api.payroc.com`) does not.
 
 *[If an MCP connection-check tool is available, run it here and surface the result before continuing.]*
 
@@ -61,7 +61,7 @@ On first invocation, announce to the developer:
 ```text
 Step 4 (MPI):   GET  https://payments.uat.payroc.com/merchant/mpi?processingTerminalId=...&singleUseToken=...&...
                 Authorization:   Bearer <token>
-Step 5 (Pay):   POST https://api.uat.payroc.com/v1/payments
+Step 5 (Pay):   POST https://api.payroc.com/v1/payments
                 Authorization:   Bearer <token>
                 Idempotency-Key: <uuid-v4>
                 Content-Type:    application/json
@@ -97,7 +97,7 @@ These are local snapshots, authoritative for this skill. Source URLs and last-sy
 5. **Never hardcode credentials.** API keys, terminal IDs, and tokens must come from environment variables or a secrets manager.
 6. **The MPI result is asynchronous.** The MPI GET request does not return the result directly — the result arrives via a GET to your callback URL. The integration must handle async delivery before proceeding to Step 5.
 7. **Do not proceed to payment on a declined MPI result.** If `result: "D"`, stop and surface the decline to the user. Submitting the payment anyway defeats the purpose of 3-D Secure.
-8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 9. **3-D Secure scope** — 3DS applies only to cardholder-present e-commerce card transactions. It does not apply to ACH/bank transfer payments (which have no card network to authenticate against). It does not apply to merchant-initiated transactions (recurring, unscheduled MIT) — those use `credentialOnFile`/`standingInstructions` instead, not 3DS. Do not claim 3DS applies to payment types it does not cover.
 
 ---
@@ -124,12 +124,12 @@ Use the answers to skip inapplicable sections. If the developer's use case is am
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team with UAT access.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Processing terminal ID** — the `processingTerminalId` used in both the MPI request and the payment request.
 3. **3-D Secure enabled on the terminal** — 3DS is not enabled by default. The developer must contact `cs@payroc.com` or the Payroc Integrations team to enable it and register a **callback URL** (the server endpoint that will receive MPI responses).
-4. **UAT environment** — Payroc's test environment. There is no self-serve signup; UAT terminals are provisioned manually by the Payroc Integrations team.
+4. **Test environment** — Payroc's test environment. Test terminals are provisioned manually by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer:
 
@@ -137,7 +137,7 @@ These are needed to **run and test** the integration in UAT — not to write the
 
 ### Checkpoint
 
-The developer knows what's needed, has confirmed which variables the code reads from, and understands that 3DS must be enabled before UAT testing.
+The developer knows what's needed, has confirmed which variables the code reads from, and understands that 3DS must be enabled before testing.
 
 ---
 
@@ -151,7 +151,7 @@ The developer knows what's needed, has confirmed which variables the code reads 
 2. Request 3-D Secure to be enabled on their terminal.
 3. Provide a **callback URL** — the server endpoint where Payroc will deliver the MPI authentication result asynchronously. Payroc delivers the result as a **GET request** to this URL (query parameters, no body). The route handler at this URL must accept `GET`, not `POST`.
 
-> **Local development note:** The callback URL must be publicly reachable at test time — `localhost` won't work. Use a tunnelling tool (e.g. ngrok, Cloudflare Tunnel) to expose a local port during UAT testing.
+> **Local development note:** The callback URL must be publicly reachable at test time — `localhost` won't work. Use a tunnelling tool (e.g. ngrok, Cloudflare Tunnel) to expose a local port during testing.
 
 If the developer says 3DS is already enabled, confirm they have a callback URL registered and move to Step 2.
 
@@ -165,9 +165,7 @@ If the developer says 3DS is already enabled, confirm they have a callback URL r
 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
-Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+Endpoint: `POST https://identity.payroc.com/authorize`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 Header: `x-api-key: <api-key>`
 
@@ -179,7 +177,7 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-The helper generates a Bearer token without error. If it fails, check the `x-api-key` header value and confirm the API key is for the UAT environment.
+The helper generates a Bearer token without error. If it fails, check the `x-api-key` header value and confirm the API key is a valid test key for the test environment.
 
 ---
 
@@ -214,10 +212,10 @@ A valid single-use token is available. If the token was obtained from Hosted Fie
 **Method:** `GET` (query parameters only, no request body)
 
 **Endpoint:**
-- UAT: `https://payments.uat.payroc.com/merchant/mpi`
+- Test: `https://payments.uat.payroc.com/merchant/mpi`
 - Production: `https://payments.payroc.com/merchant/mpi`
 
-Note: the MPI service uses `payments.uat.payroc.com`, **not** `api.uat.payroc.com`. These are different hosts.
+Note: the MPI service uses `payments.uat.payroc.com` (test) / `payments.payroc.com` (production), **not** `api.payroc.com`. These are different hosts. Unlike the REST API, the MPI service has a separate test host.
 
 **Required query parameters:**
 
@@ -239,7 +237,7 @@ Note: the MPI service uses `payments.uat.payroc.com`, **not** `api.uat.payroc.co
 **Required header:** `Authorization: Bearer <token>` (no `Content-Type` or `Idempotency-Key` — this is a GET request).
 
 ```bash
-# Example MPI request (UAT)
+# Example MPI request (test)
 curl -G https://payments.uat.payroc.com/merchant/mpi \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "processingTerminalId=$PAYROC_TERMINAL_ID" \
@@ -286,11 +284,9 @@ The MPI request was sent without error. The callback handler is in place and cor
 
 > **Read `references/api-schema.md` before writing the payment request body.** The `channel`, `threeDSecure.serviceProvider`, and `paymentMethod.type` values are all documented there. Do not emit them from training data.
 
-**Endpoint:**
-- UAT: `POST https://api.uat.payroc.com/v1/payments`
-- Production: `POST https://api.payroc.com/v1/payments`
+**Endpoint:** `POST https://api.payroc.com/v1/payments`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Note: the payment endpoint uses `api.uat.payroc.com`, **not** `payments.uat.payroc.com`.
+Note: the payment endpoint uses `api.payroc.com` for both test and live, **not** `payments.uat.payroc.com` or `payments.payroc.com`.
 
 **Required headers:**
 ```
@@ -334,7 +330,7 @@ Key field notes:
 - `autoCapture` defaults to `true` (sale — capture immediately). Set to `false` for pre-authorization.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/payments \
+curl -X POST https://api.payroc.com/v1/payments \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
@@ -380,17 +376,17 @@ Does the Payments API return HTTP 201 with a `paymentId`? If not, work through t
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on MPI or Payment request | Token missing, expired, or wrong API key | Re-generate Bearer token; verify `x-api-key` header value is correct UAT API key |
+| 401 on MPI or Payment request | Token missing, expired, or wrong API key | Re-generate Bearer token; verify `x-api-key` header value is a valid test API key (or an older test key issued for the `.uat.` hosts; see `references/identity-call.md`) |
 | MPI GET returns an error | Wrong terminal ID or 3DS not enabled | Confirm terminal ID; confirm 3-D Secure is enabled on the terminal (contact Payroc Integrations) |
 | Callback not received after MPI request | Callback URL not registered or not reachable | Verify the URL registered in Step 1 is publicly reachable; check server logs; confirm 3DS setup completed |
 | `result: "D"` from callback | Cardholder authentication failed or not authenticated | Surface the decline to the user; do not post the payment |
 | 400 on POST /v1/payments — field validation | Missing required field or wrong enum value | Check `errors[].parameter` to identify the failing field; read `references/api-schema.md` for the correct value |
-| 400 — `idempotencyKeyMissing` | Missing `Idempotency-Key` header on POST | Add `Idempotency-Key: <uuid-v4>` to the payment POST |
+| 400 — `#idempotency-key-missing` | Missing `Idempotency-Key` header on POST | Add `Idempotency-Key: <uuid-v4>` to the payment POST |
 | 400 — `channel` rejected | Wrong channel value | Use `"web"` for 3-D Secure e-commerce; read `references/api-schema.md` for the documented enum values |
 | 400 — `threeDSecure` rejected | Wrong `serviceProvider` value or missing `mpiReference` | `serviceProvider` must be `"gateway"` when using Payroc's MPI; `mpiReference` must be the exact string from the callback |
 | 400 — `paymentMethod.type` rejected | Wrong type value | Must be `"singleUseToken"`; read `references/api-schema.md` |
-| 409 — duplicate `Idempotency-Key` | Same key reused for a different payment | Generate a fresh UUID for each new payment |
-| 409 — `idempotencyKeyInUse` | Key already in use for a different payload | Generate a new UUID for the new submission |
+| 409 — duplicate `Idempotency-Key` | Same key reused for a different payment | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for each new payment |
+| 409 — `#idempotency-key-in-use` | Key already in use for a different payload | Generate a new UUID for the new submission |
 | 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
 
 **Reading validation errors** — error responses use the **RFC 7807 problem-details envelope** (`type`,
@@ -431,17 +427,17 @@ This skill focuses on the Payroc MPI (`serviceProvider: "gateway"`) path. If the
 - [ ] API key and terminal ID sourced from environment variables — never hardcoded
 - [ ] Bearer token generated from identity service — never hardcoded
 - [ ] Single-use token obtained via Hosted Fields or API tokenization
-- [ ] MPI request uses `payments.uat.payroc.com` host (not `api.uat.payroc.com`)
+- [ ] MPI request uses `payments.uat.payroc.com` host (not `api.payroc.com`)
 - [ ] `orderId`, `amount`, and `currency` match between MPI request (Step 4) and payment request (Step 5)
 - [ ] Callback handler checks `result` before proceeding — declines (`"D"`) are NOT submitted as payments
 - [ ] `mpiReference` captured from callback and stored for use in payment request
-- [ ] Payment request uses `api.uat.payroc.com` host (not `payments.uat.payroc.com`)
+- [ ] Payment request uses `api.payroc.com` host (not `payments.uat.payroc.com`)
 - [ ] `Idempotency-Key` header present and set to a UUID v4 on the payment POST
 - [ ] `channel: "web"` in payment request
 - [ ] `paymentMethod.type: "singleUseToken"` in payment request
 - [ ] `threeDSecure.serviceProvider: "gateway"` in payment request (for Payroc MPI path)
 - [ ] `paymentId` captured from payment response and stored
-- [ ] UAT endpoints used (`*.uat.payroc.com`) — not production during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production); MPI step uses `payments.uat.payroc.com`
 
 ---
 
@@ -455,9 +451,9 @@ Once all checklist items pass:
 > - **Tokenization** — Card tokenized via [Hosted Fields / API tokenization].
 > - **MPI authentication** — Card sent to Payroc's MPI service; callback handler processes the async result.
 > - **Payment posting** — Payment submitted with `mpiReference` when authentication is approved.
-> - **Validated in UAT** — End-to-end 3DS flow confirmed.
+> - **Validated in the test environment** — End-to-end 3DS flow confirmed.
 >
-> **Before going live:** swap `*.uat.payroc.com` hosts for `*.payroc.com` (both `payments.payroc.com` and `api.payroc.com`), point credentials to production terminal and API key, and confirm 3-D Secure is enabled on the production terminal.
+> **Before going live:** swap `payments.uat.payroc.com` for `payments.payroc.com` on the MPI step, swap the test API key for a live one, point the terminal ID at the production terminal, and confirm 3-D Secure is enabled on the production terminal.
 
 Offer next steps:
 - **Credential-on-file / tokenization** — save the card for future merchant-initiated charges using `credentialOnFile` in the payment request

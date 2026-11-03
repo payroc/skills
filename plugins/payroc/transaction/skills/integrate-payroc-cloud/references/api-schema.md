@@ -5,12 +5,12 @@ truth for **field names, types, required flags, enum values, and request/respons
 these from here, not from memory. For *how to sequence* the calls, see `narrative-run-a-sale.md` and
 `narrative-extend.md`.
 
-Last synced: 2026-06-17. Sources: `docs.payroc.com/openapi.yml` (`payrocCloud` tag) and the
+Last synced: 2026-11-03. Sources: `docs.payroc.com/openapi.yml` (`payrocCloud` tag) and the
 per-operation schema pages under `docs.payroc.com/api/schema/...` — see `_sources.md`.
 
-> **Cloud error shape is unverified.** We have no Cloud-enabled account, so the error envelope below
-> is the cross-skill Payroc standard (verified on boarding endpoints), applied here on the
-> assumption Cloud is consistent. Treat the error *fields* as expected-but-unconfirmed for Cloud.
+> **Cloud error shape is unverified.** The error envelope below is the cross-skill Payroc standard
+> (confirmed on boarding endpoints). The full envelope hasn't been confirmed against Cloud responses,
+> so treat the error *fields* as expected-but-unconfirmed for Cloud.
 
 ## Contents
 
@@ -25,6 +25,7 @@ per-operation schema pages under `docs.payroc.com/api/schema/...` — see `_sour
 - [Retrieve a closed-loop read](#retrieve-a-closed-loop-read)
 - [Retrieve a payment (the completed-instruction target)](#retrieve-a-payment-the-completed-instruction-target)
 - [Referenced refund (via the payments API)](#referenced-refund-via-the-payments-api)
+- [Retrieve a refund](#retrieve-a-refund)
 - [Reverse a payment (via the payments API)](#reverse-a-payment-via-the-payments-api)
 - [Search payments — `GET /payments`](#search-payments--get-payments)
 - [Search devices — `GET /devices`](#search-devices--get-devices)
@@ -35,10 +36,9 @@ per-operation schema pages under `docs.payroc.com/api/schema/...` — see `_sour
 ## Base URLs and headers
 
 ```text
-Test/sandbox (UAT):  https://api.uat.payroc.com/v1
-Production:          https://api.payroc.com/v1
-Identity (UAT):      https://identity.uat.payroc.com/authorize
-Identity (prod):     https://identity.payroc.com/authorize
+API (test and live): https://api.payroc.com/v1
+Identity:            https://identity.payroc.com/authorize
+# Use a test API key for testing; the key, not the URL, decides test or live.
 ```
 
 | Header | Where | Notes |
@@ -66,8 +66,8 @@ Identity (prod):     https://identity.payroc.com/authorize
 | GET | `/refund-instructions/{id}` → `link.href` → `/refunds/{refundId}` | 200 | Retrieve the resulting refund |
 | GET | `/signatures/{signatureId}` | 200 | Retrieve a captured signature (Base64) |
 | GET | `/closed-loop-reads/{closedLoopReadId}` | 200 | Retrieve a closed-loop card payload |
-| POST | `/payments/{paymentId}/refunds` | 201 | Run a **referenced** refund (not a device instruction) |
-| GET | `/payments/{paymentId}/refunds/{refundId}` | 200 | Retrieve a referenced refund |
+| POST | `/payments/{paymentId}/refund` | 200 | Run a **referenced** refund (not a device instruction); returns the updated payment |
+| GET | `/refunds/{refundId}` | 200 | Retrieve a refund |
 | POST | `/payments/{paymentId}/reverse` | 200 | Reverse a payment in an open batch (not a device instruction) |
 | GET | `/payments` | 200 | Search payments (find a `paymentId`) |
 | GET | `/payments/{paymentId}` | 200 | Retrieve a payment |
@@ -83,7 +83,7 @@ Identity (prod):     https://identity.payroc.com/authorize
 Exchange the API key for a bearer token, then send it on every request.
 
 ```text
-POST https://identity.uat.payroc.com/authorize        (prod: identity.payroc.com)
+POST https://identity.payroc.com/authorize        (test and live)
 x-api-key: <your-api-key>
 ```
 
@@ -117,9 +117,9 @@ All three instruction types share one shape. The id field name differs
 **`link` semantics by status:**
 
 - `inProgress` → `link.rel: "self"`, `href` points back at the instruction (poll again).
-- `completed` → `link.rel` names the resource (`"self"` then resource, or directly e.g.
-  `"signature"`), `href` points at the **real resource** (`/payments/{id}`, `/refunds/{id}`,
-  `/signatures/{id}`). Follow it.
+- `completed` → `link.rel` names the resource (`payment`, `refund`, `signature`, or
+  `closed-loop-read` for a MiFare read), `href` points at the **real resource** (`/payments/{id}`,
+  `/refunds/{id}`, `/signatures/{id}`). Follow it.
 - `failure` → read `errorMessage`.
 - `canceled` → the instruction was cancelled before completion.
 
@@ -137,9 +137,9 @@ All three instruction types share one shape. The id field name differs
 
 | Field | Type | Req | Notes |
 |-------|------|:---:|-------|
-| `processingTerminalId` | string | ✓ | Terminal id the gateway assigned (from signup). |
+| `processingTerminalId` | string | ✓ | Terminal id the gateway assigned (from signup). 4 to 50 characters; send it as a string. |
 | `order` | object | ✓ | See below. |
-| `operator` | string | | Person who initiated the request. |
+| `operator` | string | | Person who initiated the request. Up to 50 characters. |
 | `customer` | object | | Contact + billing/shipping address; `notificationLanguage`: `en` \| `fr`. |
 | `ipAddress` | object | | `{ type: "ipv4" \| "ipv6", value: string }`. |
 | `credentialOnFile` | object | | See below. |
@@ -153,11 +153,11 @@ All three instruction types share one shape. The id field name differs
 
 | Field | Type | Req | Notes |
 |-------|------|:---:|-------|
-| `orderId` | string | ✓ | Merchant-assigned transaction id. |
+| `orderId` | string | ✓ | Merchant-assigned transaction id. 1 to 24 characters. |
 | `amount` | integer (int64) | ✓ | **Lowest denomination (cents).** `4999` = $49.99. |
 | `currency` | enum | ✓ | ISO 4217 (`USD`, `EUR`, `GBP`, `CAD`, …). |
 | `dateTime` | date-time | | ISO-8601. |
-| `description` | string | | |
+| `description` | string | | Up to 1024 characters. |
 | `acceptPartialAmount` | boolean | | Default `false`. Allow partial auth if the issuer can't approve the full amount. |
 | `breakdown` | object | | See below. |
 
@@ -173,7 +173,7 @@ All three instruction types share one shape. The id field name differs
 | `surcharge` | object | `{ bypass: boolean, amount` or `percentage: number }`. |
 | `dualPricing` | object | `{ offered: boolean, choiceRate, alternativeTender: "card" \| "cash" \| "bankTransfer" }`. |
 | `healthcareExpenses` | array | items `{ type: "copay" \| "clinic" \| "dental" \| "prescription" \| "transit" \| "vision", amount }`. |
-| `taxes` | array | items `{ rate: number, name: string }`. |
+| `taxes` | array | items `{ type: "rate", rate: number, name: string }`, all three required. `rate` is a percentage (`7` = 7%; 0 to 99.99999). `name` is 1 to 64 characters; the gateway checks the name and rate against the tax stored for the terminal. |
 
 ### `credentialOnFile`
 
@@ -206,7 +206,7 @@ Headers: Authorization: Bearer <token>; Content-Type: application/json; Idempote
     "breakdown": {
       "subtotal": 4500,
       "tip": { "type": "fixedAmount", "mode": "prompted", "amount": 499 },
-      "taxes": [ { "rate": 0.08, "name": "Sales Tax" } ]
+      "taxes": [ { "type": "rate", "rate": 8, "name": "Sales Tax" } ]
     }
   },
   "operator": "Jane",
@@ -379,8 +379,8 @@ instruction** points to via `link.href` — follow the link; the `paymentId` is 
 | Field | Type | Notes |
 |-------|------|-------|
 | `type` | enum | `sale` \| `refund` \| `preAuthorization` \| `preAuthorizationCompletion`. |
-| `status` | enum | `ready`, `pending`, `declined`, `complete`, `referral`, `pickup`, `reversal`, `admin`, `expired`, `accepted`. **Branch on the full set of approval-bearing values, not just one** — e.g. `ready` (authorized, queued for capture) is an approval. |
-| `responseCode` | enum | `A` approved, `D` declined, `E` deferred, `P` partial, `R` referral, `C` card capture. |
+| `status` | enum | `ready`, `pending`, `declined`, `complete`, `referral`, `pickup`, `reversal`, `admin`, `expired`, `accepted`. The spec calls `ready` (in the open batch), `pending` (in the open batch; funds collected only after a capture) and `complete` (funds moved to the merchant) successful; `declined`, `referral` and `pickup` unsuccessful; `reversal` cancelled; `admin` under review; `expired` a `pending` that stayed too long; `accepted` in progress with the processor, result not yet confirmed. |
+| `responseCode` | enum | `A` approved, `D` declined, `E` received, processed later, `P` partial approval, `R` declined, customer to call their bank, `C` declined, keep the card (reported lost or stolen). |
 | `responseMessage` | string | Processor description. |
 | `approvalCode` | string | Authorization code. |
 | `authorizedAmount` | integer | Cents. |
@@ -389,8 +389,9 @@ instruction** points to via `link.href` — follow the link; the `paymentId` is 
 | `cardSchemeReferenceId` | string | Lives on `transactionResult`, not on the card. |
 
 > **A `complete`/`approved`-only success check is a known footgun.** `status: "ready"` with
-> `responseCode: "A"` is an approval (authorized + queued for capture). Branch on every approval value,
-> not a single remembered one.
+> `responseCode: "A"` is an approval (successful, in the open batch). Branch on every successful
+> status, not a single remembered one. The spec doesn't say which `status` and `responseCode` pairs
+> occur together, and `accepted` and `admin` are not final outcomes.
 
 ## Referenced refund (via the payments API)
 
@@ -398,17 +399,21 @@ A referenced refund is **not a device instruction** — it goes through the stan
 needs the original `paymentId` first.
 
 ```text
-POST /v1/payments/{paymentId}/refunds          -> 201
+POST /v1/payments/{paymentId}/refund           -> 200
 Headers: Authorization: Bearer <token>; Content-Type: application/json; Idempotency-Key: <uuid-v4>
 ```
 
-Minimal body:
+Body: `amount` (integer, cents, required), `description` (string, 1 to 100 characters, required),
+`operator` (string, up to 50, optional). There is no `currency` field.
 
 ```json
-{ "amount": 4999, "currency": "USD" }
+{ "amount": 4999, "description": "Refund for order OrderRef6543" }
 ```
 
-Retrieve: `GET /v1/payments/{paymentId}/refunds/{refundId}` → `200` (`refundSummary`):
+Returns `200` with the updated payment. Its `refunds[]` lists the refund as a `refundSummary`. If the
+payment was still in an open batch the gateway reverses it instead, so check `transactionResult.status`
+and `refunds[]` before reading a `refundId`.
+Retrieve a refund later with `GET /v1/refunds/{refundId}` → `200`. `refundSummary` fields:
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -417,7 +422,7 @@ Retrieve: `GET /v1/payments/{paymentId}/refunds/{refundId}` → `200` (`refundSu
 | `currency` | enum | ISO 4217. |
 | `amount` | integer | Cents. |
 | `status` | enum | see refund status enum below. |
-| `responseCode` | enum | `A`=approved, `D`=declined, `E`=pending, `P`=partial, `R`=referral, `C`=fraud alert. |
+| `responseCode` | enum | Same values as on `transactionResult`: `A` approved, `D` declined, `E` processed later, `P` partial, `R` call the bank, `C` keep the card. |
 | `responseMessage` | string | Processor description. |
 
 **Refund/payment status enum:** `ready`, `pending`, `declined`, `complete`, `referral`, `pickup`,
@@ -426,6 +431,28 @@ Retrieve: `GET /v1/payments/{paymentId}/refunds/{refundId}` → `200` (`refundSu
 > **Open-batch behaviour.** If you run a referenced refund on a payment that is still in an **open
 > batch**, the gateway **auto-cancels (reverses)** the original payment instead of creating a
 > separate refund. To deliberately cancel an open-batch payment, use *Reverse a payment*.
+
+---
+
+## Retrieve a refund
+
+`GET /refunds/{refundId}` → `200`. This is the resource a **completed refund instruction** points to
+via `link.href`, and the full record behind a referenced refund's `refundSummary`.
+
+**Always returned:** `refundId`, `processingTerminalId`, `order`, `card`, `transactionResult`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `refundId` | string | 10 characters. |
+| `processingTerminalId` | string | |
+| `operator` | string | |
+| `order` | object | `orderId`, `dateTime`, `description`, `amount` (cents), `currency`. |
+| `customer` | object | Contact + address. |
+| `card` | object | Same shape as on a payment: `type`, `entryMethod`, `cardNumber` (masked), `expiryDate`, … |
+| `payment` | object | The payment the refund is linked to. **Not returned for an unreferenced refund.** |
+| `supportedOperations` | array (enum) | Same values as on a payment. |
+| `transactionResult` | object | Same object as on a payment (see above); read it for the outcome. The spec's example has `type: "refund"`, `status: "ready"`, `responseCode: "A"` and a negative `authorizedAmount` (negative means funds sent to the customer). |
+| `customFields` | array | Name/value pairs. |
 
 ---
 
@@ -504,15 +531,15 @@ For these server-side Cloud endpoints, expect: `400`, `401`, `403`, `404` (unkno
 
 | Status | Meaning on Cloud | Action |
 |--------|------------------|--------|
-| 400 | Validation error | Map each `errors[].parameter` to the request field; fix and resubmit (reuse the same idempotency key for an identical retry). |
+| 400 | Validation error | Map each `errors[].parameter` to the request field; fix the body and resubmit with a fresh idempotency key (the corrected body is a different request, so reusing the old key can return `409`). |
 | 401 | Token expired/invalid | Re-authenticate. |
-| 403 | Insufficient permissions | Check API key scope. |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`identity-call.md`, Client notes). Otherwise check API key scope. |
 | 404 | Instruction/resource not found | Verify the id; note instruction id ≠ resource id. |
 | 406 / 415 | Not acceptable / unsupported media | Check `Accept` / `Content-Type` and body shape. |
 | 409 | Conflict — e.g. cancelling an instruction that is no longer `inProgress`, or reusing an idempotency key with a changed body | Re-GET the instruction's current `status` before retrying. |
 | 500 | Server error | Retry with backoff; surface `errors` if present. |
 
 > **Not yet verified for Cloud.** The fields above are the standard Payroc shape, confirmed on
-> boarding endpoints. The Cloud endpoints almost certainly follow it, but we could not confirm
-> against a live Cloud account. Read `errorMessage` on a `failure` instruction, and `errors[]` on a
+> boarding endpoints. The Cloud endpoints almost certainly follow it, but the full envelope hasn't
+> been confirmed against Cloud responses. Read `errorMessage` on a `failure` instruction, and `errors[]` on a
 > 4xx, but don't hard-code assumptions about Cloud-specific error text.
