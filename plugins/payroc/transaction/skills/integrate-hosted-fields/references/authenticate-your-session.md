@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Authenticate your session
 
@@ -27,8 +27,7 @@ To generate a Bearer token, Include your API key in a x-api-key header in a POST
 
 | Endpoint   | Prefix          | URL                                                                                    |
 | :--------- | :-------------- | :------------------------------------------------------------------------------------- |
-| Test       | `identity.uat.` | [https://identity.uat.payroc.com/authorize](https://identity.uat.payroc.com/authorize) |
-| Production | `identity.`     | [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize)         |
+| Test/live  | `identity.`     | [https://identity.payroc.com/authorize](https://identity.payroc.com/authorize)         |
 
 ### Example request
 
@@ -77,8 +76,7 @@ To generate a session token, send a POST request to our Processing Terminals end
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                                    |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions)         |
 
 Include the following headers in your request:
 
@@ -196,7 +194,6 @@ paths:
               $ref: '#/components/schemas/hostedFieldsCreateSessionRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -766,7 +763,6 @@ paths:
               $ref: '#/components/schemas/hostedFieldsCreateSessionRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':

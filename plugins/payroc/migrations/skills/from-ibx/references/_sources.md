@@ -14,12 +14,12 @@ tree-wide date would be misleading; the earliest row is 2026-09-04.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `map-card-transactions.md` | — (see note below) | 2026-09-14 | `legacy-migration-analysis` |
-| `map-debit-and-ebt.md` | — | 2026-09-14 | `legacy-migration-analysis` |
+| `map-card-transactions.md` | — (see note below) | 2026-11-03 | `legacy-migration-analysis` |
+| `map-debit-and-ebt.md` | — | 2026-11-03 | `legacy-migration-analysis` |
 | `map-check-cash-and-stored-value.md` | — | 2026-09-14 | `legacy-migration-analysis` |
 | `map-tokens-and-vault.md` | — | 2026-09-24 | `legacy-migration-analysis` |
-| `map-token-payments.md` | — | 2026-09-04 | `legacy-migration-analysis` |
-| `map-rest-transactions.md` | — | 2026-09-04 | `legacy-migration-analysis` |
+| `map-token-payments.md` | — | 2026-11-03 | `legacy-migration-analysis` |
+| `map-rest-transactions.md` | — | 2026-11-03 | `legacy-migration-analysis` |
 | `map-batch-and-settlement.md` | — | 2026-09-14 | `legacy-migration-analysis` |
 | `map-reporting-and-search.md` | — | 2026-09-09 | `legacy-migration-analysis` |
 | `map-recurring-soap.md` | — | 2026-09-10 | `legacy-migration-analysis` |

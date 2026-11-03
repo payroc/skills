@@ -1,21 +1,19 @@
 ---
 name: set-up-a-funding-recipient
 description: >
-  Guides developers through registering and creating a funding recipient via the Payroc
-  Funding API (POST /v1/funding-recipients). Use this skill when the user wants to set up
-  a funding recipient, create a new recipient entity for fund distribution, register a
-  third-party to receive merchant settlement proceeds, implement dynamic funding, configure
-  fund splitting or fund routing to a recipient, set up a payout recipient, create a
-  funding account for a recipient, or work with the /v1/funding-recipients endpoint. Also
-  use when the user asks about KYC requirements for a funding recipient, recipient approval
-  status (approved/pending/rejected), owner or beneficial owner details for a funding
-  recipient, or linking a bank account to a newly created funding recipient (including ACH
-  routing and account numbers on the recipient creation request) — even if they don't use
-  the word "skill" or "funding API" explicitly. Do NOT use for sending or disbursing
-  funds to an existing recipient, viewing funding activity or reports, processing ACH
-  payments unrelated to recipient setup, or onboarding a merchant processing account.
+  Guides developers through registering and creating a funding recipient via the Payroc Funding API
+  (POST /v1/funding-recipients). Use when the user wants to set up a funding recipient, create a new
+  recipient entity for fund distribution, register a third-party to receive merchant settlement
+  proceeds, implement dynamic funding, configure fund splitting or fund routing to a recipient, set
+  up a payout recipient, create a funding account for a recipient, or work with
+  /v1/funding-recipients. Also use for KYC requirements for a funding recipient, recipient approval
+  status (approved/pending/rejected), owner or beneficial owner details for the recipient, or
+  linking a bank account to a newly created funding recipient (including ACH routing and account
+  numbers on the creation request). Do NOT use for sending or disbursing funds to an existing
+  recipient, viewing funding activity or reports, processing ACH payments unrelated to recipient
+  setup, or onboarding a merchant processing account.
 metadata:
-  version: "0.2.1"
+  version: "0.2.3"
   category: funding
   status: draft
 ---
@@ -39,12 +37,12 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-## KYC validation in UAT
+## KYC validation in the test environment
 
 > If Payroc returns a recipient with `status: rejected` or stuck at `pending` even
-> though the submitted data is correct, this is usually a UAT-environment KYC-simulation
+> though the submitted data is correct, this is usually a test-environment KYC-simulation
 > limitation rather than a problem with your request or this skill — contact the Payroc
-> Integrations team if you need KYC simulation enabled for your UAT key. The skill's field
+> Integrations team if you need KYC simulation enabled for your test API key. The skill's field
 > names, enum values, and request/response schemas are derived directly from the Payroc
 > OpenAPI specification and official documentation.
 
@@ -69,7 +67,7 @@ This skill covers all three, plus recipient retrieval and lifecycle management.
 ## Quick reference
 
 ```
-POST   https://api.uat.payroc.com/v1/funding-recipients
+POST   https://api.payroc.com/v1/funding-recipients
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -109,8 +107,8 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
    instead of creating a duplicate.
 3. **Never hardcode credentials.** API keys must come from environment variables or a secrets manager.
 4. **recipientId is an integer.** Do not treat it as a prefixed string (e.g. `FR-XXXX`) — it comes back
-   as a plain integer in UAT and production.
-5. **KYC status may be non-deterministic in UAT.** A `pending` or `rejected` status in the test
+   as a plain integer in the test environment and in live.
+5. **KYC status may be non-deterministic in the test environment.** A `pending` or `rejected` status in the test
    environment does not necessarily indicate a problem with the submitted data.
 6. **Diagnose before proceeding.** If a step fails, pause and work through the error taxonomy before
    continuing.
@@ -131,7 +129,7 @@ Use what you find to pre-fill obvious answers. Then ask:
    a `recipientType` enum value; read `references/api-schema.md` for the full list)
 2. **Do you have the recipient's EIN/SSN, legal name, address, and owner identity details?** (Required
    for KYC compliance — cannot be omitted or substituted with dummy data in production)
-3. **Do you already have a UAT API key for the funding endpoints?** (Funding may require a separate
+3. **Do you already have a test API key for the funding endpoints?** (Funding may require a separate
    credential from card payment terminals)
 
 If any of the above is missing, warn without blocking — wire the code to read from environment variables
@@ -141,10 +139,10 @@ and continue.
 
 ## Prerequisites
 
-These are needed to run and test the integration in UAT — not to write the code. If already present,
+These are needed to run and test the integration in the test environment — not to write the code. If already present,
 great. If not, don't stop — wire to env vars and keep building.
 
-1. **API key** — provisioned by the Payroc Integrations team for UAT access. May be a different key
+1. **API key** — for testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com). May be a different key
    from card-payment terminals. Store as `PAYROC_API_KEY`.
 2. **Recipient data** — legal name, EIN/tax ID, physical address, and at least one owner's full KYC
    details (name, date of birth, national ID, address, contact).
@@ -154,7 +152,7 @@ great. If not, don't stop — wire to env vars and keep building.
 
 > ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. Funding recipient creation requires
 > real KYC data (name, tax ID, owner identity) — you cannot use test data in production. Contact the
-> Payroc Integrations team if you need a UAT API key that supports funding endpoints.
+> Payroc Integrations team if you need a test API key that supports funding endpoints.
 
 ---
 
@@ -165,11 +163,7 @@ great. If not, don't stop — wire to env vars and keep building.
 Tokens expire after 3,600 seconds (1 hour). Exchange your API key once per session.
 
 ```bash
-# Test / UAT
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: $PAYROC_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
@@ -188,7 +182,7 @@ Use `Authorization: Bearer <access_token>` on every subsequent request.
 ### Checkpoint
 
 Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm
-the API key is correct for the UAT environment.
+the API key is correct for the test environment, or is not an older test key issued for the `.uat.` hosts (see `references/identity-call.md`).
 
 ---
 
@@ -337,7 +331,7 @@ timeout), reuse the same key — the API returns the original response instead o
 On a genuinely new submission, generate a new UUID.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/funding-recipients \
+curl -X POST https://api.payroc.com/v1/funding-recipients \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -398,7 +392,7 @@ If the initial response is `status: pending`, poll the retrieve endpoint until t
 or configure webhooks for event-based notification.
 
 ```bash
-curl https://api.uat.payroc.com/v1/funding-recipients/{recipientId} \
+curl https://api.payroc.com/v1/funding-recipients/{recipientId} \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -409,7 +403,7 @@ curl https://api.uat.payroc.com/v1/funding-recipients/{recipientId} \
 | `rejected` | Failed KYC | Contact Payroc support — do not resubmit blindly |
 | `hold` | Flagged by Risk team | Contact Payroc support |
 
-In UAT, `status` may remain `pending` or return `rejected` regardless of submitted data — see the
+In the test environment, `status` may remain `pending` or return `rejected` regardless of submitted data — see the
 KYC validation note at the top of this skill.
 
 ---
@@ -424,13 +418,13 @@ is the RFC standard; the `errors[]` array is a Payroc extension. Each item in `e
 
 | HTTP status | Scenario | Action |
 | --- | --- | --- |
-| 400 validation | Field issues | Fix each field in `errors[].parameter`; **generate a new UUID v4 for `Idempotency-Key`** — a corrected payload is a new submission. Reusing the same key after a validation failure returns the cached error response instead of processing your fix. |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` header to every POST. For the first attempt: generate a fresh UUID v4. When retrying the *same* failed submission: reuse the UUID from that attempt — the API returns the original response instead of creating a duplicate. Generate a new UUID only for a genuinely new (different) submission. |
-| 401 | Token expired or invalid | Re-authenticate and get a fresh Bearer token |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc Integrations team |
+| 400 validation | Field issues | Fix each field in `errors[].parameter`; **generate a new UUID v4 for `Idempotency-Key`** — a corrected payload is a new submission. Reusing the same key with the corrected body returns `409` (`#idempotency-key-in-use`) instead of processing your fix. |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` header to every POST. For the first attempt: generate a fresh UUID v4. When retrying the *same* failed submission: reuse the UUID from that attempt — the API returns the original response instead of creating a duplicate. Generate a new UUID only for a genuinely new (different) submission. |
+| 401 | Token expired or invalid, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-authenticate and get a fresh Bearer token |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc Integrations team |
 | 404 | Recipient not found | Verify the `recipientId` — it is a plain integer (e.g. `9901`), not a prefixed string |
 | 406 | Not acceptable format | Check `Content-Type: application/json` header is set |
-| 409 `resourceAlreadyExists` | Duplicate recipient | Retrieve the existing recipient using the HATEOAS link in the response |
+| 409 (other than `#idempotency-key-in-use`; not declared for this endpoint in Payroc's API reference) | Possibly a duplicate recipient | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, if the body has an `instance` or `link`, retrieve the recipient it points to; otherwise list recipients (`GET /funding-recipients`) and look for it before creating another |
 | 500 | Server error | Retry with exponential back-off; surface `errors[]` array if present |
 
 **Reading validation errors:**
@@ -440,7 +434,7 @@ is the RFC standard; the `errors[]` array is a Payroc extension. Each item in `e
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/funding-recipients",
+  "instance": "https://api.payroc.com/v1/funding-recipients",
   "errors": [
     {
       "parameter": "owners[0].identifiers",
@@ -472,7 +466,7 @@ Fix every field listed in `errors[].parameter` in a single corrected payload and
 - **Missing email contact method**: Both the recipient's `contactMethods` and each owner's
   `contactMethods` must include at least one `email` type entry.
 - **Missing idempotency key**: All POST requests require `Idempotency-Key: <uuid-v4>` or you get a 400.
-- **recipientId is an integer**: Treat it as a plain integer, not a prefixed string. In UAT it is a
+- **recipientId is an integer**: Treat it as a plain integer, not a prefixed string. In the test environment it is a
   plain number (e.g. `9901`).
 
 ---

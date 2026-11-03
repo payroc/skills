@@ -1,7 +1,7 @@
 # Refund a Card Payment — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Card Payment Refund schemas). Last synced: 2026-06-22. This is the offline source of truth this
+> (Card Payment Refund schemas). Last synced: 2026-11-03. This is the offline source of truth this
 > skill emits from — read enum values and required-field sets from here, not from memory. To refresh,
 > re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -18,9 +18,8 @@
 | Adjust a refund | `POST /v1/refunds/{refundId}/adjust` |
 | Reverse a refund | `POST /v1/refunds/{refundId}/reverse` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 

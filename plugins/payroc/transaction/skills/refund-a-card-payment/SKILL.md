@@ -13,7 +13,7 @@ description: >-
   refund-an-ach-payment instead), voiding or reversing a pre-authorization hold, or
   cancelling an unsettled card payment before capture.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: transaction
   status: draft
 ---
@@ -58,22 +58,22 @@ On first invocation, announce to the developer:
 
 ```text
 # Referenced refund (preferred — use when you have the paymentId)
-POST  https://api.uat.payroc.com/v1/payments/{paymentId}/refund
+POST  https://api.payroc.com/v1/payments/{paymentId}/refund
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Unreferenced refund (standalone — no paymentId required)
-POST  https://api.uat.payroc.com/v1/refunds
+POST  https://api.payroc.com/v1/refunds
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Retrieve / list / adjust / reverse
-GET   https://api.uat.payroc.com/v1/refunds
-GET   https://api.uat.payroc.com/v1/refunds/{refundId}
-POST  https://api.uat.payroc.com/v1/refunds/{refundId}/adjust
-POST  https://api.uat.payroc.com/v1/refunds/{refundId}/reverse
+GET   https://api.payroc.com/v1/refunds
+GET   https://api.payroc.com/v1/refunds/{refundId}
+POST  https://api.payroc.com/v1/refunds/{refundId}/adjust
+POST  https://api.payroc.com/v1/refunds/{refundId}/reverse
 ```
 
 ---
@@ -100,7 +100,7 @@ These are local snapshots, authoritative for this skill. Their source URLs and l
 4. **Idempotency-Key on every POST.** The header value must be a UUID v4. This is a required header — omitting it causes a 400. Generate a fresh UUID for each distinct operation. When **retrying the same failed request**, reuse the same key — the gateway returns the original response and does not create a duplicate.
 5. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement token refresh logic.
-7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 8. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
 
 ---
@@ -135,12 +135,12 @@ Use the answers to skip sections that don't apply.
 
 ## Prerequisites
 
-These are needed to run and test the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building.
+These are needed to run and test the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building.
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team.
-2. **Processing terminal ID** — needed for unreferenced refunds (`processingTerminalId` in the request body). The developer should know this from their UAT setup.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — needed for unreferenced refunds (`processingTerminalId` in the request body). The developer should know this from their test setup.
 3. **`paymentId`** — needed for referenced refunds. Returned when the original payment was created.
-4. **UAT environment** — Payroc's test environment. UAT terminals are provisioned manually by the Payroc Integrations team.
+4. **Test environment** — a test API key and test terminal. Test terminals are provisioned manually by the Payroc Integrations team.
 5. **Unreferenced refund capability** (if applicable) — this feature must be enabled by Payroc on the terminal. Not all terminals support it.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Tell the developer plainly what's outstanding and how to obtain it.
@@ -156,8 +156,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; the API key decides which)
 
 Header: `x-api-key: <api-key>`
 
@@ -169,13 +168,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment.
 
 ---
 
 ## Step 2a — Create a referenced refund (you have the paymentId)
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments/{paymentId}/refund`
+Endpoint: `POST https://api.payroc.com/v1/payments/{paymentId}/refund`
 
 > **Read `references/api-schema.md` before writing the request body.** Confirm the `referencedRefund` schema — required fields are `amount` and `description`. Do not add fields not in the schema.
 
@@ -216,7 +215,7 @@ Does the API return HTTP 200 with the payment object containing a `refunds[]` en
 
 > **Confirm with the developer that their terminal supports unreferenced refunds before writing this code.** This capability is not enabled on all Payroc accounts.
 
-Endpoint: `POST https://api.uat.payroc.com/v1/refunds`
+Endpoint: `POST https://api.payroc.com/v1/refunds`
 
 > **Read `references/api-schema.md` before writing the request body.** The `channel`, `refundMethod.type`, and `cardDetails.entryMethod` values are all enums — read their documented values from the reference. Do not emit enum values from memory.
 
@@ -314,7 +313,7 @@ Does the API return HTTP 201 with a `refundId`? If not, work through the error t
 
 ### Retrieve a refund
 
-`GET https://api.uat.payroc.com/v1/refunds/{refundId}`
+`GET https://api.payroc.com/v1/refunds/{refundId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -324,7 +323,7 @@ Returns the full `retrievedRefund` object including current `transactionResult.s
 
 ### List refunds
 
-`GET https://api.uat.payroc.com/v1/refunds`
+`GET https://api.payroc.com/v1/refunds`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -342,7 +341,7 @@ Pagination: cursor-based via `limit`, `after`, `before` query parameters. Use `b
 
 > Adjustments are only possible while the refund is in an **open batch**. Once settled, you cannot adjust it.
 
-`POST https://api.uat.payroc.com/v1/refunds/{refundId}/adjust`
+`POST https://api.payroc.com/v1/refunds/{refundId}/adjust`
 
 Required headers:
 ```
@@ -384,7 +383,7 @@ Response (HTTP 200): updated `retrievedRefund` object.
 
 > **Warn the developer before writing reversal code:** Reversing a refund removes it from the open batch permanently. No funds are returned to the cardholder. This can only be done while the refund is in an open batch.
 
-`POST https://api.uat.payroc.com/v1/refunds/{refundId}/reverse`
+`POST https://api.payroc.com/v1/refunds/{refundId}/reverse`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`
 
@@ -409,17 +408,17 @@ Only write the code after the developer confirms. Do not proceed without an expl
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header is the correct UAT API key |
-| 400 — `idempotencyKeyMissing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` to every POST; generate a fresh UUID per operation |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 400 — `#idempotency-key-missing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` to every POST; generate a fresh UUID per operation |
 | 400 — validation error on `channel` | Enum value not from the reference | Read `references/api-schema.md` — valid values: `pos`, `moto` |
 | 400 — validation error on `refundMethod.type` or `cardDetails.entryMethod` | Enum value not from the reference | Read `references/api-schema.md` for valid enum values; never emit from memory |
 | 400 — validation error on `amount` | Amount exceeds original payment, or missing | For referenced refunds: `amount` must be ≤ original payment amount and is required |
 | 400 — validation error on `description` | `description` missing | Both `amount` and `description` are required on `referencedRefund` |
 | 400 — validation on `order.*` | Missing required order fields in unreferenced refund | All four fields required: `orderId`, `description`, `amount`, `currency` |
-| 403 — unreferenced refund rejected | Terminal not enabled for unreferenced refunds | Contact Payroc to enable unreferenced refund capability on this terminal |
-| 404 — paymentId not found | `paymentId` wrong, payment doesn't exist in this environment, or environment mismatch (e.g. production paymentId used against UAT) | Verify the ID from the original payment response; use List Payments to search. UAT and production are separate systems — a paymentId created in production will never exist in UAT |
+| 403 — unreferenced refund rejected | Terminal not enabled for unreferenced refunds; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc to enable unreferenced refund capability on this terminal |
+| 404 — paymentId not found | `paymentId` wrong, payment doesn't exist in this environment, or environment mismatch (e.g. production paymentId used with a test key) | Verify the ID from the original payment response; use List Payments to search. Payroc sends requests with a test API key to its test environment, a separate system from production, so a paymentId created in production will never exist there, and the reverse |
 | 404 — refundId not found | `refundId` wrong or refund doesn't exist | Verify the ID from the refund creation response; use List Refunds to search |
-| 409 — duplicate `Idempotency-Key` | Same key reused for a different operation | Generate a fresh UUID for every distinct new operation; only reuse for retries of the same request |
+| 409 — duplicate `Idempotency-Key` | Same key reused for a different operation | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for every distinct new operation; only reuse for retries of the same request |
 | `transactionResult.responseCode: D` | Processor declined the refund | Check `responseMessage` for details; contact Payroc support if consistently declined |
 | `transactionResult.responseCode: E` | Processor will process later | Refund is queued; poll `GET /v1/refunds/{refundId}` for status update |
 | Adjust returns 400 | Refund already settled; can't adjust | Adjustments only possible in open batch; check `transactionResult.status` first |
@@ -441,7 +440,7 @@ Only write the code after the developer confirms. Do not proceed without an expl
 - [ ] `refundMethod.type` and `cardDetails.entryMethod` values read from `references/api-schema.md` — not from training data
 - [ ] `refundId` captured from creation response (for unreferenced) or from `payment.refunds[].refundId` (for referenced) and stored for subsequent operations
 - [ ] Reversal: developer explicitly confirmed intent before code was written
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -454,9 +453,9 @@ Once all checklist items pass:
 > - **Authentication** — Bearer token generation from the Payroc identity service; credentials in env vars.
 > - **Refund** — [summarise: referenced or unreferenced, amount, description]
 > - **Extended operations** (list what was built) — retrieve, list, adjust, reverse.
-> - **Validated in UAT** — end-to-end flow confirmed.
+> - **Validated in the test environment** — end-to-end flow confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal.
 
 Offer next steps:
 - **Refund status polling** — use `GET /v1/refunds/{refundId}` to check whether a queued refund (`responseCode: E`) was subsequently approved

@@ -1,21 +1,19 @@
 ---
 name: add-processing-account
 description: >
-  Guides developers through adding a processing account (a new MID) to an EXISTING merchant
-  platform via the Payroc Boarding API (POST /merchant-platforms/{merchantPlatformId}/processing-accounts),
-  and through retrieving, listing, and sending signing reminders for processing accounts. Use
-  this skill whenever the user wants to add another processing account, provision a new MID for
-  an already-boarded merchant, add a store / location / outlet / DBA to an existing merchant
-  platform, onboard a second business line under the same merchant, build the request body for
-  POST .../processing-accounts, retrieve or list a merchant platform's processing accounts
-  (GET /processing-accounts/{id} or GET /merchant-platforms/{id}/processing-accounts), look up a
+  Guides developers through adding a processing account (a new MID) to an EXISTING merchant platform
+  via the Payroc Boarding API (POST /merchant-platforms/{merchantPlatformId}/processing-accounts),
+  and through retrieving, listing, and sending signing reminders for processing accounts. Use to add
+  another processing account, provision a new MID for an already-boarded merchant, add a store /
+  location / outlet / DBA to an existing merchant platform, onboard a second business line under the
+  same merchant, retrieve or list a merchant platform's processing accounts (GET
+  /processing-accounts/{id} or GET /merchant-platforms/{id}/processing-accounts), look up a
   processing account's owners, contacts, funding accounts, or pricing agreement, or prompt a
-  merchant to sign their pricing agreement (reminders) — even if they don't say "skill",
-  "processing account", or "boarding API" explicitly. This is distinct from create-merchant-platform
-  (initial boarding of a brand-new merchant) — reach for this skill when the merchant platform
-  already exists and you have its merchantPlatformId.
+  merchant to sign their pricing agreement. Distinct from create-merchant-platform (initial boarding
+  of a brand-new merchant): use this skill when the merchant platform already exists and you have
+  its merchantPlatformId.
 metadata:
-  version: "0.2.1"
+  version: "0.2.3"
   category: boarding
   status: draft
 ---
@@ -73,8 +71,8 @@ Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 ```
 
-Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat.payroc.com`
-(test) / `https://identity.payroc.com` (production).
+Base URL: `https://api.payroc.com`. Identity: `https://identity.payroc.com`. The same hosts serve test
+and live. Use a test API key for testing; the key, not the URL, decides test or live.
 
 ---
 
@@ -124,7 +122,7 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 - A bearer token (see Step 1).
 - A valid `merchantPlatformId` for an existing platform.
 - A pricing path: an `active` `pricingIntentId`, or the data for an inline agreement.
-- The environment-specific base URLs (test vs production).
+- The base URLs (the same for test and live; the API key decides).
 
 ---
 
@@ -135,10 +133,7 @@ Test/UAT base URL: `https://api.uat.payroc.com`. Identity: `https://identity.uat
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
-# Test / sandbox
-curl -X POST https://identity.uat.payroc.com/authorize -H "x-api-key: YOUR_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize -H "x-api-key: YOUR_API_KEY"
 ```
 
@@ -192,7 +187,7 @@ Generate a fresh UUID v4 for `Idempotency-Key`. The key is bound to the request 
 same key *only* to retry a byte-for-byte identical submission — the API then returns the original
 result instead of creating a duplicate. A `400` validation error creates nothing, but when you fix
 the payload the body has changed, so resubmit with a **fresh** UUID; reusing the old key with the
-corrected body returns `409 idempotentKeyInUse`. Generate a new UUID for a genuinely separate
+corrected body returns `409` (`#idempotency-key-in-use`). Generate a new UUID for a genuinely separate
 account too.
 
 ```bash
@@ -278,10 +273,10 @@ nothing, but the corrected body no longer matches the old key — reusing it ret
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 validation | Field issues | Fix each `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` |
 | 400 addendum/processor validation | Unrecognized or duplicate `addendums[].type`, an addendum missing a required field, or an unrecognized `processor` | Not a fatal or unexpected error — see the addendum/processor error table in `references/api-schema.md`; fix the flagged field and resubmit |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token |
-| 403 | Permissions, or account not email-signing (reminders) | Check API key scope; confirm `requestedViaEmail` |
+| 403 | Permissions, or account not email-signing (reminders); or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; confirm `requestedViaEmail` |
 | 404 | Unknown `merchantPlatformId` / `processingAccountId` | Verify the id via the list endpoints |
 | 409 | Conflict (duplicate, or reminder when already signed) | Inspect existing state before retrying |
 | 500 | Server error | Retry with exponential backoff |

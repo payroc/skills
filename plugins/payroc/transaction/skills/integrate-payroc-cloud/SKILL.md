@@ -1,21 +1,18 @@
 ---
 name: integrate-payroc-cloud
 description: >-
-  Guides developers through running in-person, card-present sales and refunds through Payroc Cloud —
-  the semi-integrated cloud-to-device API where a POS sends an instruction to the Payroc gateway and
-  the gateway relays it to a physical payment device. Use this skill whenever the user mentions Payroc
-  Cloud, "pay by cloud", semi-integrated card-present payments, sending a sale/refund/signature to a
-  terminal or card reader via the API, payment-instructions / refund-instructions /
-  signature-instructions, polling an instruction, or cloud device payments — even if they don't say
-  "skill" explicitly. Covers the async submit -> poll -> follow-link -> retrieve flow, idempotency,
-  cancelling an in-progress instruction, referenced vs unreferenced refunds, reversals, signature
-  capture, closed-loop reads, and finding a device serialNumber via GET /devices. Do NOT use this
-  skill for card-not-present / e-commerce flows, for Hosted Fields, Hosted Payment Pages, or Payment
-  Links (browser-based — separate skills), or for physically configuring or pairing a payment device
-  (that is hardware setup, out of scope). If the user wants to set up or pair a device, say that is
-  out of scope and that this skill picks up once a device serial number exists.
+  Guides developers through in-person, card-present sales and refunds with Payroc Cloud, the
+  semi-integrated API where a POS sends instructions via the Payroc gateway to a payment device.
+  Use whenever the user mentions Payroc Cloud, "pay by cloud", semi-integrated
+  card-present payments, sending a sale/refund/signature to a terminal or card reader via the API,
+  payment-, refund- or signature-instructions, polling an instruction, or cloud device payments.
+  Covers the async submit, poll, follow-link, retrieve flow, idempotency, cancelling an in-progress
+  instruction, referenced vs unreferenced refunds, reversals, signature capture, closed-loop reads,
+  and finding a device serialNumber (GET /devices). Do NOT use for card-not-present flows, Hosted Fields, Hosted Payment Pages or Payment Links (separate skills), for setting up or
+  pairing a device (out of scope; starts once a device serial number exists), or for a POS app on
+  the same Android device as the Payroc App (integrate-payroc-app-switching).
 metadata:
-  version: "0.2.1"
+  version: "0.2.4"
   category: transaction
   status: draft
 ---
@@ -69,10 +66,13 @@ SDK to embed and no card data on your servers. This skill covers that REST surfa
 - **Out of scope (hardware):** configuring or pairing the physical device (Android / Ingenico /
   ID TECH setup), the tap/insert/swipe/PIN/on-glass-signing interaction, binding a real serial number
   to a terminal. If the developer needs these, say so plainly — they're device setup, not API work.
+- **Different skill (POS app on the payment device):** when the POS app runs on the same Android
+  payment device as the Payroc App and has to switch the screen to it, use the
+  `integrate-payroc-app-switching` skill. A POS on a separate device stays here.
 
 This skill treats the **device + `serialNumber` as a given input**. If the developer doesn't have one,
 `GET /devices` finds one (read-only, no hardware), and the Payroc Cloud Simulator
-(`cloud.uat.payroc.com`) issues a mock serial number per browser tab for testing without hardware.
+(`cloud.uat.payroc.com`) issues a mock serial number per browser tab for testing without hardware. The simulator is a separate test host; the REST API (`api.payroc.com`) has no separate test host.
 
 ---
 
@@ -96,8 +96,8 @@ wrong one is a known failure mode:
 
 Source URLs and last-synced dates are in [`references/_sources.md`](references/_sources.md).
 
-> **Honest limitation.** These references were curated from Payroc's published docs **without a
-> Cloud-enabled account or hardware to validate against**. The contract (paths, fields, enums, the
+> **Honest limitation.** These references were curated from Payroc's published docs and haven't
+> been validated end to end against Cloud hardware. The contract (paths, fields, enums, the
 > instruction lifecycle) comes straight from the docs and is reliable; the **error response shape for
 > Cloud is assumed** to match the cross-skill standard and is *not* confirmed for Cloud. Flag this if a
 > developer is building hard error-handling logic.
@@ -129,8 +129,8 @@ Source URLs and last-synced dates are in [`references/_sources.md`](references/_
 ## Quick reference
 
 ```text
-Base URL (test):  https://api.uat.payroc.com/v1          Identity (test): https://identity.uat.payroc.com/authorize
-Base URL (prod):  https://api.payroc.com/v1              Identity (prod): https://identity.payroc.com/authorize
+Base URL (test and live): https://api.payroc.com/v1     Identity: https://identity.payroc.com/authorize
+# A test API key selects test, a live key selects live. The key, not the URL, decides.
 
 # Instruction submit (runs on the device) — Idempotency-Key required
 POST   /devices/{serialNumber}/payment-instructions      -> 202
@@ -147,7 +147,7 @@ GET    /payments/{paymentId}        GET /refunds/{refundId}        GET /signatur
 GET    /closed-loop-reads/{closedLoopReadId}
 
 # Referenced refund & reversal (standard payments API, NOT device instructions) — Idempotency-Key required
-POST   /payments/{paymentId}/refunds                      -> 201
+POST   /payments/{paymentId}/refund                       -> 200
 POST   /payments/{paymentId}/reverse                      -> 200
 GET    /payments        GET /payments/{paymentId}         # find / retrieve a payment
 GET    /devices                                           # find a serialNumber
@@ -165,8 +165,8 @@ Tokens expire in ~1 hour (`expires_in: 3600`). Exchange the API key before each 
 proactively before expiry.
 
 ```bash
-# Test / sandbox (production: identity.payroc.com)
-curl -X POST https://identity.uat.payroc.com/authorize \
+# Same host for test and live; a test API key selects test
+curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
 
@@ -189,7 +189,7 @@ Read `references/narrative-run-a-sale.md`. This is the heart of Payroc Cloud; ev
    `GET /payments/{paymentId}` (or `/refunds/{id}`, `/signatures/{id}`). Don't build this URL from the
    instruction id — they are different ids. The retrieved payment carries the bank outcome in
    `transactionResult` — branch on `transactionResult.status` reading the **full** approval set from
-   `references/api-schema.md` (e.g. `ready` = authorized + queued for capture is an approval), not on a
+   `references/api-schema.md` (e.g. `ready` = successful, added to the open batch, is an approval), not on a
    single remembered value like `complete`.
 4. On **`failure`**, read `errorMessage`. On **`canceled`**, the instruction was cancelled first.
 
@@ -220,7 +220,7 @@ POST /v1/devices/{serialNumber}/payment-instructions
     "breakdown": {
       "subtotal": 4500,
       "tip": { "type": "fixedAmount", "mode": "prompted", "amount": 499 },
-      "taxes": [ { "rate": 0.08, "name": "Sales Tax" } ]
+      "taxes": [ { "type": "rate", "rate": 8, "name": "Sales Tax" } ]
     }
   },
   "customizationOptions": { "entryMethod": "deviceRead" },
@@ -236,6 +236,8 @@ Key choices (read the enum/field details from the reference):
   pre-authorization (capture later); `processAsSale: true` settles immediately and ignores
   `autoCapture`. Pick deliberately.
 - **`entryMethod`** defaults to `deviceRead`; the other values are in the reference — don't invent one.
+- **Each `taxes` item needs `type: "rate"`**, and `rate` is a percentage (`8` = 8%, not `0.08`). The
+  gateway checks the tax name and rate against the tax configured for the terminal.
 - **Tokenize on the sale** with `credentialOnFile.tokenize: true` (and `mitAgreement` for
   merchant-initiated follow-ons).
 
@@ -252,8 +254,8 @@ Read `references/narrative-extend.md` for sequencing, `references/api-schema.md`
   Note `order.description` is **required** on a refund order. Poll → follow link → `GET /refunds/{id}`.
 - **Referenced refund** — **not** a device instruction; it uses the standard payments API and needs the
   original `paymentId`. Get it via `GET /payments/{paymentId}` or search `GET /payments` (`last4`,
-  `cardholderName`, `orderId`, `dateFrom`/`dateTo`, …), then `POST /payments/{paymentId}/refunds` with
-  `{ amount, currency }`.
+  `cardholderName`, `orderId`, `dateFrom`/`dateTo`, …), then `POST /payments/{paymentId}/refund` with
+  `{ amount, description }` (both required).
 - **Reverse a payment** — also the payments API, for a payment still in an **open batch**:
   `POST /payments/{paymentId}/reverse` (omit `amount` for full, supply it for partial). No funds move.
 - **Reverse vs refund:** open batch, funds not yet taken → **reverse**; already settled → **refund**.
@@ -280,15 +282,15 @@ key is a `409`. Polls (`GET`) and cancels (`DELETE`) don't take an idempotency k
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body. See `references/api-schema.md` for the per-status table.
 
 > **Cloud error shape is not yet verified.** We applied the standard Payroc envelope (confirmed on
-> boarding endpoints) on the assumption Cloud is consistent, but could not confirm against a live
-> Cloud account. Read `errorMessage` on a `failure` instruction and `errors[]` on a 4xx, but don't
+> boarding endpoints) on the assumption Cloud is consistent; it hasn't been confirmed against Cloud
+> responses. Read `errorMessage` on a `failure` instruction and `errors[]` on a 4xx, but don't
 > hard-code assumptions about Cloud-specific error text.
 
 | Status | Scenario | Action |
 |--------|----------|--------|
-| 400 | Validation error on submit | Map each `errors[].parameter` to the field; fix and resubmit (reuse the same idempotency key for an identical retry). |
+| 400 | Validation error on submit | Map each `errors[].parameter` to the field; fix the body and resubmit with a fresh idempotency key (the corrected body is a different request, so reusing the old key can return `409`). |
 | 401 | Token expired/invalid | Re-authenticate for a fresh bearer token. |
-| 403 | Insufficient permissions | Check the API key's scope. |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check the API key's scope. |
 | 404 | Instruction or resource not found | Verify the id — and check you didn't confuse the instruction id with the resource id. |
 | 409 | Conflict — cancelling an instruction no longer `inProgress`, or reusing an idempotency key with a changed body | GET the instruction's current `status` first; don't blindly retry. |
 | 500 | Server error | Retry with backoff; surface `errors` if present. |

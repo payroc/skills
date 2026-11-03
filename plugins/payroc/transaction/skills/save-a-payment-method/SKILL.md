@@ -3,19 +3,17 @@ name: save-a-payment-method
 description: >
   Guides developers through saving and tokenizing customer payment details via the Payroc Secure
   Tokens API (POST /v1/processing-terminals/{processingTerminalId}/secure-tokens). Use this skill
-  when the user wants to: save a card or bank account for future use without charging it now;
-  tokenize card details into a reusable vault token; store a payment method; implement card-on-file
-  or bank-account-on-file storage; vault a card or ACH/PAD bank account for later use;
-  create a reusable secure-token (secureTokenId) via the /secure-tokens endpoint; save payment
-  details to enable future merchant-initiated charges (recurring, installment, or unscheduled);
-  manage stored tokens (retrieve, list, delete, or update account details); or replace a customer's
-  saved card with a new one. Do NOT use this skill when the user wants to create a single-use token
-  for a one-time transaction (use create-single-use-token), set up or configure recurring billing
-  schedules or payment plans (use set-up-a-payment-plan or manage-subscriptions), charge a customer
-  using a saved token (use run-a-card-sale), or take a bank transfer/ACH payment right now (use
-  take-an-ach-payment).
+  to: save a card or bank account (ACH/PAD) for future use without charging it now; tokenize card
+  details into a reusable vault token (secureTokenId); implement card-on-file or
+  bank-account-on-file storage; save payment details to enable future merchant-initiated charges
+  (recurring, installment, or unscheduled); manage stored tokens (retrieve, list, delete, or update
+  account details); or replace a customer's saved card with a new one. Do NOT use this skill to
+  create a single-use token for a one-time transaction (use create-single-use-token), set up
+  recurring billing schedules or payment plans (use set-up-a-payment-plan or manage-subscriptions),
+  charge a customer using a saved token (use run-a-card-sale), or take a bank transfer/ACH payment
+  right now (use take-an-ach-payment).
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: transaction
   status: draft
 ---
@@ -55,7 +53,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens
+POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -88,7 +86,7 @@ recorded in [`references/_sources.md`](references/_sources.md).
 4. **Idempotency-Key on every POST.** The header must be a UUID v4. Omitting it causes a 400. Generate a fresh UUID for each distinct create or update-account request.
 5. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement token refresh logic.
-7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 8. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
 
 ---
@@ -114,17 +112,17 @@ Use the answers to skip sections that don't apply.
 
 ## Prerequisites
 
-These are needed to run and test in UAT — not to write the code. If the developer already has them, great.
+These are needed to run and test in the test environment — not to write the code. If the developer already has them, great.
 If not, wire the code to read each value from an environment variable and keep building.
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team with UAT access.
-2. **Processing terminal ID** — the `processingTerminalId` used in the endpoint path. Should be known from UAT setup.
-3. **UAT environment** — no self-serve signup; UAT terminals are provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — the `processingTerminalId` used in the endpoint path. Should be known from your test setup.
+3. **Test environment** — test terminals are provisioned by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it.
 Otherwise propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Then tell the developer:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need Payroc UAT credentials to actually test this — contact the Payroc Integrations team. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test API key (create one in the Developer Portal) and a test terminal (contact the Payroc Integrations team) to actually test this. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -142,13 +140,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header value and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header value and confirm the API key is a valid test key for the test environment.
 
 ---
 
 ## Step 2 — Build the tokenization request
 
-Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens`
+Endpoint: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens`
 
 Required headers:
 ```
@@ -219,7 +217,7 @@ Is the request body valid JSON with at minimum a `source` object containing a `t
 ## Step 3 — Send the request and capture the response
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/processing-terminals/$PAYROC_TERMINAL_ID/secure-tokens \
+curl -X POST https://api.payroc.com/v1/processing-terminals/$PAYROC_TERMINAL_ID/secure-tokens \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -245,7 +243,7 @@ curl -X POST https://api.uat.payroc.com/v1/processing-terminals/$PAYROC_TERMINAL
 
 **Persist `secureTokenId` and `token` immediately.** Both are needed for future operations.
 
-**IDs are opaque.** The `MREF_...` form shown above is illustrative only. In UAT, IDs may come back as plain integers. Treat every ID as an opaque string — do not validate against a format pattern.
+**IDs are opaque.** The `MREF_...` form shown above is illustrative only. In the test environment, IDs may come back as plain integers. Treat every ID as an opaque string — do not validate against a format pattern.
 
 **Token format note.** The `token` field always starts with `296753` and is up to 12 digits (Luhn-verified). This is a reusable vault token — different from a single-use token issued by Hosted Fields.
 
@@ -259,7 +257,7 @@ Does the API return HTTP 201 with both a `secureTokenId` and a `token`? If not, 
 
 ### Retrieve a token
 
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -269,7 +267,7 @@ Returns the full token record including current `status`, masked `source`, and `
 
 ### List tokens for a terminal
 
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -283,7 +281,7 @@ Pagination: cursor-based via `limit`, `after`, `before`. Use `before` or `after`
 
 ### Delete a token
 
-`DELETE https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}`
+`DELETE https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -302,7 +300,7 @@ Response: `204 No Content` — empty body.
 
 *(When the customer's card has expired or they want to replace their saved payment method)*
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}/update-account`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}/update-account`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`, `Content-Type: application/json`
 
@@ -327,14 +325,14 @@ This replaces the payment source on the existing token while preserving `mitAgre
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` value is a valid test API key (or an older test key issued for the `.uat.` hosts; see `references/identity-call.md`) |
 | 400 — validation error on `source.type` or any enum field | Enum value not from the reference | Read `references/api-schema.md` and use the documented value exactly |
 | 400 — missing `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST |
 | 400 — missing required field in `source` | Source variant is missing a required field | Read the full source schema for the `source.type` in `references/api-schema.md` |
 | 409 — `secureTokenId` already exists | Provided `secureTokenId` is already in use for a different payment method | Use a different `secureTokenId`, or omit it and let the gateway generate one |
-| 409 — idempotency key reused | Same Idempotency-Key sent with different payload | Generate a fresh UUID for each distinct request |
+| 409 — idempotency key reused | Same Idempotency-Key sent with different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for each distinct request |
 | 404 — token not found | `secureTokenId` or `processingTerminalId` wrong | Verify both IDs from the create response; use the list endpoint to confirm the token exists |
-| 403 — insufficient permissions | API key lacks access to this terminal or operation | Check with the Payroc Integrations team for terminal-level permissions |
+| 403 — insufficient permissions | API key lacks access to this terminal or operation; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check with the Payroc Integrations team for terminal-level permissions |
 | 406 — not acceptable | Request format rejected by the gateway | Check that `Accept` header (if set) is compatible with `application/json` |
 | 413 — payload too large | Request body exceeds the gateway size limit | Reduce payload size; check for unexpectedly large field values |
 | 415 — unsupported media type | `Content-Type` is not `application/json` | Set `Content-Type: application/json` on all POST requests |
@@ -355,8 +353,8 @@ This replaces the payment source on the existing token while preserving `mitAgre
 - [ ] PAD source: `transitNumber`, `institutionNumber`, `accountNumber`, `nameOnAccount`, and `accountType` all present (PAD does not use `routingNumber`)
 - [ ] `secureTokenId` and `token` captured from create response and stored
 - [ ] Delete operation: developer explicitly confirmed irreversibility before code was written
-- [ ] UAT endpoints used (`api.uat.payroc.com`) during testing — not production endpoints
-- [ ] Before going live: swap `api.uat.payroc.com` → `api.payroc.com` and `identity.uat.payroc.com` → `identity.payroc.com`; use production terminal ID and API key
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
+- [ ] Before going live: swap the test API key for a live one and use the production terminal ID
 
 ---
 
@@ -369,9 +367,9 @@ Once all checklist items pass:
 > - **Authentication** — Bearer token generation from the Payroc identity service; credentials in env vars.
 > - **Tokenization** — [summarise: source type, mitAgreement if set]
 > - **Lifecycle** (list what was built) — retrieve, list, delete, update-account
-> - **Validated in UAT** — token created successfully and secureTokenId confirmed.
+> - **Validated in the test environment** — token created successfully and secureTokenId confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal.
 
 Offer next steps:
 - **Run a card sale using a saved token** — see the `run-a-card-sale` skill for using `secureTokenId` in a payment request

@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > and `https://docs.payroc.com/api/schema/notifications/event-subscriptions/` (per-operation docs).
-> Last synced: 2026-09-16. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory.
 
 ---
@@ -18,8 +18,7 @@
 | Partially update event subscription | `PATCH` | `/v1/event-subscriptions/{subscriptionId}` |
 | Delete event subscription | `DELETE` | `/v1/event-subscriptions/{subscriptionId}` |
 
-UAT host: `https://api.uat.payroc.com`
-Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (test and live). Use a test API key for testing; the key, not the URL, decides test or live.
 
 ---
 
@@ -84,7 +83,7 @@ Content-Type:    application/json
 | Field | Type | Description |
 | --- | --- | --- |
 | `type` | string enum | Must be `"webhook"` |
-| `uri` | string | Your public endpoint URL; must be reachable from the internet |
+| `uri` | string | Your public endpoint URL. Must be an absolute `https://` URI that resolves to a public host. Max length 4000 characters |
 | `secret` | string | Validation token — Payroc sends this in the `Payroc-Secret` header with every webhook so you can verify authenticity |
 | `supportEmailAddress` | string | Email address Payroc contacts if webhook delivery fails after retries |
 
@@ -354,6 +353,7 @@ Terminal order status enum values:
 
 - Payroc sends the `Payroc-Secret` header with every webhook POST. Verify its value matches your subscription's `secret` to confirm authenticity.
 - Your endpoint **must return HTTP 200** to acknowledge receipt. Any other response code is treated as a delivery failure.
+- Your endpoint **must respond within 15 seconds**. Payroc treats a request that takes longer as a failed delivery.
 - On failure, Payroc **retries up to 5 times**. If all retries fail, Payroc contacts `supportEmailAddress` and the subscription transitions to `failed` status.
 - Idempotency: the CloudEvents `id` field is the unique identifier of the event — use it to detect and discard duplicate deliveries.
 
@@ -363,4 +363,22 @@ Terminal order status enum values:
 
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
 
-Status codes these endpoints return: `400` (validation), `401` (auth/expired token), `403` (permissions), `404` (unknown `subscriptionId`, or one belonging to a different account), `406` (content negotiation — unsupported request format), `409` (conflict — a subscription with conflicting configuration already exists), `500` (server — retry with backoff).
+Status codes these endpoints return: `400` (validation), `401` (auth/expired token), `403` (permissions), `404` (unknown `subscriptionId`, or one belonging to a different account), `406` (content negotiation — unsupported request format), `409` (conflict — Payroc documents an `Idempotency-Key` already used for a different request, on create and partial update; a subscription with conflicting configuration may also cause it), `500` (server — retry with backoff).
+
+**Invalid webhook URI (400).** Create and partial update return this when a notification `uri` is not an absolute `https://` URI that resolves to a public host:
+
+```json
+{
+  "type": "https://docs.payroc.com/api/errors#bad-request",
+  "title": "Bad request",
+  "status": 400,
+  "detail": "One or more validation errors occurred, see error section for more info",
+  "errors": [
+    {
+      "parameter": "notifications[0].uri",
+      "detail": "invalid value",
+      "message": "'URI' must be an absolute 'https://' URI."
+    }
+  ]
+}
+```

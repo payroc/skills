@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (Funding Activity schemas: `funding_fundingActivity_*`, `merchantBalance`, `activityRecord`, `ActivityRecordType`).
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum values
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum values
 > and required-field sets from here, not from memory. To refresh, re-fetch the source and regenerate
 > this file (see [`_sources.md`](./_sources.md)).
 
@@ -15,9 +15,8 @@
 | List funding balances | `GET /v1/funding-balance` |
 | List funding activity | `GET /v1/funding-activity` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
+Identity: `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -202,7 +201,7 @@ Example response with a next-page link (when `hasMore: true`):
   "count": 10,
   "hasMore": true,
   "links": [
-    { "rel": "next", "method": "GET", "href": "https://api.uat.payroc.com/v1/funding-activity?after=<cursor>&dateFrom=2026-06-01&dateTo=2026-06-22" }
+    { "rel": "next", "method": "GET", "href": "https://api.payroc.com/v1/funding-activity?after=<cursor>&dateFrom=2026-06-01&dateTo=2026-06-22" }
   ],
   "data": [ ... ]
 }

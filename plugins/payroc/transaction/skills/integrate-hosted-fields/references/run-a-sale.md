@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/hosted-fields/run-a-sale.md
-> Last synced: 2026-09-16. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Run a sale
 
@@ -44,8 +44,7 @@ To run a sale with card details, send a POST request to our Payments endpoint.
 
 | Endpoint   | Prefix     | URL                                                                              |
 | :--------- | :--------- | :------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/payments](https://api.uat.payroc.com/v1/payments) |
-| Production | `api.`     | [https://api.payroc.com/v1/payments](https://api.payroc.com/v1/payments)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/payments](https://api.payroc.com/v1/payments)         |
 
 ### Request parameters
 
@@ -139,7 +138,6 @@ paths:
               $ref: '#/components/schemas/paymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -3927,7 +3925,6 @@ paths:
               $ref: '#/components/schemas/paymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -7545,8 +7542,7 @@ To run a sale with bank account details, send a POST request to our Bank Transfe
 
 | Endpoint   | Prefix     | URL                                                                                                          |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/bank-transfer-payments](https://api.uat.payroc.com/v1/bank-transfer-payments) |
-| Production | `api.`     | [https://api.payroc.com/v1/bank-transfer-payments](https://api.payroc.com/v1/bank-transfer-payments)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/bank-transfer-payments](https://api.payroc.com/v1/bank-transfer-payments)         |
 
 ### Request parameters
 
@@ -7643,7 +7639,6 @@ paths:
               $ref: '#/components/schemas/bankTransferPaymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -10024,7 +10019,6 @@ paths:
               $ref: '#/components/schemas/bankTransferPaymentRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':

@@ -10,13 +10,13 @@ Read: references/load-hosted-payment-page.md
 
 The pre-auth endpoint differs from the sale endpoint only in the path segment (`preauthpage` instead of `paymentpage`). The form-POST field set, enum values, and hash recipe are identical to the sale flow — read them from the local reference; don't emit any field name or enum value from memory.
 
-As a verification anchor: the UAT pre-auth endpoint should be `https://payments.uat.payroc.com/merchant/preauthpage` and production `https://payments.payroc.com/merchant/preauthpage`. If the reference shows different values, use what the reference says and note the discrepancy.
+As a verification anchor: the test pre-auth endpoint should be `https://payments.uat.payroc.com/merchant/preauthpage` and production `https://payments.payroc.com/merchant/preauthpage`. If the reference shows different values, use what the reference says and note the discrepancy.
 
 All request parameters are identical to the sale flow (TERMINALID, ORDERID, CURRENCY, AMOUNT, DATETIME, HASH). The hash format is also unchanged.
 
 ### Checkpoint
 
-Does submitting the form redirect the browser to the Payroc UAT pre-auth payment page without an error? If not, diagnose before continuing.
+Does submitting the form redirect the browser to the Payroc test pre-auth payment page without an error? If not, diagnose before continuing.
 
 ---
 
@@ -47,14 +47,14 @@ The capture is a REST API call — entirely separate from the HPP form flow. It 
 
 Before writing the capture handler, confirm:
 
-1. **API key for the identity service** — you need an `x-api-key` to obtain a Bearer token from the identity service. **UAT/test:** `POST https://identity.uat.payroc.com/authorize`; **production:** `POST https://identity.payroc.com/authorize` (the UAT host carries the `.uat` segment, production does not). This may or may not be the same credential as the terminal secret; ask the developer which API key they have for the REST API. If they don't have one, direct them to the Payroc Integrations team.
+1. **API key for the identity service** — you need an `x-api-key` to obtain a Bearer token from the identity service. `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, the key decides test or live). This may or may not be the same credential as the terminal secret; ask the developer which API key they have for the REST API. If they don't have one, for testing direct them to create a test API key in the Developer Portal (https://developers.payroc.com).
 2. **UNIQUEREF stored** — the capture call needs the `UNIQUEREF` value written to durable storage in Step 3.
 
 ### Obtaining a Bearer token
 
 ```
-# UAT/test (note the .uat segment); production drops it: https://identity.payroc.com/authorize
-POST https://identity.uat.payroc.com/authorize
+# Same host for test and live; the API key decides which
+POST https://identity.payroc.com/authorize
 x-api-key: <api_key>
 ```
 
@@ -63,7 +63,7 @@ The response contains an `access_token` valid for 3600 seconds. Store it appropr
 ### Capture call
 
 ```
-POST https://api.uat.payroc.com/v1/payments/{UNIQUEREF}/capture
+POST https://api.payroc.com/v1/payments/{UNIQUEREF}/capture
 Authorization: Bearer <access_token>
 Content-Type: application/json
 Idempotency-Key: <uuid-v4>
@@ -81,11 +81,11 @@ The request body is optional. Omit it entirely to capture the full pre-authorize
 
 Amount is in the lowest denomination of the currency (e.g. cents). If you need to capture more than the original pre-auth amount, the Adjust Payment endpoint must be called first.
 
-For production, replace `api.uat.payroc.com` with `api.payroc.com`.
+The host is the same for test and live. Use a test API key for testing and swap in a live key at go-live.
 
 ### Idempotency
 
-Every capture request must include a unique `Idempotency-Key` (UUID v4). If you need to retry a failed request, reuse the same key — the gateway will return the original result rather than processing a duplicate.
+Every capture request must include a unique `Idempotency-Key` (UUID v4). If you need to resend the identical request after a timeout, a network error or a `401` (with a new token), reuse the same key — the gateway will return the original result rather than processing a duplicate. Use a new key only for a changed body, such as a fixed `400`.
 
 ### Response
 

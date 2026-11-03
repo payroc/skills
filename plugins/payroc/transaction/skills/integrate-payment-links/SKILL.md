@@ -12,7 +12,7 @@ description: >-
   "payment links". Also trigger when a developer has a Payroc API key and
   wants to charge customers without embedding a payment form in their site.
 metadata:
-  version: "0.2.3"
+  version: "0.2.5"
   category: integration
   status: draft
 ---
@@ -59,7 +59,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links
+POST  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -92,7 +92,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 4. **Idempotency-Key on every POST and PATCH except `/deactivate`.** The header value must be a UUID v4. This is a required header, not optional — omitting it causes a 400. Generate a fresh UUID for each distinct operation (do not reuse the same key across different requests). The one exception is `POST /v1/payment-links/{paymentLinkId}/deactivate`, which does not take the header; sending it there is harmless but omitting it does not cause a 400.
 5. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager, never source code or configuration files checked into version control.
 6. **Bearer token expiry.** Tokens from the identity service expire after 3,600 seconds (1 hour). For short scripts this is fine; for long-running services, implement token refresh logic.
-7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+7. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 8. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
 
 ---
@@ -132,15 +132,15 @@ Use the answers to skip sections that don't apply. If the developer's use case i
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can populate the variables before they test.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team along with UAT access.
-2. **Processing terminal ID** — the `processingTerminalId` used in the create-link endpoint path. The developer should know this from their UAT setup.
-3. **UAT environment** — Payroc's test environment. There is no self-serve signup; UAT terminals are provisioned manually by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — the `processingTerminalId` used in the create-link endpoint path. The developer should know this from their test setup.
+3. **Test environment** — Test terminals are provisioned manually by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read the credentials from those variables, then tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal and API key to actually run or test this — contact the Payroc Integrations team to get them, and set the variables before testing. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal) to actually run or test this, and set the variables before testing. I can keep building in the meantime.
 
 Offer to help them obtain what's missing, and continue with development if they want to.
 
@@ -155,8 +155,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, the key decides test or live)
 
 Header: `x-api-key: <api-key>`
 
@@ -168,13 +167,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment.
 
 ---
 
 ## Step 2 — Create a payment link
 
-Endpoint: `POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links`
+Endpoint: `POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links`
 
 Required headers:
 ```
@@ -225,7 +224,7 @@ Does the API return HTTP 201 with a `paymentLinkId` and `assets.paymentUrl`? If 
 
 *(Include this section if the developer selected "Share links by email")*
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payment-links/{paymentLinkId}/sharing-events`
+Endpoint: `POST https://api.payroc.com/v1/payment-links/{paymentLinkId}/sharing-events`
 
 Required headers:
 ```
@@ -262,7 +261,7 @@ Does the API return HTTP 201 with a `sharingEventId`? If not, verify the `paymen
 
 ### Retrieve a link
 
-`GET https://api.uat.payroc.com/v1/payment-links/{paymentLinkId}`
+`GET https://api.payroc.com/v1/payment-links/{paymentLinkId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -272,7 +271,7 @@ Returns the full link object including current `status`. Useful for checking whe
 
 ### List links for a terminal
 
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-links`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -286,7 +285,7 @@ Pagination: cursor-based via `limit`, `after`, `before` query parameters. The re
 
 ### Update a link (partial update)
 
-`PATCH https://api.uat.payroc.com/v1/payment-links/{paymentLinkId}`
+`PATCH https://api.payroc.com/v1/payment-links/{paymentLinkId}`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`
 
@@ -305,7 +304,7 @@ Supported `op` values: `add`, `remove`, `replace`, `move`, `copy`, `test`. See `
 
 ### Deactivate a link
 
-`POST https://api.uat.payroc.com/v1/payment-links/{paymentLinkId}/deactivate`
+`POST https://api.payroc.com/v1/payment-links/{paymentLinkId}/deactivate`
 
 Required headers: `Authorization: Bearer <token>`
 
@@ -320,7 +319,7 @@ If the intent is to temporarily pause payments, ask whether updating the `expire
 
 ### List sharing events
 
-`GET https://api.uat.payroc.com/v1/payment-links/{paymentLinkId}/sharing-events`
+`GET https://api.payroc.com/v1/payment-links/{paymentLinkId}/sharing-events`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -334,12 +333,12 @@ Returns a paginated list of sharing events with timestamps, recipient details, a
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-generate token; verify `x-api-key` header value is the correct API key |
 | 400 — validation error mentioning `type`, `authType`, or `paymentMethods` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — missing or malformed `Idempotency-Key` | Header absent or not a UUID v4 | Add `Idempotency-Key: <UUID v4>` to every POST and PATCH except `/deactivate`; generate a new UUID per operation |
 | 400 — single-use link missing required field | A field the schema marks required is absent | Read the create-link schema in `references/api-schema.md`; add every required field (single-use typically needs `orderId` inside `order` and `expiresOn`) |
 | 400 — charge object rejected / malformed | `charge` wrapped in a nested `preset`/`prompt` key (`charge.preset.amount`) | Flatten it: `charge` is one object with `type` (`preset`/`prompt`) and `amount`/`currency` as **siblings** of `type` — no nested wrapper |
-| 409 — duplicate Idempotency-Key | Same key reused across different operations | Generate a fresh UUID for every distinct operation |
+| 409 — duplicate Idempotency-Key | Same key reused across different operations | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for every distinct operation |
 | PATCH regenerates `paymentUrl` unexpectedly | Updating a single-use link is by design | Re-share the new URL from the updated response |
 | Link `status: expired`, customer can't pay | `expiresOn` has passed | PATCH to extend `expiresOn` if you still want the link active |
 | Link `status: deactivated`, customer can't pay | Link was permanently deactivated | Create a new link — deactivated links cannot be reactivated |
@@ -359,7 +358,7 @@ Returns a paginated list of sharing events with timestamps, recipient details, a
 - [ ] `charge` is a flat object — `type` (`preset`/`prompt`) with `amount`/`currency` as siblings; no nested `preset`/`prompt` wrapper key
 - [ ] Deactivation: developer explicitly confirmed the operation is permanent before code was written
 - [ ] PATCH operations: RFC 6902 JSON Patch array format (not a PUT/POST body)
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -373,9 +372,9 @@ Once all checklist items pass:
 > - **Create payment link** — [summarise: type, authType, paymentMethods, charge type]
 > - **Share by email** (if built) — sends the payment URL to recipients via Payroc's API; stores `sharingEventId`.
 > - **Extended features** (list what was built) — retrieve, list, update, deactivate, sharing events.
-> - **Validated in UAT** — end-to-end flow confirmed.
+> - **Validated in the test environment** — end-to-end flow confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal. The hosts stay the same.
 
 Offer next steps:
 - **Tokenization / recurring billing** — save payment details with `credentialOnFile` for future merchant-initiated charges

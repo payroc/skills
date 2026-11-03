@@ -1,22 +1,19 @@
 ---
 name: send-funds-to-a-merchant
 description: >
-  Guides developers through sending (disbursing) funds to a merchant via the Payroc Funding API
-  — including checking available balance before disbursement and creating, tracking, updating, or
-  cancelling funding instructions (/v1/funding-instructions). Use this skill when the user wants
-  to disburse or send funds to a merchant, create a funding instruction, pay out a merchant,
-  distribute merchant balances, implement an ACH payout to a merchant's bank account, perform
-  merchant settlement disbursement, batch-fund multiple merchants in a single instruction, update
-  a pending funding instruction, delete or cancel a funding instruction, or manage the
-  /v1/funding-instructions endpoint (POST, GET, PUT, DELETE). Also use when the user asks about
-  idempotency keys for funding instructions, tracking instruction status
-  (accepted/pending/completed/funded), or checking available balance specifically as a prerequisite
-  for disbursing funds. Do NOT use for setting up or registering a new funding recipient or funding
-  account (use the set-up-a-funding-recipient skill), or for viewing funding activity history,
-  balance reports, or funding balances without the intent to disburse (use the
-  view-funding-activity skill).
+  Guides developers through sending (disbursing) funds to a merchant via the Payroc Funding API —
+  including checking available balance before disbursement and creating, tracking, updating, or
+  cancelling funding instructions (/v1/funding-instructions). Use when the user wants to disburse or
+  send funds to a merchant, create a funding instruction, pay out a merchant, distribute merchant
+  balances, implement an ACH payout to a merchant's bank account, batch-fund multiple merchants in a
+  single instruction, update a pending funding instruction, delete or cancel a funding instruction,
+  or manage /v1/funding-instructions. Also use for idempotency keys on funding instructions or
+  tracking instruction status (accepted/pending/completed) or per-recipient payout status. Do NOT
+  use for setting up a new funding recipient or funding account (use set-up-a-funding-recipient), or
+  for viewing funding activity history, balance reports, or funding balances without intent to
+  disburse (use view-funding-activity).
 metadata:
-  version: "0.1.3"
+  version: "0.1.5"
   category: funding
   status: draft
 ---
@@ -40,7 +37,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-> **Funding a merchant requires a KYC-approved recipient.** If funding instructions fail with a "recipient not found" or similar error in UAT, confirm the target funding recipient has passed KYC first — see the KYC validation note in the `set-up-a-funding-recipient` skill. All steps, schemas, and enum values here are derived from the official Payroc API documentation.
+> **Funding a merchant requires a KYC-approved recipient.** If funding instructions fail with a "recipient not found" or similar error in the test environment, confirm the target funding recipient has passed KYC first — see the KYC validation note in the `set-up-a-funding-recipient` skill. All steps, schemas, and enum values here are derived from the official Payroc API documentation.
 
 ---
 
@@ -58,12 +55,12 @@ For all field details, enum values, and schemas, read `references/api-schema.md`
 ## Quick reference
 
 ```text
-GET   https://api.uat.payroc.com/v1/funding-balance
-POST  https://api.uat.payroc.com/v1/funding-instructions
-GET   https://api.uat.payroc.com/v1/funding-instructions/{instructionId}
-GET   https://api.uat.payroc.com/v1/funding-instructions?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
-PUT   https://api.uat.payroc.com/v1/funding-instructions/{instructionId}
-DELETE https://api.uat.payroc.com/v1/funding-instructions/{instructionId}
+GET   https://api.payroc.com/v1/funding-balance
+POST  https://api.payroc.com/v1/funding-instructions
+GET   https://api.payroc.com/v1/funding-instructions/{instructionId}
+GET   https://api.payroc.com/v1/funding-instructions?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+PUT   https://api.payroc.com/v1/funding-instructions/{instructionId}
+DELETE https://api.payroc.com/v1/funding-instructions/{instructionId}
 
 Authorization:   Bearer <token>          (all requests)
 Idempotency-Key: <uuid-v4>              (POST only)
@@ -106,14 +103,14 @@ Use the answers to scope what sections to implement.
 
 Before this skill can run end-to-end, the following must exist:
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Merchant ID** — the `merchantId` of the recipient merchant, assigned by Payroc when the merchant was boarded.
 3. **Funding account ID** — the `fundingAccountId` (integer) of the merchant's bank account, created when the funding recipient was set up. If this doesn't exist, the `set-up-a-funding-recipient` skill must be run first.
 4. **Available balance** — confirmed via `GET /v1/funding-balance` before creating an instruction.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY`. Write the code to read credentials from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc UAT API key and a set-up funding recipient (with a valid `fundingAccountId`) to run or test this — contact the Payroc Integrations team if you don't have them.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc test API key and a set-up funding recipient (with a valid `fundingAccountId`) to run or test this. Create a test API key in the Developer Portal; contact the Payroc Integrations team if you don't have a funding recipient.
 
 ### Checkpoint
 
@@ -127,8 +124,7 @@ Either the credentials and IDs are confirmed, or the developer knows what's outs
 
 Exchange your API key for a Bearer token before any Funding API call.
 
-- UAT: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 - Header: `x-api-key: <api-key>`
 
 Response: `access_token`, `expires_in` (3600), `token_type` ("Bearer"), `scope` (space-separated service identifiers — check this field if you receive a 403 to verify funding scope is included).
@@ -148,7 +144,7 @@ Can the token helper return an `access_token` without error? If not, verify the 
 Before creating a funding instruction, verify sufficient funds are available.
 
 ```text
-GET https://api.uat.payroc.com/v1/funding-balance
+GET https://api.payroc.com/v1/funding-balance
 Authorization: Bearer <token>
 ```
 
@@ -171,7 +167,7 @@ Is the merchant's `available` balance at least equal to the amount you intend to
 
 > Read `references/api-schema.md` before writing the request body or answering questions about supported payment methods and currencies. The `paymentMethod` enum and `currency` enum have exactly one valid value each — do not guess them from training data.
 
-Endpoint: `POST https://api.uat.payroc.com/v1/funding-instructions`
+Endpoint: `POST https://api.payroc.com/v1/funding-instructions`
 
 Required headers:
 ```text
@@ -269,7 +265,7 @@ Does the API return HTTP 201 with an `instructionId`? If not, work through the e
 
 ## Step 4 — Track instruction status
 
-Poll `GET https://api.uat.payroc.com/v1/funding-instructions/{instructionId}` to monitor progress. As an alternative to polling, you can subscribe to webhook events to receive push notifications when the instruction status changes — if the developer prefers event-driven tracking, refer them to the Payroc webhook documentation.
+Poll `GET https://api.payroc.com/v1/funding-instructions/{instructionId}` to monitor progress. As an alternative to polling, you can subscribe to webhook events to receive push notifications when the instruction status changes — if the developer prefers event-driven tracking, refer them to the Payroc webhook documentation.
 
 **Instruction-level status progression:**
 ```
@@ -302,13 +298,13 @@ Implement polling with appropriate backoff — ACH transfers are not instant and
 
 ### List instructions
 
-`GET https://api.uat.payroc.com/v1/funding-instructions?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD`
+`GET https://api.payroc.com/v1/funding-instructions?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD`
 
 Both `dateFrom` and `dateTo` are required. Date range is limited to the previous two years. Supports `limit`, `after`, `before` for pagination.
 
 ### Update an instruction
 
-`PUT https://api.uat.payroc.com/v1/funding-instructions/{instructionId}`
+`PUT https://api.payroc.com/v1/funding-instructions/{instructionId}`
 
 **Constraint: only possible while status is `accepted`.** Once the instruction moves to `pending` or beyond, this returns 409 Conflict.
 
@@ -320,7 +316,7 @@ Response: 204 No Content.
 
 ### Delete an instruction
 
-`DELETE https://api.uat.payroc.com/v1/funding-instructions/{instructionId}`
+`DELETE https://api.payroc.com/v1/funding-instructions/{instructionId}`
 
 **Constraint: only possible while status is `accepted`.** Fails with 409 if already `pending` or beyond.
 
@@ -341,11 +337,11 @@ Response: 204 No Content.
 | 400 — validation | Field issues in request body | Fix each field named in `errors[].parameter`; resubmit with a fresh idempotency key (nothing was created, but the corrected body needs a new key) |
 | 400 — missing `Idempotency-Key` | Missing `Idempotency-Key` header on POST | Add `Idempotency-Key: <uuid-v4>` to the request |
 | 400 — `fundingAccountId` type error | Sent as string, not integer | Change `fundingAccountId` to an integer literal |
-| 401 | Token missing, expired, or API key invalid | Re-authenticate; verify `x-api-key` value and ensure the API key is correct for the environment |
-| 403 | API key lacks funding scope | Contact Payroc Integrations team to enable funding permissions for this API key |
+| 401 | Token missing, expired, or API key invalid | Re-authenticate; verify `x-api-key` value and ensure the API key is correct for the environment, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 | API key lacks funding scope; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc Integrations team to enable funding permissions for this API key |
 | 404 | `instructionId` not found | Verify the ID from the create response; check list endpoint |
 | 406 | Not Acceptable — format issue | Verify the `Accept` header is not set to an unsupported media type; omit `Accept` to use the default |
-| 409 — duplicate idempotency key | Reused an idempotency key with a **different** payload | This is a different instruction — generate a new UUID and resubmit. Do **not** confuse this with a retry: if you are retrying the *same* payload after a network failure, reuse the original key (the API is idempotent and will return the original response). A 409 on a retry means the original request was received and succeeded — retrieve the instruction to confirm. |
+| 409 — duplicate idempotency key | Reused an idempotency key with a **different** payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, this is a different instruction — generate a new UUID and resubmit. Do **not** confuse this with a retry: if you are retrying the *same* payload after a network failure, reuse the original key (the API is idempotent and will return the original response). An identical retry returns the saved response, not a `409`; a `409` means the key was saved with a different body, which may have succeeded or failed — retrieve the instruction to confirm. |
 | 409 — wrong status for update/delete | Instruction is not `accepted` | Retrieve the instruction to check current status; modifications cannot be made beyond `accepted` |
 | 500 | Server error | Retry with exponential backoff |
 

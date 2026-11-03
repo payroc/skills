@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/guides/take-payments/update-saved-payment-details
-> Last synced: 2026-07-02. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Update saved payment details
 
@@ -38,8 +38,7 @@ To update the payment details represented by a secure token, send a PATCH reques
 
 | Environment | URL                                                                                                                                                                                                                    |
 | :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test        | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}) |
-| Production  | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId})         |
+| Test/live   | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId})         |
 
 **Note:** The request format follows the RFC 6902 standard.
 
@@ -188,8 +187,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':
@@ -1428,8 +1425,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':
@@ -2439,8 +2434,7 @@ To update saved payment details with a single-use token, send a POST request to 
 
 | Environment | URL                                                                                                                                                                                                                                                  |
 | :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test        | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account) |
-| Production  | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account)         |
+| Test/live   | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account)         |
 
 ### Request parameters
 
@@ -2567,8 +2561,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':
@@ -3699,8 +3691,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':
@@ -4607,8 +4597,7 @@ To update the payment details represented by a secure token, send a PATCH reques
 
 | Environment | URL                                                                                                                                                                                                                    |
 | :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test        | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}) |
-| Production  | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId})         |
+| Test/live   | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId})         |
 
 **Note:** The request format follows the RFC 6902 standard.
 
@@ -4757,8 +4746,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':
@@ -5997,8 +5984,6 @@ paths:
 servers:
   - url: https://api.payroc.com/v1
     description: Production
-  - url: https://api.uat.payroc.com/v1
-    description: UAT
 components:
   schemas:
     '400':

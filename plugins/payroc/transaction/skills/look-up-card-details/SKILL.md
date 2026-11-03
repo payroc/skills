@@ -6,15 +6,13 @@ description: >-
   indicator, healthcare/FSA/HSA flag, and surcharging eligibility — before or without processing
   a transaction. Use this skill when a developer asks about looking up card details via the
   Payroc API, identifying a card network or brand from a BIN or card number, checking whether a
-  card is debit or credit, checking surcharge eligibility for a specific card via API lookup,
-  doing a BIN lookup, checking card issuer country via the BIN lookup endpoint, or checking if a
-  card is FSA/HSA-linked. Also use when the developer has a card number (or first 6–8 digits) and
-  wants to know what kind of card it is, whether surcharging applies to that card, or whether
-  healthcare spending applies — even if they don't use the term "BIN lookup". Do NOT use for card
-  number format validation (Luhn check), processing a card payment, pre-authorization, refunds,
+  card is debit or credit, checking surcharge eligibility for a card, doing a BIN lookup,
+  checking the card's issuing country, or checking if a card is FSA/HSA-linked. Also use when the
+  developer has a card number (or its first 6–8 digits) and wants to know what kind of card it
+  is — even if they don't use the term "BIN lookup". Do NOT use for card number format validation (Luhn check), processing a card payment, pre-authorization, refunds,
   configuring surcharging on a terminal, or general surcharging setup — those are separate skills.
 metadata:
-  version: "0.3.0"
+  version: "0.3.2"
   category: transaction
   status: draft
 ---
@@ -64,7 +62,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/cards/bin-lookup
+POST  https://api.payroc.com/v1/cards/bin-lookup
 Authorization: Bearer <token>
 Content-Type:  application/json
 ```
@@ -126,15 +124,15 @@ Use what you find to pre-fill obvious answers and ask targeted questions. Then a
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read from environment variables and keep building.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read from environment variables and keep building.
 
-1. **API key** — exchanged for a Bearer token from the Payroc identity service. Provisioned by the Payroc Integrations team.
-2. **Processing terminal ID** (optional) — only required if surcharge information is needed. The developer should know this from their UAT setup.
-3. **UAT environment** — Payroc's test environment. UAT terminals are provisioned manually by the Payroc Integrations team.
+1. **API key** — exchanged for a Bearer token from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** (optional) — only required if surcharge information is needed. The developer should know this from their test setup.
+3. **Test environment** — a test API key and test terminal. Test terminals are provisioned manually by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY` and (if needed) `PAYROC_TERMINAL_ID`. Tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc UAT API key to run or test this — contact the Payroc Integrations team to get one, and set the variable before testing. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc test API key to run or test this (create one in the Developer Portal), and set the variable before testing. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -147,7 +145,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding 
 > **Read `references/identity-call.md` now, before writing any auth code.** The endpoint URLs, request header name, and response field names are documented there. Do not rely on values stated elsewhere in this skill — the reference is the single source of truth and must be consulted at this step to avoid drift.
 
 Using the values from `references/identity-call.md`:
-- Obtain a Bearer token by calling the identity service endpoint for the target environment (UAT or production).
+- Obtain a Bearer token by calling the identity service endpoint for the target environment (the same host serves test and live; the API key decides which).
 - Pass the API key using the header documented in the reference.
 - From the response, extract the `access_token` (and `expires_in` for expiry tracking). All subsequent API requests use `Authorization: Bearer <access_token>`.
 
@@ -157,7 +155,7 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment.
 
 ---
 
@@ -244,11 +242,14 @@ Use this when the developer has Apple Pay or Google Pay encrypted wallet data:
   "card": {
     "type": "digitalWallet",
     "serviceProvider": "apple",
-    "encryptedData": "BASE64_ENCRYPTED_WALLET_DATA",
+    "encryptedData": "HEX_ENCODED_WALLET_DATA",
     "cardholderName": "Jane Smith"
   }
 }
 ```
+
+`encryptedData` is the wallet's encrypted payment data converted to hexadecimal, as for the Payments
+endpoint (Payroc's Apple Pay and Google Pay guides require hex; this endpoint uses the same wallet object).
 
 - `serviceProvider` values: `apple` | `google` — read from `references/api-schema.md`.
 
@@ -259,7 +260,7 @@ Use this when the developer has Apple Pay or Google Pay encrypted wallet data:
 No `Idempotency-Key` is needed — this is a read-only lookup.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/cards/bin-lookup \
+curl -X POST https://api.payroc.com/v1/cards/bin-lookup \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -345,7 +346,7 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 | --- | --- | --- |
 | 400 | Validation failure — missing `card`, wrong `type` value, malformed BIN | Fix fields identified in `errors[].parameter`; re-read `references/api-schema.md` for correct enum values |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh Bearer token |
-| 403 | API key lacks permission | Check API key scope; contact Payroc support |
+| 403 | API key lacks permission; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | Token not found (for `secureToken` variant) | Verify the token value; check if the saved card still exists |
 | 406 | `Accept` header rejects `application/json` | Remove the `Accept` header or set it to `application/json` |
 | 409 | Conflict — duplicate idempotency key (unlikely on this read-only endpoint) | Do not add an `Idempotency-Key` header; if one is present, remove it |
@@ -368,7 +369,7 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | 400 — invalid `type` value | `card.type` enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — missing `card` | Request body sent without the required `card` object | Add `card` with the appropriate variant |
 | 400 — missing `bin` | `cardBin` type sent without `bin` field | Add the `bin` field |
@@ -377,7 +378,7 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 | No `serviceFee` in response | Merchant doesn't apply a service fee, or the gateway couldn't determine the currency | If the merchant has a service fee, send `currency` and `processingTerminalId`. The fee is calculated in the request currency on multi-currency accounts, otherwise in the terminal's currency |
 | `serviceFee` present but no `amount` | Percentage-based fee and no `amount` in the request | Include `amount` (and `currency`) to get the calculated fee |
 | 404 — token not found | Secure token is invalid or the saved card was deleted | Verify the token; prompt the customer to re-enter card details |
-| 403 — permission denied | API key scope doesn't cover this endpoint | Contact Payroc support to check API key permissions |
+| 403 — permission denied | API key scope doesn't cover this endpoint; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc support to check API key permissions |
 
 ---
 

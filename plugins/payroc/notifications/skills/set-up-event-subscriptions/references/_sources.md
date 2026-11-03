@@ -1,11 +1,11 @@
 # References — Source Registry
 
-Last synced: 2026-09-16
+Last synced: 2026-11-03
 
 | File | Source URL | Notes |
 | --- | --- | --- |
 | `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | Canonical auth reference; copied from `plugins/payroc/_shared/identity-call.md` |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml + https://docs.payroc.com/api/schema/notifications/event-subscriptions/ | Event subscription endpoints, request/response schemas, enum values extracted from OpenAPI spec and per-operation docs |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml + https://docs.payroc.com/api/schema/notifications/event-subscriptions/ | Event subscription endpoints, request/response schemas, enum values extracted from OpenAPI spec and per-operation docs. Hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03); the docs guide page still lists UAT hosts |
 | `event-subscriptions-guide.md` | https://docs.payroc.com/guides/board-merchants/event-subscriptions.md + https://docs.payroc.com/guides/board-merchants/event-subscriptions/create-an-event-subscription.md | Narrative setup guide including webhook delivery behaviour, CloudEvents format, secret verification |
 
 ## Event type documentation

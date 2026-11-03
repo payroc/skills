@@ -1,7 +1,7 @@
 # Narrative — extend a Payroc Cloud integration
 
 Source of truth for **how to sequence** the follow-on flows. For field names, types, and enum values,
-use `api-schema.md`. Last synced: 2026-06-17. Sources:
+use `api-schema.md`. Last synced: 2026-10-30. Sources:
 `docs.payroc.com/essentials/payroc-cloud/extend-your-integration*.md` (see `_sources.md`).
 
 All of these build on the core submit → poll → follow-link → retrieve pattern in
@@ -40,10 +40,12 @@ a device instruction. You need the original `paymentId` first.
    `GET /v1/payments?last4=7062&cardholderName=Sarah` (also `first6`, `orderId`, `operator`,
    `dateFrom`/`dateTo`, `status`, `type`, `processingTerminalId`). Read `paymentId` from the matching
    summary.
-2. **Submit the refund:** `POST /v1/payments/{paymentId}/refunds` (Idempotency-Key required), body
-   `{ "amount": 4999, "currency": "USD" }` → `201`.
-3. **Retrieve:** `GET /v1/payments/{paymentId}/refunds/{refundId}` → `200` (`refundSummary`: `status`,
+2. **Submit the refund:** `POST /v1/payments/{paymentId}/refund` (Idempotency-Key required), body
+   `{ "amount": 4999, "description": "Refund for order OrderRef6543" }` (both required) → `200` with
+   the updated payment, whose `refunds[]` lists the refund (unless the payment was in an open batch
+   and was reversed instead; see below) (`refundSummary`: `refundId`, `status`,
    `responseCode`, `responseMessage`, etc.).
+3. **Retrieve later:** `GET /v1/refunds/{refundId}` → `200`.
 
 > **Open-batch gotcha.** If the original payment is still in an **open batch**, running a referenced
 > refund makes the gateway **auto-cancel (reverse)** the payment rather than create a separate refund.

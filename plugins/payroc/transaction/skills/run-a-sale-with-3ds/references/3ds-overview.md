@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/knowledge/card-payments/3-d-secure.md`
 > and `https://docs.payroc.com/guides/take-payments/3-d-secure/run-a-sale-with-3-d-secure.md`.
-> Last synced: 2026-06-22.
+> Last synced: 2026-11-03.
 
 ---
 
@@ -72,7 +72,7 @@ The `eci` field provides the card-scheme indicator:
 ## Key Architectural Note
 
 3-D Secure uses two separate Payroc API surfaces with different host names:
-- **MPI service** — `payments.uat.payroc.com` / `payments.payroc.com`
-- **Payments API** — `api.uat.payroc.com` / `api.payroc.com`
+- **MPI service** — `payments.uat.payroc.com` (test) / `payments.payroc.com` (production)
+- **Payments API** — `api.payroc.com` (test and live; the API key decides which)
 
 The MPI response is asynchronous — it arrives at the merchant's callback URL, not as a direct response to the MPI GET request. The integration must handle this asynchronous delivery.

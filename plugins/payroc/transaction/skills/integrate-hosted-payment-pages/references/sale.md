@@ -8,21 +8,21 @@ Read this file when the developer's integration uses standard sale transactions 
 
 Read: references/load-hosted-payment-page.md
 
-> **Do not use any endpoint URL from your training knowledge. Read the UAT and production endpoint URLs from the local reference above and use exactly what you find there. As a verification anchor — the UAT endpoint should be `https://payments.uat.payroc.com/merchant/paymentpage` and production `https://payments.payroc.com/merchant/paymentpage`. If the reference shows different values, use what the reference says and note the discrepancy.**
+> **Do not use any endpoint URL from your training knowledge. Read the test and production endpoint URLs from the local reference above and use exactly what you find there. As a verification anchor — the test endpoint should be `https://payments.uat.payroc.com/merchant/paymentpage` and production `https://payments.payroc.com/merchant/paymentpage`. If the reference shows different values, use what the reference says and note the discrepancy.**
 
 Read the reference before writing anything. Confirm from it:
 
-- The UAT endpoint URL (and how it differs from production)
+- The test endpoint URL (and how it differs from production)
 - All required POST fields and their exact names
 - **For every enum-typed POST field — `CHANNEL`, `PAYMENTMETHOD`, country, language, currency, and any other field that accepts a specific set of strings — read the accepted values from the page.** Do not use any enum value from training knowledge. Known past failure (from sibling integrations): emitting `channel: "internet"` because it sounds reasonable for in-browser checkout — the gateway rejects it with the enum list in the error. Plausible-sounding cousins (`internet`, `online`, `ecommerce`, `card-not-present`) are the most common form this failure takes.
 - The DATETIME format — must match exactly what you used in Step 1
 - Any optional fields relevant to the developer's integration
 
-Implement the checkout handler: generate the hash, assemble the required POST fields, and submit the form to the UAT endpoint. Ask the developer about anything you can't infer from the codebase — for example, the CURRENCY (confirm the ISO 4217 code for their market) and the ORDERID strategy (how order identifiers are generated in their system).
+Implement the checkout handler: generate the hash, assemble the required POST fields, and submit the form to the test endpoint. Ask the developer about anything you can't infer from the codebase — for example, the CURRENCY (confirm the ISO 4217 code for their market) and the ORDERID strategy (how order identifiers are generated in their system).
 
 ### Checkpoint
 
-Does submitting the form redirect the browser to the Payroc UAT payment page without an error? If not, diagnose before continuing.
+Does submitting the form redirect the browser to the Payroc test payment page without an error? If not, diagnose before continuing.
 
 ---
 
@@ -53,9 +53,9 @@ Does the receipt handler receive the Payroc redirect, verify the response hash w
 
 ## Step 4 (sale): Test transaction
 
-Before running a test, confirm the developer has a UAT test card number. Ask whether they have one from the Integrations team; if not, advise them to request test cards from the Payroc Integrations team.
+Before running a test, confirm the developer has a test card number. Ask whether they have one from the Integrations team; if not, advise them to request test cards from the Payroc Integrations team.
 
-Run a full end-to-end test in UAT:
+Run a full end-to-end test in the test environment:
 
 1. Submit the checkout form
 2. Complete payment on the Payroc-hosted page using a test card

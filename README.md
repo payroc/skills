@@ -50,11 +50,11 @@ The skills come in six plugins:
 | Plugin | What it covers |
 |--------|----------------|
 | `boarding` | Merchant platforms, processing accounts, pricing intents, attachments, terminal orders |
-| `transaction` | Card sales, pre-authorizations, 3-D Secure, refunds, ACH payments, bank account verification, saved payment methods, single-use tokens, subscriptions and payment plans, Hosted Fields, hosted payment pages, payment links, Apple Pay, Google Pay, Payroc Cloud, EBT balance checks, card lookups |
+| `transaction` | Card sales, pre-authorizations, 3-D Secure, refunds, ACH payments, bank account verification, saved payment methods, single-use tokens, subscriptions and payment plans, Hosted Fields, hosted payment pages, payment links, Apple Pay, Google Pay, Payroc Cloud, Payroc Cloud app switching on Android terminals, EBT balance checks, card lookups |
 | `funding` | Funding recipients, sending funds to merchants, funding balances and activity |
 | `reporting` | Settlement batches, settled transactions, authorizations, ACH deposits, disputes |
 | `notifications` | Event subscriptions (webhooks) for status changes |
-| `migrations` | Porting an existing IBX gateway integration to the Payroc API |
+| `migrations` | Porting an existing IBX, iTransact or TranSafe gateway integration to the Payroc API |
 
 With the plugin marketplace method, you install the plugins you need one at a time. The Skills CLI method installs all of them at once.
 
@@ -142,6 +142,7 @@ The skills go into a `.agents/skills` folder inside your project. To install the
 - "Help me board a new merchant via the Payroc API"
 - "Show me the settled transactions in a Payroc settlement batch"
 - "Port our IBX integration to the Payroc API"
+- "Migrate our iTransact integration to the Payroc API"
 
 ---
 

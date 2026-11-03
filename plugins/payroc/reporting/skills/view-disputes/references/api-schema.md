@@ -3,7 +3,7 @@
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/openapi.yml`
 > (disputes schemas) and `https://docs.payroc.com/api/schema/reporting/settlement/list-disputes.md`,
 > `https://docs.payroc.com/api/schema/reporting/settlement/list-disputes-statuses.md`.
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and schema details from here, not from memory. To refresh, re-fetch the source URLs and
 > regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -20,11 +20,11 @@ their status history.
 | List disputes | `GET /v1/disputes` |
 | List dispute statuses | `GET /v1/disputes/{disputeId}/statuses` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 Full endpoint examples:
-- `GET https://api.uat.payroc.com/v1/disputes?date=2024-02-01`
-- `GET https://api.uat.payroc.com/v1/disputes/{disputeId}/statuses`
+- `GET https://api.payroc.com/v1/disputes?date=2024-02-01`
+- `GET https://api.payroc.com/v1/disputes/{disputeId}/statuses`
 
 ---
 
@@ -198,7 +198,7 @@ Returns an **array** of status objects (not a paginated envelope — the full hi
 | 200 | Success |
 | 400 | Validation error — check `errors[]` array |
 | 401 | Authentication failed — exchange a new Bearer token |
-| 403 | Insufficient permissions — check API key scope |
+| 403 | Insufficient permissions — check API key scope; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | 404 | Dispute not found (status history endpoint) |
 | 406 | Not acceptable |
 | 500 | Server error — retry with backoff |

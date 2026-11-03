@@ -13,7 +13,7 @@ description: >
   word "verify" explicitly. Do NOT use for general ACH or bank transfer payment
   processing that does not involve the verify endpoint.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: transaction
   status: draft
 ---
@@ -38,7 +38,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 ---
 
 > **This requires a bank-transfer-capable terminal.** Bank account verification needs a terminal
-> provisioned for bank transfers — this applies in both UAT and production. Built from spec review of
+> provisioned for bank transfers — this applies in both the test environment and production. Built from spec review of
 > `https://docs.payroc.com/openapi.yml` and
 > `https://docs.payroc.com/api/schema/payment-features/bank/verify.md`.
 
@@ -47,7 +47,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/bank-accounts/verify
+POST  https://api.payroc.com/v1/bank-accounts/verify
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -106,13 +106,13 @@ Use the answers to tailor the implementation. If the type is ambiguous, ask one 
 
 These are needed to **run and test** the integration — not to write the code. If the developer already has them, proceed. If not, wire the code to read from environment variables and keep building.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Processing terminal ID** — the `processingTerminalId` in the request body. Must be provisioned for bank transfers (ACH or PAD).
-3. **UAT environment** — Payroc's test environment. UAT terminals must be provisioned manually by the Payroc Integrations team; there is no self-serve signup.
+3. **Test environment** — Payroc's test environment. Test terminals must be provisioned manually by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Then:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal provisioned for bank transfers (ACH or PAD) to actually test this — contact the Payroc Integrations team. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test terminal provisioned for bank transfers (ACH or PAD) to actually test this — contact the Payroc Integrations team. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -125,8 +125,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding,
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+Endpoint: `POST https://identity.payroc.com/authorize`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 Header: `x-api-key: <api-key>`
 
@@ -138,13 +137,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is a valid test key for the test environment.
 
 ---
 
 ## Step 2 — Build the verification request
 
-Endpoint: `POST https://api.uat.payroc.com/v1/bank-accounts/verify`
+Endpoint: `POST https://api.payroc.com/v1/bank-accounts/verify`
 
 Required headers:
 ```
@@ -248,7 +247,7 @@ Always generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* re
 > payload will cause a 409 conflict.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-accounts/verify \
+curl -X POST https://api.payroc.com/v1/bank-accounts/verify \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -307,7 +306,7 @@ Does the API return HTTP 200? Is the `verified` field present in the response? I
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is a valid test API key (or an older test key issued for the `.uat.` hosts; see `references/identity-call.md`) |
 | 400 — `Idempotency-Key` header absent | `Idempotency-Key` header missing from the POST | Add `Idempotency-Key: <UUID v4, lowercase, hyphenated>` to the POST request |
 | 400 — `Idempotency-Key` value is not a valid UUID | `Idempotency-Key` header present but value is not a valid UUID v4 | Ensure the value is a UUID v4, lowercase, hyphenated (e.g. `550e8400-e29b-41d4-a716-446655440000`) |
 | 400 — validation error on `type` | Wrong or misspelled `bankAccount.type` value | Read `references/api-schema.md`; `type` must be exactly `"ach"` or `"pad"` |
@@ -317,10 +316,10 @@ Does the API return HTTP 200? Is the `verified` field present in the response? I
 | 400 — validation on `transitNumber` | Transit number is not 5 characters | PAD transit numbers must be exactly 5 characters, zero-padded (e.g. `"00123"`, not `"123"`) |
 | 400 — validation on `institutionNumber` | Institution number is not 3 characters | PAD institution numbers must be exactly 3 characters, zero-padded (e.g. `"003"`, not `"3"`) |
 | 400 — missing required field | A required field is absent from the body | Read `references/api-schema.md` for the complete required-field list for the relevant `type` |
-| 403 | Terminal not authorized for bank account verification | Check the terminal ID; confirm it is provisioned for bank transfers (ACH/PAD) with the Payroc Integrations team |
-| 404 | Terminal not found | Verify the `processingTerminalId` is correct for the UAT environment |
+| 403 | Terminal not authorized for bank account verification; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check the terminal ID; confirm it is provisioned for bank transfers (ACH/PAD) with the Payroc Integrations team |
+| 404 | Terminal not found | Verify the `processingTerminalId` is correct for the test environment |
 | 406 | `Accept` header mismatch | Remove any explicit `Accept` header or set it to `application/json` |
-| 409 — duplicate `Idempotency-Key` | Same key reused with a different payload | Generate a fresh UUID for a new distinct request. Note: after `verified: false`, corrected account data is a new distinct request — do not reuse the previous key |
+| 409 — duplicate `Idempotency-Key` | Same key reused with a different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for a new distinct request. Note: after `verified: false`, corrected account data is a new distinct request — do not reuse the previous key |
 | 415 | `Content-Type` header is not `application/json` | Set `Content-Type: application/json` on the request |
 | 500 | Server error | Retry with exponential backoff |
 | HTTP 200 but `verified: false` | Account details did not pass verification | Not an error — handle in application logic; prompt customer to check their account number and routing/transit number |
@@ -346,7 +345,7 @@ that failed.
 - **Uppercase UUID in `Idempotency-Key`** — the value must be lowercase and hyphenated; always use lowercase (e.g. from `uuid.uuid4()` in Python, `uuidgen | tr '[:upper:]' '[:lower:]'` in bash, or `Guid.NewGuid().ToString()` in C# which produces lowercase by default)
 - **Treating `verified: false` as an error** — HTTP 200 with `verified: false` is a normal outcome; do not throw an exception or retry the same request
 - **Reusing the same `Idempotency-Key` after `verified: false` with corrected data** — `verified: false` is a completed call, not a transient error; corrected account details are a new distinct request requiring a fresh UUID (reuse causes a 409)
-- **Using a card terminal for bank verification** — the terminal must be provisioned for bank transfers; verify this with the Payroc Integrations team if you receive a 403
+- **Using a card terminal for bank verification** — the terminal must be provisioned for bank transfers; verify this with the Payroc Integrations team if you receive a 403 (unless the body is the plain-text `error code: 1010`: then your client's `User-Agent` was refused; see the error table)
 
 ---
 

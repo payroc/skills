@@ -93,4 +93,5 @@ The payment request uses `source.type: "secureToken"` with the token value rathe
    or let the gateway generate one. If you generate your own, it must be unique within the terminal.
 3. **Always use env vars for credentials** — never hardcode API keys, terminal IDs, or tokens in source code.
 4. **Idempotency-Key is required on POSTs** — use a fresh UUID v4 for each distinct create or update-account
-   request. On retry of a failed request, reuse the same key to prevent duplicate tokens.
+   request. When resending the identical request after a timeout, a network error or a `401` (with a new token),
+   reuse the same key to prevent duplicate tokens; use a new key only for a changed body, such as a fixed `400`.

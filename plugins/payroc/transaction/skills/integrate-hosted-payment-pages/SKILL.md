@@ -2,7 +2,7 @@
 name: integrate-hosted-payment-pages
 description: >-
   Guide an ISV developer or merchant through integrating Payroc's Hosted
-  Payment Pages (HPP) from credential setup to first successful UAT test
+  Payment Pages (HPP) from credential setup to first successful test
   transaction. Use this skill whenever someone asks about integrating Payroc
   Hosted Pages, implementing HPP, setting up a Payroc payment form, generating
   a Payroc auth hash, handling a Payroc receipt callback, getting Payroc
@@ -14,7 +14,7 @@ description: >-
   merchant-initiated transactions on Payroc — even if they don't explicitly
   mention "integration" or ask for step-by-step guidance.
 metadata:
-  version: "0.6.3"
+  version: "0.6.5"
   category: integration
   status: draft
 ---
@@ -43,7 +43,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 On first invocation, announce to the developer:
 
 > **Payroc Hosted Pages Integration**
-> I'll guide you from credential setup through a successful UAT test transaction.
+> I'll guide you from credential setup through a successful test transaction.
 > This covers card-not-present payments via Payroc's Hosted Payment Page — sale transactions, pre-authorizations (hold now, capture later), and recurring billing (save a card for later, then charge it on a schedule or on demand).
 >
 > **How HPP works (three parts):**
@@ -65,11 +65,13 @@ On first invocation, announce to the developer:
 
 ```text
 # Identity service (Bearer token — used for REST APIs: capture, repeat payments)
-# UAT/test: identity.uat.payroc.com · Production: identity.payroc.com (note: UAT has the .uat segment, prod does not)
-POST https://identity.uat.payroc.com/authorize
+# Same host for test and live: the API key decides which
+POST https://identity.payroc.com/authorize
 x-api-key: <api-key>
 
 # Hosted Payment Page — sale (form POST, loads the payment page)
+# The HPP, Self Care Portal and 3DS MPI are not part of the REST API and still have a separate test host
+# (payments.uat.payroc.com test, payments.payroc.com production). The REST API hosts do not.
 POST https://payments.uat.payroc.com/merchant/paymentpage
 Content-Type: application/x-www-form-urlencoded
 
@@ -80,16 +82,16 @@ POST https://payments.uat.payroc.com/merchant/preauthpage
 POST https://payments.uat.payroc.com/merchant/securecardpage
 
 # Capture API (pre-auth only)
-POST https://api.uat.payroc.com/v1/payments/{uniqueRef}/capture
+POST https://api.payroc.com/v1/payments/{uniqueRef}/capture
 Authorization:  Bearer <token>
 Content-Type:   application/json
 
 # Repeat payments — gateway path (Bearer token)
-POST https://api.uat.payroc.com/v1/processing-terminals/{terminalId}/payment-plans
-POST https://api.uat.payroc.com/v1/processing-terminals/{terminalId}/subscriptions
+POST https://api.payroc.com/v1/processing-terminals/{terminalId}/payment-plans
+POST https://api.payroc.com/v1/processing-terminals/{terminalId}/subscriptions
 
 # Repeat payments — your-own-software / MIT path (Bearer token; paymentMethod.type=secureToken)
-POST https://api.uat.payroc.com/v1/payments
+POST https://api.payroc.com/v1/payments
 ```
 
 ---
@@ -132,7 +134,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 
 1. **Inspect before asking** — read the codebase before asking anything; use what you find to skip obvious questions and ask targeted ones.
 2. **Ask before coding** — gather unknowns through questions before writing implementation code; wrong assumptions waste the developer's time.
-3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in UAT.
+3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in the test environment.
 4. **Read the references, don't guess — and pick the right reference for the question.** HPP has *three* source surfaces, not two — using the wrong one for a question is how memorised-but-wrong values leak through. The Step 1 hash recipe already gets this discipline applied rigorously; extend it to every other step.
    - **HPP form POST and receipt callback (PAYMENTMETHOD, RESPONSECODE, AMOUNT/DATETIME formats, hash field order) → the HPP narrative copies.** These live on the form-POST surface and are NOT in `references/api-schema.md`. The narrative copies — `references/authenticate-your-requests.md`, `references/load-hosted-payment-page.md`, `references/build-receipt-page.md` — are authoritative for them. Read the relevant narrative copy before emitting form POST fields or branching on receipt-callback values.
    - **Capture API and any other Payroc REST API surface → `references/api-schema.md`; repeat-payments REST surface → `references/repeat-payments-api-schema.md`.** The capture endpoint for pre-auth, the `transactionResult` schema (including the full `responseCode` and `status` enums) live in `api-schema.md`. The Secure Tokens / Payment Plans / Subscriptions endpoints and the Payments `secureToken` + `standingInstructions` shapes live in `repeat-payments-api-schema.md`. Field names, enum values, required fields, request/response shapes.
@@ -193,18 +195,18 @@ Once all three are in scope, continue to Prerequisites.
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable (and the receipt URL from config), and keep building. The developer can populate everything before they test.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable (and the receipt URL from config), and keep building. The developer can populate everything before they test.
 
-1. **Terminal ID** — a UAT terminal ID assigned by the Payroc Integrations team. UAT is Payroc's test environment; credentials are provisioned manually by the team (there is no self-serve signup).
-2. **Terminal secret** — created in the [Self-Care Portal](https://selfcare.payroc.com) for that specific UAT terminal.
-3. **Receipt URL** — a URL on their application that Payroc's HPP redirects the customer's browser to after payment, appending transaction details as query parameters. Because it's a browser redirect (not a call from Payroc's servers), **localhost works fine** for testing this step. The URL must be registered in the Self-Care Portal for the UAT terminal before a live test will redirect successfully — but you can build the receipt-handler route now and read the URL from config.
+1. **Terminal ID** — a test terminal ID assigned by the Payroc Integrations team. Test terminals are provisioned manually by the team.
+2. **Terminal secret** — created in the [Self-Care Portal](https://selfcare.payroc.com) for that specific test terminal.
+3. **Receipt URL** — a URL on their application that Payroc's HPP redirects the customer's browser to after payment, appending transaction details as query parameters. Because it's a browser redirect (not a call from Payroc's servers), **localhost works fine** for testing this step. The URL must be registered in the Self-Care Portal for the test terminal before a live test will redirect successfully — but you can build the receipt-handler route now and read the URL from config.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_TERMINAL_ID`, `PAYROC_TERMINAL_SECRET`, and a `PAYROC_RECEIPT_URL` setting. Write the code to read those values from the environment/config, then tell the developer what's outstanding and how to get it:
-- Terminal ID / UAT access → contact the Payroc Integrations team.
-- Terminal secret → create it in the Self-Care Portal once they have UAT access.
+- Terminal ID / test access → contact the Payroc Integrations team.
+- Terminal secret → create it in the Self-Care Portal once they have test access.
 - Receipt URL → decide the route now and build the handler; register the URL in the Self-Care Portal (and work through the tunneling options in the local testing section) before testing a live redirect.
 
-Ask for anything else you need at this point — for example, whether UAT credentials are already stored somewhere, or whether there's an existing checkout handler to modify rather than write from scratch.
+Ask for anything else you need at this point — for example, whether test credentials are already stored somewhere, or whether there's an existing checkout handler to modify rather than write from scratch.
 
 **If the developer has already confirmed the terminal credentials** (e.g. terminal ID and secret are visible in env vars or config), name the receipt URL as the main outstanding item to register before live testing — but still build the receipt handler against a configured URL rather than waiting on it.
 
@@ -253,7 +255,7 @@ Read the reference for your transaction type:
 
 ### Checkpoint
 
-Does submitting the form redirect the browser to the Payroc UAT page (payment page for sale/pre-auth, secure-card page for save-card) without an error? If not, diagnose before continuing.
+Does submitting the form redirect the browser to the Payroc test page (payment page for sale/pre-auth, secure-card page for save-card) without an error? If not, diagnose before continuing.
 
 ---
 
@@ -306,7 +308,7 @@ This stage is REST API over **Bearer-token auth** (obtain a token from the ident
 
 ### Checkpoint
 
-Gateway path: subscription created and `currentState.status` is `active` in UAT (and a `manual` `/pay` succeeded if applicable)? MIT path: first charge returns HTTP 200 with the `transactionResult` success branch verified against the full enum in `references/api-schema.md` (a real approval may be `status: "ready"` with `responseCode: "A"`)? Did you read the repeat-payments schema before emitting endpoints/enums? If not, use the error taxonomy.
+Gateway path: subscription created and `currentState.status` is `active` in the test environment (and a `manual` `/pay` succeeded if applicable)? MIT path: first charge returns HTTP 200 with the `transactionResult` success branch verified against the full enum in `references/api-schema.md` (a real approval may be `status: "ready"` with `responseCode: "A"`)? Did you read the repeat-payments schema before emitting endpoints/enums? If not, use the error taxonomy.
 
 ---
 
@@ -322,9 +324,9 @@ Gateway path: subscription created and `currentState.status` is `active` in UAT 
 - **VS Dev Tunnels** (built into Visual Studio and VS Code) — natural choice for .NET apps; creates a persistent public HTTPS URL tunneled to your local port with minimal setup.
 - **ngrok** — language-agnostic, quick setup, free tier works for development.
 - **Cloudflare Tunnel** — more robust for longer-lived environments.
-- **Deploy to a staging host** — if tunneling is not available, deploy to any UAT-accessible host and test there.
+- **Deploy to a staging host** — if tunneling is not available, deploy to any host the test environment can reach and test there.
 
-Register whichever public URL you use in the Self-Care Portal as the Background Validation URL for the UAT terminal (this is a separate field from the receipt URL).
+Register whichever public URL you use in the Self-Care Portal as the Background Validation URL for the test terminal (this is a separate field from the receipt URL).
 
 ---
 
@@ -333,17 +335,17 @@ Register whichever public URL you use in the Self-Care Portal as the Background 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Error from HPP immediately on redirect | Hash invalid | Re-read `references/authenticate-your-requests.md`; check AMOUNT format, DATETIME format and timezone, and field order; re-run against the example hash in the reference |
-| `RESPONSECODE=D` | Transaction declined | Expected in UAT — use a Payroc test card |
+| `RESPONSECODE=D` | Transaction declined | Expected in the test environment — use a Payroc test card |
 | `RESPONSECODE=R` | Referral — customer should contact bank | Treat as decline for Phase 1 testing |
 | `RESPONSECODE=C` | Card reported lost/stolen | Use a different test card |
 | App logged a failure but a real approval occurred — `RESPONSECODE` carried a value other than `A` (past surfacings: `E`) | Receipt-page branch treated `RESPONSECODE == 'A'` as the only success and silently misclassified other approvals | Read `references/build-receipt-page.md` for the full `RESPONSECODE` enum. Identify every value that pairs with bank approval and branch on that full set — `A` is an example, not the canonical set. |
 | Pre-auth: capture API returns HTTP 200 but app logged a failure — response shows `responseCode: "A"` / `responseMessage: "APPROVAL"` | Server-side success check branched on a remembered subset of `transactionResult.status` (past failure: only `"approved"` accepted; `"ready"` — authorized + queued for capture — silently treated as a failure) | Read the `transactionResult.status` enum from `references/api-schema.md` and branch on the full set of values that pair with bank approval. |
-| No redirect to receipt page after payment | Receipt URL not registered in Self-Care Portal, or registered with a typo | The receipt result is delivered as a **browser GET redirect** (query parameters) — not a server-side POST. Localhost is valid. Most likely cause: URL not registered or typo in Self-Care Portal. Confirm the URL exactly matches what's registered for the UAT terminal. |
+| No redirect to receipt page after payment | Receipt URL not registered in Self-Care Portal, or registered with a typo | The receipt result is delivered as a **browser GET redirect** (query parameters) — not a server-side POST. Localhost is valid. Most likely cause: URL not registered or typo in Self-Care Portal. Confirm the URL exactly matches what's registered for the test terminal. |
 | Response hash verification fails | Wrong fields or wrong order in verification hash | Re-read `references/build-receipt-page.md`; confirm exactly which response fields are hashed and their order |
 | Hash mismatch despite correct fields | Character encoding or whitespace | All hash inputs must be plain ASCII; check for Unicode characters, trailing spaces, or line endings in any field value |
 | 404 on capture API call | UNIQUEREF invalid or pre-auth expired | Verify UNIQUEREF matches the value from the receipt response; note pre-auths have an issuer-defined hold period after which they expire |
 | 409 on capture API call | Pre-auth already captured | Check order state before attempting capture; don't retry a completed capture |
-| 401 on capture/repeat-payments API call | Bearer token expired or wrong API key | Re-generate the Bearer token; confirm the `x-api-key` value used with the identity service |
+| 401 on capture/repeat-payments API call | Bearer token expired or wrong API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-generate the Bearer token; confirm the `x-api-key` value used with the identity service |
 | Save-card: error from HPP immediately on redirect, or hash mismatch | Sale hash recipe reused for save-card (left AMOUNT in, used ORDERID, or omitted ACTION), or posted to `paymentpage` instead of `securecardpage` | Re-read `references/save-payment-details/authenticate-your-requests.md`; the recipe is `TERMINALID:MERCHANTREF:DATETIME:ACTION:SECRET` (no AMOUNT). Confirm the endpoint is `/merchant/securecardpage`. |
 | Save-card: gateway rejects `STOREDCREDENTIALUSE` (or REST rejects `mitAgreement`/`processingModel`) | Wrong casing for the surface | HPP form POST uses UPPERCASE (`RECURRING`); REST APIs use lowercase (`recurring`). Read the reference for the surface you're emitting. |
 | Save-card: receipt handler never fires | Save-card redirect registered in the wrong Self-Care field | The save-card receipt uses the **Secure Token URL** field, separate from the sales/pre-auth receipt URL. Confirm it's registered there. |
@@ -361,11 +363,11 @@ Register whichever public URL you use in the Self-Care Portal as the Background 
 - [ ] Hash function validated against the example hash in `references/authenticate-your-requests.md`
 - [ ] All required POST fields present when loading HPP
 - [ ] Response hash verified before trusting any response data
-- [ ] `RESPONSECODE=A` confirmed in UAT with a test card
+- [ ] `RESPONSECODE=A` confirmed in the test environment with a test card
 - [ ] `UNIQUEREF` captured and stored
 - [ ] (Pre-auth only) Transaction type recorded in order model — HPP response does not include it
 - [ ] (Pre-auth only) `UNIQUEREF` persisted to durable storage (database/order record), not session or TempData
-- [ ] (Pre-auth only) Capture API tested in UAT — HTTP 200 with `transactionResult` confirmed
+- [ ] (Pre-auth only) Capture API tested in the test environment — HTTP 200 with `transactionResult` confirmed
 - [ ] Every POST field enum value (`PAYMENTMETHOD`, country, language, etc.) was read from `references/load-hosted-payment-page.md`, not from training data or this skill's examples
 - [ ] `RESPONSECODE` branching covers every approval value listed in `references/build-receipt-page.md` — not a remembered subset like just `A`
 - [ ] (Pre-auth only) Capture-response success branch on `transactionResult.status` covers every approval value in the `references/api-schema.md` enum (e.g. `"ready"`)
@@ -374,7 +376,7 @@ Register whichever public URL you use in the Self-Care Portal as the Background 
 - [ ] (Save-card only) Receipt branch uses the save-card `RESPONSECODE` set (`A`/`E14`/`E43`/`E44`) and `CARDREFERENCE` is persisted to durable storage (not session/TempData)
 - [ ] (Save-card only) Save-card redirect registered in the Self-Care **Secure Token URL** field
 - [ ] (Recurring only) Stored-credential usage casing matches the surface — UPPERCASE on the form, lowercase `mitAgreement`/`processingModel` on the REST API
-- [ ] (Recurring, gateway) Payment plan created before subscription; subscription `paymentMethod` is `{ type: secureToken, token: <CARDREFERENCE> }`; `currentState.status` is `active` in UAT
+- [ ] (Recurring, gateway) Payment plan created before subscription; subscription `paymentMethod` is `{ type: secureToken, token: <CARDREFERENCE> }`; `currentState.status` is `active` in the test environment
 - [ ] (Recurring, MIT) First charge sent with `standingInstructions` (`sequence: first`); follow-ons use `sequence: subsequent` with `referenceDataOfFirstTxn`; `channel` is a valid enum value
 - [ ] (Recurring only) Repeat-payments endpoints, fields, and enums were read from `references/repeat-payments-api-schema.md`, not from memory
 
@@ -419,11 +421,11 @@ Once `RESPONSECODE=A` is confirmed and all checklist items pass:
 > - **Authentication hash** — signs every payment request with your terminal secret; prevents tampering.
 > - **Checkout handler** — assembles and POSTs the payment form to Payroc's Hosted Payment Page.
 > - **Receipt handler** — receives Payroc's browser redirect (GET with query parameters), verifies the response hash, branches on the full RESPONSECODE approval set, and captures UNIQUEREF.
-> - **Validated in UAT** — end-to-end transaction confirmed with a test card.
+> - **Validated in the test environment** — end-to-end transaction confirmed with a test card.
 > - **Pre-authorization + Capture** (if applicable) — holds funds at checkout; captured via REST API when ready to settle; UNIQUEREF links the two calls; capture-response branch covers the full `transactionResult.status` approval set.
-> - **Recurring billing** (if applicable) — card saved on the Hosted Page via `securecardpage` (its own hash recipe and receipt), `CARDREFERENCE` stored durably, and repeat payments set up either through Payroc's gateway (Payment Plan + Subscription) or your own merchant-initiated charges (`secureToken` + `standingInstructions`), verified in UAT.
+> - **Recurring billing** (if applicable) — card saved on the Hosted Page via `securecardpage` (its own hash recipe and receipt), `CARDREFERENCE` stored durably, and repeat payments set up either through Payroc's gateway (Payment Plan + Subscription) or your own merchant-initiated charges (`secureToken` + `standingInstructions`), verified in the test environment.
 >
-> **Before going live:** swap the UAT endpoint URLs for production URLs — this applies to the HPP endpoints (`paymentpage` / `preauthpage` / `securecardpage`) and every REST endpoint (capture, payment-plans, subscriptions, payments) — confirm them in the references. Point credentials to the production terminal, confirm the receipt URL(s) — including the **Secure Token URL** if you save cards — are registered in the production Self-Care Portal, and remove any test card numbers.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal. The REST endpoints (capture, payment-plans, subscriptions, payments) keep the same host. Swap the test HPP host (`payments.uat.payroc.com`: `paymentpage` / `preauthpage` / `securecardpage`) for its production host; confirm it in the references. Also confirm the receipt URL(s) — including the **Secure Token URL** if you save cards — are registered in the production Self-Care Portal, and remove any test card numbers.
 
 Offer next steps:
 

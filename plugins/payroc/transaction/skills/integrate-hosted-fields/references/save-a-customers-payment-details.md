@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/save-a-customers-payment-details.md
-> Last synced: 2026-09-16. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Save a customer's payment details
 
@@ -175,8 +175,7 @@ To convert the single-use token into a secure token, send a POST request to our 
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                  |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens)         |
 
 ### Request parameters
 
@@ -303,7 +302,6 @@ paths:
               $ref: '#/components/schemas/tokenizationRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -3187,7 +3185,6 @@ paths:
               $ref: '#/components/schemas/tokenizationRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':

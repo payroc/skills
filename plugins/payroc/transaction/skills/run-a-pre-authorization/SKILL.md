@@ -12,7 +12,7 @@ description: >
   card sales (autoCapture: true), ACH/bank-transfer payments, refunds on settled transactions,
   3-D Secure authentication, or tokenization — those are separate skills.
 metadata:
-  version: "0.1.2"
+  version: "0.1.4"
   category: transaction
   status: draft
 ---
@@ -55,23 +55,23 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-Create pre-auth:  POST https://api.uat.payroc.com/v1/payments
+Create pre-auth:  POST https://api.payroc.com/v1/payments
                   Authorization:   Bearer <token>
                   Idempotency-Key: <uuid-v4>
                   Content-Type:    application/json
                   Body: autoCapture: false, processAsSale: false
 
-Capture:          POST https://api.uat.payroc.com/v1/payments/{paymentId}/capture
+Capture:          POST https://api.payroc.com/v1/payments/{paymentId}/capture
                   Authorization:   Bearer <token>
                   Idempotency-Key: <fresh-uuid-v4>
                   Content-Type:    application/json
 
-Reverse/void:     POST https://api.uat.payroc.com/v1/payments/{paymentId}/reverse
+Reverse/void:     POST https://api.payroc.com/v1/payments/{paymentId}/reverse
                   Authorization:   Bearer <token>
                   Idempotency-Key: <fresh-uuid-v4>
                   Content-Type:    application/json
 
-Adjust:           POST https://api.uat.payroc.com/v1/payments/{paymentId}/adjust
+Adjust:           POST https://api.payroc.com/v1/payments/{paymentId}/adjust
                   Authorization:   Bearer <token>
                   Idempotency-Key: <fresh-uuid-v4>
                   Content-Type:    application/json
@@ -100,10 +100,10 @@ recorded in [`references/_sources.md`](references/_sources.md).
 1. **Read schema before emitting enum values.** Every field that accepts a fixed set of strings — `channel`, `paymentMethod.type`, `cardDetails.entryMethod`, `keyedData.dataFormat`, `transactionResult.status`, `transactionResult.responseCode` — is documented in `references/api-schema.md`. Read it before emitting any value. A plausible-sounding string not in the documented enum will produce a 400 or silent mismatch. Apply the same discipline when reviewing developer code.
 2. **Both `autoCapture: false` AND `processAsSale: false` for pre-authorization.** Omitting either flag (or setting `autoCapture: true`) causes the gateway to process the transaction as a sale. These are the only two fields that distinguish a pre-auth from a sale in the create request.
 3. **Persist `paymentId` immediately.** The create response's `paymentId` is required for every subsequent operation (capture, adjust, reverse). If it is lost, the pre-authorization cannot be captured programmatically.
-4. **Idempotency-Key on every POST.** UUID v4, required. A fresh UUID per distinct operation — do not reuse the create key for the capture. When retrying a failed request, reuse the same key.
+4. **Idempotency-Key on every POST.** UUID v4, required. A fresh UUID per distinct operation — do not reuse the create key for the capture. Keep the key while the request is unchanged: after a timeout or network error (no response), resend the identical request with the same key, and after a `401`, get a new token and resend once with the same key. Use a new key only when you change the body, for example after fixing a `400`; the old key with a changed body returns `409` (`#idempotency-key-in-use`). After that `409`, check whether the earlier request already succeeded before sending again with a new key.
 5. **Branch on `transactionResult`, not HTTP status alone.** HTTP 201 (create) or 200 (capture) confirms the API accepted the request, not that the authorization or capture succeeded. Read `transactionResult.status` and `transactionResult.responseCode` against the full enums in `references/api-schema.md` before writing success/failure branches. `"approved"` is not a member of `TransactionResultStatus` — a common authorization success is `status: "ready"` with `responseCode: "A"`.
 6. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager.
-7. **Validate before advancing.** Confirm each step's checkpoint passes in UAT before moving to the next step.
+7. **Validate before advancing.** Confirm each step's checkpoint passes in the test environment before moving to the next step.
 
 ---
 
@@ -127,9 +127,9 @@ Use what you find to pre-fill obvious answers. Then confirm:
 
 ## Prerequisites
 
-These are needed to run and test the integration in UAT. If the developer already has them, great. If not, wire the code to read each value from an environment variable and keep building.
+These are needed to run and test the integration in the test environment. If the developer already has them, great. If not, wire the code to read each value from an environment variable and keep building.
 
-1. **API key** — used to generate Bearer tokens. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Processing terminal ID** — the `processingTerminalId` used in the create request body.
 3. **Pre-authorization enabled** on the terminal. If not enabled, create requests process as sales. The Payroc Integrations team enables this feature.
 
@@ -148,8 +148,7 @@ Either the credentials and terminal capability are confirmed, or the developer k
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; the API key decides which)
 
 Header: `x-api-key: <api-key>`
 
@@ -161,13 +160,13 @@ Store the API key in an environment variable. Never inline it.
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, verify the `x-api-key` header value and confirm the API key is for the UAT environment.
+Can the helper generate a Bearer token without error? If not, verify the `x-api-key` header value and confirm the API key is for the test environment.
 
 ---
 
 ## Step 2 — Create the pre-authorization
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments`
+Endpoint: `POST https://api.payroc.com/v1/payments`
 
 > **Read `references/api-schema.md` before writing the request body.** The values for `channel`, `paymentMethod.type`, `cardDetails.entryMethod`, `keyedData.dataFormat`, and all device model enums are defined there. Do not emit any of these from training data or memory.
 
@@ -230,7 +229,7 @@ After HTTP 201, read `transactionResult.status` and `transactionResult.responseC
 
 *(Include this step if the final amount may differ from the authorized amount)*
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments/{paymentId}/adjust`
+Endpoint: `POST https://api.payroc.com/v1/payments/{paymentId}/adjust`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <fresh-uuid-v4>`, `Content-Type: application/json`
 
@@ -247,7 +246,7 @@ Does the adjust call return HTTP 200? If not, check whether the payment has alre
 
 ## Step 4a — Capture the pre-authorization
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments/{paymentId}/capture`
+Endpoint: `POST https://api.payroc.com/v1/payments/{paymentId}/capture`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <fresh-uuid-v4>`, `Content-Type: application/json`
 
@@ -275,7 +274,7 @@ Does the capture call return HTTP 200? Does `transactionResult.responseCode` equ
 
 *(Implement instead of Step 4a when the merchant wants to release the hold without charging)*
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments/{paymentId}/reverse`
+Endpoint: `POST https://api.payroc.com/v1/payments/{paymentId}/reverse`
 
 Required headers: `Authorization: Bearer <token>`, `Idempotency-Key: <fresh-uuid-v4>`, `Content-Type: application/json`
 
@@ -293,11 +292,11 @@ Does the reverse call return HTTP 200? If not, check whether the payment was alr
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
-| 400 — `idempotencyKeyMissing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <uuid-v4>` to every POST |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 400 — `#idempotency-key-missing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <uuid-v4>` to every POST |
 | 400 — validation error mentioning `channel`, `entryMethod`, or `type` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — validation error on `amount` | Amount passed as decimal (e.g. `100.00`) | Use integer lowest denomination (e.g. `10000` for $100.00) |
-| 409 — duplicate `Idempotency-Key` | Same key reused across different operations | Generate a fresh UUID for every distinct operation |
+| 409 — duplicate `Idempotency-Key` | Same key reused across different operations | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for every distinct operation |
 | 404 on capture/adjust/reverse | `paymentId` wrong or not found | Verify the ID from the create response; check the payment exists |
 | Pre-auth processes as a sale | `autoCapture: true` or feature not enabled on terminal | Set `autoCapture: false` and `processAsSale: false`; confirm terminal has pre-auth enabled |
 | Capture greater than authorized amount | Capturing more than the hold without adjusting first | Call the Adjust endpoint to increase the authorized amount, then capture |
@@ -322,7 +321,7 @@ Does the reverse call return HTTP 200? If not, check whether the payment was alr
 - [ ] `transactionResult.status` and `transactionResult.responseCode` enums read from `references/api-schema.md` before writing success/failure branches
 - [ ] Capture: fresh `Idempotency-Key` (not reusing the create key)
 - [ ] Amounts in integer lowest denomination (not decimals)
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 - [ ] Reversal: developer confirmed they understand the operation is irreversible
 
 ---
@@ -338,9 +337,9 @@ Once all checklist items pass:
 > - **Capture** (if built) — full or partial capture from the `paymentId`.
 > - **Adjust** (if built) — amount adjustment before capture.
 > - **Reverse/void** (if built) — hold released without charging.
-> - **Validated in UAT** — end-to-end flow confirmed.
+> - **Validated in the test environment** — end-to-end flow confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal.
 
 Offer next steps:
 - **Tokenization / recurring billing** — save the customer's payment method as a secure token for future merchant-initiated charges

@@ -2,7 +2,7 @@
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
 > (Funding Recipients schemas) and `https://docs.payroc.com/api/schema/funding/funding-recipients/`.
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum values
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum values
 > and required-field sets from here, not from memory. To refresh, re-fetch the source and regenerate
 > this file (see [`_sources.md`](./_sources.md)).
 
@@ -18,10 +18,9 @@
 | Update a funding recipient | `PUT /v1/funding-recipients/{recipientId}` |
 | Delete a funding recipient | `DELETE /v1/funding-recipients/{recipientId}` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Identity: `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 

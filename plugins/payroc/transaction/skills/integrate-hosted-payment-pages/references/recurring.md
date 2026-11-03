@@ -44,7 +44,7 @@ Does the save-card hash function reproduce the example hash from the reference e
 Read: references/save-payment-details/load-hosted-payment-page.md
 
 The endpoint is **`/merchant/securecardpage`** — *not* `/merchant/paymentpage` (sale) or `/merchant/preauthpage`
-(pre-auth). As a verification anchor, the UAT URL should be
+(pre-auth). As a verification anchor, the test URL should be
 `https://payments.uat.payroc.com/merchant/securecardpage`. If the reference shows different, use the reference
 and note the discrepancy.
 
@@ -58,7 +58,7 @@ persist that in your own model alongside `MERCHANTREF`.
 
 ### Checkpoint
 
-Does submitting the form redirect the browser to the Payroc UAT secure-card page without an error? If not,
+Does submitting the form redirect the browser to the Payroc test secure-card page without an error? If not,
 diagnose (common cause: posted to `paymentpage`, or hash built with the sale recipe) before continuing.
 
 ---
@@ -100,8 +100,8 @@ Receipt handler verifies the response hash, branches on the save-card `RESPONSEC
 Read: references/repeat-payments-api-schema.md
 
 All of Stage B is REST API over Bearer-token auth — obtain a token from the identity service exactly as for
-pre-auth capture (`POST https://identity.uat.payroc.com/authorize` in UAT, `https://identity.payroc.com/authorize`
-in production — the UAT host carries the `.uat` segment, prod does not — with `x-api-key`; `access_token` valid 3600s).
+pre-auth capture (`POST https://identity.payroc.com/authorize` with `x-api-key`, the same host for test and live;
+`access_token` valid 3600s).
 Every POST needs `Authorization: Bearer <token>`, `Content-Type: application/json`, and a unique
 `Idempotency-Key` (UUID v4). Read every endpoint, field name, and enum from the reference — don't emit from
 memory, and watch the lowercase casing of `mitAgreement` / `processingModel`.
@@ -138,14 +138,14 @@ For a `manual` subscription, collect each payment with
 same `frequency` period. For `automatic`, the gateway collects on schedule. Manage the
 lifecycle with `/deactivate` and `/reactivate`.
 
-**Verify in UAT:** the subscription is created (HTTP 2xx) and `currentState.status` is `active`. For a
+**Verify in the test environment:** the subscription is created (HTTP 2xx) and `currentState.status` is `active`. For a
 `manual` plan, also run one `/pay` call and confirm it succeeds. It succeeds only if a payment is due, so
 test with a `startDate` of today.
 
 #### Checkpoint
 
 Payment plan created, subscription created with `paymentMethod.type: secureToken` + the `CARDREFERENCE` token,
-and `currentState.status` is `active` in UAT (and a manual `/pay` succeeded if applicable)? Did you read the
+and `currentState.status` is `active` in the test environment (and a manual `/pay` succeeded if applicable)? Did you read the
 plan/subscription enums from `references/repeat-payments-api-schema.md` first? If not, use the SKILL.md error
 taxonomy.
 
@@ -166,7 +166,7 @@ that positions the transaction in the sequence:
 The first charge is `sequence: first`; every later charge is `sequence: subsequent`. This mirrors the HPP
 receipt's `STOREDCREDENTIALTXTYPE` (`FIRST_TXN` → `SUBSEQUENT_MERCHANT_INITIATED_TXN`).
 
-**Verify in UAT:** the first MIT charge returns HTTP 200 and the `transactionResult` success branch passes —
+**Verify in the test environment:** the first MIT charge returns HTTP 200 and the `transactionResult` success branch passes —
 read the `transactionResult.status` / `responseCode` enums from `references/api-schema.md` (the same
 discipline as pre-auth capture; a real approval may come back as `ready` with `responseCode: "A"`, not
 `"approved"`).

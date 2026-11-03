@@ -3,7 +3,7 @@
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/api/schema/reporting/settlement/list-ach-deposits.md`,
 > `https://docs.payroc.com/api/schema/reporting/settlement/retrieve-ach-deposit.md`,
 > `https://docs.payroc.com/api/schema/reporting/settlement/list-ach-deposit-fees.md`.
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read field names,
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read field names,
 > enum values, and required-field sets from here, not from memory. To refresh, re-fetch the source URLs
 > and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -20,9 +20,8 @@ idempotency key required (GET operations are idempotent by definition).
 | Retrieve an ACH deposit | `GET /v1/ach-deposits/{achDepositId}` |
 | List ACH deposit fees | `GET /v1/ach-deposit-fees` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
+Identity: `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -120,13 +119,13 @@ Paginated list envelope:
         "processingAccountId": 38765,
         "link": {
           "rel": "merchant",
-          "href": "https://api.uat.payroc.com/v1/merchants/4525644354"
+          "href": "https://api.payroc.com/v1/merchants/4525644354"
         }
       },
       "links": [
         {
           "rel": "achDepositFees",
-          "href": "https://api.uat.payroc.com/v1/ach-deposit-fees?achDepositId=99"
+          "href": "https://api.payroc.com/v1/ach-deposit-fees?achDepositId=99"
         }
       ]
     }
@@ -154,7 +153,7 @@ Returns a single `achDeposit` object — same shape as items in the `data` array
 | --- | --- |
 | 400 | Validation error |
 | 401 | Identity could not be verified |
-| 403 | Insufficient permissions |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | 404 | ACH deposit not found |
 | 406 | Not acceptable |
 | 500 | Server error |
@@ -162,7 +161,7 @@ Returns a single `achDeposit` object — same shape as items in the `data` array
 ### Example request
 
 ```
-GET https://api.uat.payroc.com/v1/ach-deposits/99
+GET https://api.payroc.com/v1/ach-deposits/99
 Authorization: Bearer <token>
 ```
 
@@ -189,13 +188,13 @@ Authorization: Bearer <token>
     "processingAccountId": 38765,
     "link": {
       "rel": "merchant",
-      "href": "https://api.uat.payroc.com/v1/merchants/4525644354"
+      "href": "https://api.payroc.com/v1/merchants/4525644354"
     }
   },
   "links": [
     {
       "rel": "achDepositFees",
-      "href": "https://api.uat.payroc.com/v1/ach-deposit-fees?achDepositId=99"
+      "href": "https://api.payroc.com/v1/ach-deposit-fees?achDepositId=99"
     }
   ]
 }
@@ -261,14 +260,14 @@ Paginated list envelope (same structure as List ACH deposits):
         "processingAccountId": 38765,
         "link": {
           "rel": "merchant",
-          "href": "https://api.uat.payroc.com/v1/merchants/4525644354"
+          "href": "https://api.payroc.com/v1/merchants/4525644354"
         }
       },
       "achDeposit": {
         "achDepositId": 99,
         "link": {
           "rel": "achDeposit",
-          "href": "https://api.uat.payroc.com/v1/ach-deposits/99"
+          "href": "https://api.payroc.com/v1/ach-deposits/99"
         }
       }
     }
@@ -292,7 +291,7 @@ These are read/reporting (GET) endpoints, so the typical status set is `400` (in
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/ach-deposits",
+  "instance": "https://api.payroc.com/v1/ach-deposits",
   "errors": [
     {
       "parameter": "date",
@@ -307,7 +306,7 @@ These are read/reporting (GET) endpoints, so the typical status set is `400` (in
 | --- | --- |
 | 400 | Validation error — missing required parameter, invalid date format, both `before` and `after` sent together |
 | 401 | Bearer token missing, expired, or invalid |
-| 403 | API key lacks permission to access this endpoint |
+| 403 | API key lacks permission to access this endpoint; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | 404 | `achDepositId` not found (retrieve endpoint only) |
 | 406 | Not acceptable (Accept header mismatch) |
-| 500 | Server error — known to occur intermittently in UAT; retry with backoff |
+| 500 | Server error — known to occur intermittently in the test environment; retry with backoff |

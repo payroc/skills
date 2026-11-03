@@ -6,8 +6,8 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (paths `POST /processing-accounts/{processingAccountId}/attachments`, `GET /attachments/{attachmentId}`; schemas `attachment`, `AttachmentType`, `AttachmentUploadStatus`, `AttachmentEntityType`, `AttachmentEntity`, `ProcessingAccountsProcessingAccountIdAttachmentsPostRequestBodyContentMultipartFormDataSchemaAttachment`) | 2026-09-16 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (paths `POST /processing-accounts/{processingAccountId}/attachments`, `GET /attachments/{attachmentId}`; schemas `attachment`, `AttachmentType`, `AttachmentUploadStatus`, `AttachmentEntityType`, `AttachmentEntity`, `ProcessingAccountsProcessingAccountIdAttachmentsPostRequestBodyContentMultipartFormDataSchemaAttachment`) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The
 attachment schemas are entirely Payroc-owned, so this skill has no `third-party-derived`
@@ -22,6 +22,6 @@ references.
 - The `uploadStatus` starts as `pending` immediately after upload. Poll the retrieve endpoint
   to check for transition to `accepted` or `rejected`.
 - The retrieve endpoint (`GET /attachments/{attachmentId}`) returns metadata only — not file bytes.
-- UAT testability is **yellow**: the upload path can be tested against UAT; however, the transition
+- Test-environment testability is **yellow**: the upload path can be tested with a test API key; however, the transition
   from `pending` to `accepted`/`rejected` depends on backend processing timing and may not be
   immediately observable.

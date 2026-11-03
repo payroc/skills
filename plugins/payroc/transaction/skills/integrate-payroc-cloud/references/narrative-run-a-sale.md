@@ -1,7 +1,7 @@
 # Narrative — run a sale through Payroc Cloud
 
 Source of truth for **how to sequence the calls**. For field names, enum values, and request/response
-shapes, use `api-schema.md`. Last synced: 2026-06-17. Source:
+shapes, use `api-schema.md`. Last synced: 2026-10-30. Source:
 `docs.payroc.com/essentials/payroc-cloud/run-a-sale.md` (see `_sources.md`).
 
 ## The premise
@@ -60,7 +60,7 @@ Status values: `inProgress`, `completed`, `failure`, `canceled`.
   {
     "status": "completed",
     "paymentInstructionId": "a37439165d134678a9100ebba3b29597",
-    "link": { "rel": "self", "method": "GET",
+    "link": { "rel": "payment", "method": "GET",
               "href": "https://api.payroc.com/v1/payments/{paymentId}" }
   }
   ```

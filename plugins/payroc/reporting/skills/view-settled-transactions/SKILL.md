@@ -1,22 +1,19 @@
 ---
 name: view-settled-transactions
 description: >
-  Guides developers through querying Payroc's Settlement Reporting API to retrieve
-  settled transactions and settlement batches (GET /v1/batches, GET /v1/transactions).
-  Use this skill when the user wants to view settled (batched/cleared) transactions,
-  retrieve post-settlement data, reconcile payments against a settlement batch, list
-  settled transactions within a specific batch, look up which transactions are in a
-  given batch, build a settlement reconciliation workflow, look up a settled transaction
-  by batch ID or settlement date, inspect the settled.achDate or settled.achDepositId
-  fields on transaction records, or work with the /v1/batches or /v1/transactions
-  reporting endpoints. Also trigger when someone asks about daily settlement reports,
-  end-of-day reconciliation, batch transaction lists, settlement totals, or matching
-  captured card payments to settlement batch records.
-  Do NOT use for: viewing standalone ACH deposit records or ACH deposit fees
-  (use view-ach-deposits), viewing authorization records (use view-authorizations),
-  processing payments, creating refunds, or checking real-time authorization status.
+  Guides developers through querying Payroc's Settlement Reporting API to retrieve settled
+  transactions and settlement batches (GET /v1/batches, GET /v1/transactions). Use when the user
+  wants to view settled (batched/cleared) transactions, reconcile payments against a settlement
+  batch, list or look up the transactions in a given batch, build a settlement reconciliation
+  workflow, look up a settled transaction by batch ID or settlement date, inspect the
+  settled.achDate or settled.achDepositId fields on transaction records, or work with /v1/batches or
+  /v1/transactions. Also trigger for end-of-day reconciliation or matching captured card payments to
+  settlement batch records. Do NOT use for: batch-level totals or daily batch summaries alone (use
+  view-settlement-batches), viewing standalone ACH deposit records or ACH deposit fees (use
+  view-ach-deposits), viewing authorization records (use view-authorizations), processing payments,
+  creating refunds, or checking real-time authorization status.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: reporting
   status: draft
 ---
@@ -40,7 +37,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-> **UAT data note.** The Payroc UAT environment periodically wipes settlement data, so queries against `api.uat.payroc.com` may return empty results even with a valid API key. This is expected UAT behaviour — it does not indicate a code problem or a production limitation. If UAT returns empty results for `/v1/batches` or `/v1/transactions`, advise the developer to: (1) try a recent past date (within the last 7 days); (2) contact the Payroc Integrations team for a UAT environment with seed data; or (3) treat the empty response as a successful call and proceed to production testing. The endpoints and schemas documented here match the production API spec.
+> **Test data note.** The Payroc test environment periodically wipes settlement data, so queries made with a test API key may return empty results even when the key is valid (observed on the earlier, separate test host). This is expected test-environment behaviour — it does not indicate a code problem or a production limitation. If the test environment returns empty results for `/v1/batches` or `/v1/transactions`, advise the developer to: (1) try a recent past date (within the last 7 days); (2) contact the Payroc Integrations team for a test environment with seed data; or (3) treat the empty response as a successful call and proceed to production testing. The endpoints and schemas documented here match the production API spec.
 
 ---
 
@@ -48,23 +45,23 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ```text
 # Step 1 — Find batches for a date (date = batch submission date, not original authorization date)
-GET  https://api.uat.payroc.com/v1/batches?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/batches?date=YYYY-MM-DD
 Authorization: Bearer <token>
 
 # Step 1b (optional) — Retrieve a single batch by ID
-GET  https://api.uat.payroc.com/v1/batches/{batchId}
+GET  https://api.payroc.com/v1/batches/{batchId}
 Authorization: Bearer <token>
 
 # Step 2 — Get transactions in a batch (from batchId in step 1 response)
-GET  https://api.uat.payroc.com/v1/transactions?batchId={batchId}
+GET  https://api.payroc.com/v1/transactions?batchId={batchId}
 Authorization: Bearer <token>
 
 # Alternative — Get all transactions for a date directly (date = batch submission date, not transaction date)
-GET  https://api.uat.payroc.com/v1/transactions?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/transactions?date=YYYY-MM-DD
 Authorization: Bearer <token>
 
 # Step 3 (optional) — Retrieve a single transaction
-GET  https://api.uat.payroc.com/v1/transactions/{transactionId}
+GET  https://api.payroc.com/v1/transactions/{transactionId}
 Authorization: Bearer <token>
 ```
 
@@ -131,13 +128,13 @@ Also confirm:
 
 These are needed to **run and test** the integration — not to write the code. If the developer already has them, proceed. If not, wire the code to read from environment variables and keep building.
 
-1. **API key** — exchanged for a Bearer token. Provisioned by the Payroc Integrations team.
-2. **UAT environment access** — `api.uat.payroc.com` for test, `api.payroc.com` for production.
-3. **A date with settlement data** — in UAT, data may be sparse or absent (see UAT status note above).
+1. **API key** — exchanged for a Bearer token. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Test environment access** — `api.payroc.com` for both test and live; use a test API key for testing, because the key, not the URL, decides test or live.
+3. **A date with settlement data** — in the test environment, data may be sparse or absent (see the test data note above).
 
 **If anything is missing — warn, don't block.** Propose env var names like `PAYROC_API_KEY`. Write code to read from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc UAT API key to test this — contact the Payroc Integrations team if you don't have one. Note: UAT settlement data may be sparse; if queries return empty results, that's a data availability issue, not a code problem.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc test API key to test this. Create one in the Developer Portal (https://developers.payroc.com). Note: test-environment settlement data may be sparse; if queries return empty results, that's a data availability issue, not a code problem.
 
 ### Checkpoint
 
@@ -151,8 +148,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding 
 
 Obtain a Bearer token by exchanging the API key against the Identity Service:
 
-- UAT: `POST https://identity.uat.payroc.com/authorize` with header `x-api-key: <api-key>`
-- Production: `POST https://identity.payroc.com/authorize` with header `x-api-key: <api-key>`
+- `POST https://identity.payroc.com/authorize` with header `x-api-key: <api-key>` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 The response contains `access_token`, `expires_in` (3600 seconds), and `token_type` ("Bearer"). Use `Authorization: Bearer <access_token>` on all subsequent requests.
 
@@ -171,7 +167,7 @@ Can the helper generate a Bearer token without error? If not, verify the `x-api-
 > Read `references/api-schema.md` before writing any request. Confirm the required parameters and response field names from the reference — not from memory.
 
 ```
-GET https://api.uat.payroc.com/v1/batches?date=YYYY-MM-DD
+GET https://api.payroc.com/v1/batches?date=YYYY-MM-DD
 Authorization: Bearer <access_token>
 ```
 
@@ -192,7 +188,7 @@ Optional parameter: `merchantId` — filter to a specific merchant (useful for m
 
 ### Checkpoint
 
-Does the request return HTTP 200 with a `data` array? If `data` is empty, check the date (try yesterday's date) and see the UAT note above. If you get 400, check the `date` format.
+Does the request return HTTP 200 with a `data` array? If `data` is empty, check the date (try yesterday's date) and see the test data note above. If you get 400, check the `date` format.
 
 ---
 
@@ -201,17 +197,17 @@ Does the request return HTTP 200 with a `data` array? If `data` is empty, check 
 If you already have a `batchId` (e.g. received via a webhook or external notification) and want to retrieve that batch's metadata without listing all batches for a date:
 
 ```
-GET https://api.uat.payroc.com/v1/batches/{batchId}
+GET https://api.payroc.com/v1/batches/{batchId}
 Authorization: Bearer <access_token>
 ```
 
 Replace `{batchId}` with a non-null **integer** batch ID. The response shape is identical to a single batch object from the list response (same fields: `batchId`, `saleAmount`, `returnAmount`, `transactionCount`, `currency`, `merchant`, `links`, etc.).
 
-For production, replace `api.uat.payroc.com` with `api.payroc.com`.
+The host is the same for test and live. For production, use a live API key.
 
 ### Checkpoint
 
-Does the request return HTTP 200 with the batch details? If 404, verify the `batchId` is an integer and from the correct environment (UAT/production).
+Does the request return HTTP 200 with the batch details? If 404, verify the `batchId` is an integer and from the correct environment (test or live data, depending on the API key).
 
 ---
 
@@ -222,14 +218,14 @@ Does the request return HTTP 200 with the batch details? If 404, verify the `bat
 From the `batchId` obtained in Step 2:
 
 ```
-GET https://api.uat.payroc.com/v1/transactions?batchId={batchId}
+GET https://api.payroc.com/v1/transactions?batchId={batchId}
 Authorization: Bearer <access_token>
 ```
 
 **Alternative** — skip batch lookup and query by date directly:
 
 ```
-GET https://api.uat.payroc.com/v1/transactions?date=YYYY-MM-DD
+GET https://api.payroc.com/v1/transactions?date=YYYY-MM-DD
 Authorization: Bearer <access_token>
 ```
 
@@ -281,7 +277,7 @@ Does the request return HTTP 200 with a `data` array? If `transactionId` is `nul
 If the developer needs a specific transaction by ID:
 
 ```
-GET https://api.uat.payroc.com/v1/transactions/{transactionId}
+GET https://api.payroc.com/v1/transactions/{transactionId}
 Authorization: Bearer <access_token>
 ```
 
@@ -289,7 +285,7 @@ The `transactionId` must be a **non-null integer** (from the list response). Whe
 
 ### Checkpoint
 
-Does the request return HTTP 200 with the transaction details? If 404, confirm the `transactionId` is correct and from the same environment (UAT/production).
+Does the request return HTTP 200 with the transaction details? If 404, confirm the `transactionId` is correct and from the same environment (test or live data, depending on the API key).
 
 ---
 
@@ -319,15 +315,15 @@ GET /v1/transactions?batchId=65&limit=50&after=<cursor>
 | --- | --- | --- |
 | 400 — missing date/batchId | Request to `/v1/transactions` without `date` or `batchId` | Add either `date=YYYY-MM-DD` or `batchId=<integer>` |
 | 400 — validation error | Malformed parameter (e.g. date format wrong) | Check `errors[].parameter` and `errors[].message` for which field failed |
-| 401 | Token missing, expired, or API key invalid | Re-authenticate; verify `x-api-key` is correct for the target environment |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
+| 401 | Token missing, expired, or API key invalid | Re-authenticate; verify `x-api-key` is correct for the target environment, or is not an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
 | 404 | `transactionId` not found (path does not exist; 404 is expected behaviour but is not listed in the API schema's documented error codes) | Verify the ID is an integer and from the correct environment |
 | 406 | Content negotiation failure | Ensure `Accept: application/json` is set (or omitted) |
 | 500 | Server error | Retry with exponential backoff; check `errors[]` if present |
 
 **Reading validation errors:** Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`); Payroc **extends** it with an `errors` array. Each `errors[]` item has `parameter` (JSON path of the failing field), `detail` (short reason), and `message` (human-readable explanation). Use `parameter` to identify which field caused the error.
 
-**UAT empty results:** A 200 response with an empty `data` array is not an error. In UAT, settlement data is periodically wiped. This is a data availability issue, not a code problem — see the UAT note at the top of this skill.
+**Test-environment empty results:** A 200 response with an empty `data` array is not an error. In the test environment, settlement data is periodically wiped. This is a data availability issue, not a code problem — see the test data note at the top of this skill.
 
 ---
 

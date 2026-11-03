@@ -12,7 +12,7 @@ description: >
   verifying bank accounts, viewing settlement batches, viewing settled transactions, or viewing
   funding activity — those have dedicated skills.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: reporting
   status: draft
 ---
@@ -36,8 +36,8 @@ Before announcing anything or starting the flow, confirm this skill is current:
 
 ---
 
-> **Known UAT behavior:** the ACH deposit endpoints may return HTTP 500 errors in the Payroc UAT
-> environment. This is expected UAT instability, not an indication your request is malformed — retry
+> **Known test-environment behavior:** the ACH deposit endpoints may return HTTP 500 errors in the Payroc test
+> environment. This is expected test-environment instability, not an indication your request is malformed — retry
 > with exponential backoff, and if it persists, contact the Payroc Integrations team. The skill content
 > is derived directly from the published Payroc API specification and is spec-accurate.
 
@@ -63,15 +63,15 @@ For complete field names, all response schema details, and error shapes, read
 
 ```text
 # List ACH deposits
-GET  https://api.uat.payroc.com/v1/ach-deposits?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/ach-deposits?date=YYYY-MM-DD
 Authorization: Bearer <token>
 
 # Retrieve a deposit by ID
-GET  https://api.uat.payroc.com/v1/ach-deposits/{achDepositId}
+GET  https://api.payroc.com/v1/ach-deposits/{achDepositId}
 Authorization: Bearer <token>
 
 # List deposit fees
-GET  https://api.uat.payroc.com/v1/ach-deposit-fees?date=YYYY-MM-DD
+GET  https://api.payroc.com/v1/ach-deposit-fees?date=YYYY-MM-DD
 Authorization: Bearer <token>
 ```
 
@@ -120,7 +120,7 @@ Use what you find to pre-fill obvious answers. Then confirm:
    - List fees for a deposit
 2. **Filter scope:** Is the developer filtering by a specific merchant ID, or listing all merchants?
 3. **Pagination:** Will the integration page through results (multi-page) or just take the first page?
-4. **Target environment:** UAT (testing) or production?
+4. **Target environment:** testing (test API key) or live (live API key)?
 
 Use the answers to implement only the relevant operations and skip sections that don't apply.
 
@@ -128,15 +128,15 @@ Use the answers to implement only the relevant operations and skip sections that
 
 ## Prerequisites
 
-To run and test this integration in UAT:
+To run and test this integration in the test environment:
 
-1. **API key** — provisioned by the Payroc Integrations team along with UAT access.
-2. **UAT environment** — `api.uat.payroc.com`. There is no self-serve signup; UAT access is provisioned by the Payroc Integrations team.
-3. **A date with ACH deposit data** — the list endpoint requires a `date` parameter and the UAT environment may have limited historical data.
+1. **API key** — for testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Test environment** — `api.payroc.com` (the same host as live; the test API key selects it). Other test access (terminals, accounts) is provisioned by the Payroc Integrations team.
+3. **A date with ACH deposit data** — the list endpoint requires a `date` parameter and the test environment may have limited historical data.
 
 **If the API key is missing — warn, don't block.** Wire the code to read credentials from environment variables and keep building. Tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need Payroc UAT access to actually run or test this — contact the Payroc Integrations team to get it, and set the variable before testing. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key from `PAYROC_API_KEY`. You'll need a Payroc test API key to actually run or test this. Create one in the Developer Portal (https://developers.payroc.com) and set the variable before testing. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -155,8 +155,7 @@ Exchange your API key for a Bearer token using the Payroc identity service.
 > for the endpoint URL, header name, and response fields. If anything below conflicts with the reference,
 > the reference takes precedence.
 
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 Header: `x-api-key: <api-key>` — no request body.
 
@@ -178,12 +177,12 @@ Can the helper generate a Bearer token without error? If not, check the `x-api-k
 > (`achDepositId`, `paymentDate`, `associationDate`, `netAmount`, etc.) and their types are documented
 > there. Do not guess field names from training data — use only the reference.
 
-Endpoint: `GET https://api.uat.payroc.com/v1/ach-deposits`
+Endpoint: `GET https://api.payroc.com/v1/ach-deposits`
 
 Required query parameter: **`date`** (`YYYY-MM-DD`) — the date the merchant **received** the ACH deposit (`paymentDate` in the response). Note: the response also includes `achDate` (date Payroc sent the ACH) and `associationDate` (date sent to card brands for clearing) — these are different dates. The `date` filter matches `paymentDate` only.
 
 ```bash
-curl -G https://api.uat.payroc.com/v1/ach-deposits \
+curl -G https://api.payroc.com/v1/ach-deposits \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "date=2024-07-02"
 ```
@@ -219,12 +218,12 @@ Does the call return HTTP 200 with a `data` array? If not, work through the erro
 
 *(Include if the developer selected this operation)*
 
-Endpoint: `GET https://api.uat.payroc.com/v1/ach-deposits/{achDepositId}`
+Endpoint: `GET https://api.payroc.com/v1/ach-deposits/{achDepositId}`
 
 The `achDepositId` (integer) comes from the list response above.
 
 ```bash
-curl https://api.uat.payroc.com/v1/ach-deposits/99 \
+curl https://api.payroc.com/v1/ach-deposits/99 \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -248,7 +247,7 @@ exist for the authenticated context.
 
 *(Include if the developer selected this operation)*
 
-Endpoint: `GET https://api.uat.payroc.com/v1/ach-deposit-fees`
+Endpoint: `GET https://api.payroc.com/v1/ach-deposit-fees`
 
 > **Read `references/api-schema.md` before writing this request.** Pay particular attention to the
 > conditional requirement: either `date` or `achDepositId` must be provided — confirm this before
@@ -258,17 +257,17 @@ At least one of `date` or `achDepositId` must be provided — providing neither 
 
 ```bash
 # By deposit ID (preferred when you have one from a prior call)
-curl -G https://api.uat.payroc.com/v1/ach-deposit-fees \
+curl -G https://api.payroc.com/v1/ach-deposit-fees \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "achDepositId=99"
 
 # By date
-curl -G https://api.uat.payroc.com/v1/ach-deposit-fees \
+curl -G https://api.payroc.com/v1/ach-deposit-fees \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "date=2024-07-02"
 
 # By both (narrows to fees for deposit 99 on that date)
-curl -G https://api.uat.payroc.com/v1/ach-deposit-fees \
+curl -G https://api.payroc.com/v1/ach-deposit-fees \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "achDepositId=99" \
   --data-urlencode "date=2024-07-02"
@@ -304,11 +303,11 @@ Does the call return HTTP 200 with fee records? If you get a `400`, confirm that
 | 400 — missing filter on deposit fees | Neither `date` nor `achDepositId` provided | Add at least one of `?date=YYYY-MM-DD` or `?achDepositId=<id>` — providing both is also valid |
 | 400 — invalid date format | Date not in `YYYY-MM-DD` format | Correct the format; ISO 8601 date strings only |
 | 400 — `before` and `after` both sent | Pagination cursor conflict | Remove one — use `after` for forward pagination, `before` for backward |
-| 401 — identity not verified | Token missing, expired, or API key wrong | Re-generate the Bearer token; verify the `x-api-key` value is correct for the environment |
-| 403 — insufficient permissions | API key scope doesn't cover reporting | Contact Payroc to check API key permissions |
-| 404 — deposit not found | `achDepositId` doesn't exist in this context, **or the request URL uses the wrong environment** | Check the base URL in the request: UAT is `api.uat.payroc.com`, production is `api.payroc.com`. A deposit ID created in UAT will 404 in production and vice versa. Verify the ID from the list response using the same environment. |
+| 401 — identity not verified | Token missing, expired, or API key wrong | Re-generate the Bearer token; verify the `x-api-key` value is correct for the environment, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 403 — insufficient permissions | API key scope doesn't cover reporting; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc to check API key permissions |
+| 404 — deposit not found | `achDepositId` doesn't exist in this context, **or the request uses an API key for the other environment (test vs live)** | Check which API key the request uses: the host is `api.payroc.com` for both test and live. Payroc sends test-key requests to its test environment, so a deposit ID from test data will 404 with a live key, and the reverse. Verify the ID from the list response using the same key. |
 | 406 — not acceptable | `Accept` header set to a non-JSON MIME type | Remove the `Accept` header or set it to `application/json`; these endpoints return JSON only |
-| 500 — server error | Transient server error (known to occur in UAT) | Retry with exponential backoff. Check `errors[]` array for detail. |
+| 500 — server error | Transient server error (known to occur in the test environment) | Retry with exponential backoff. Check `errors[]` array for detail. |
 
 **Reading error details** — the response uses the RFC 7807 problem-details envelope (`type`, `title`,
 `status`, `detail`, `instance`); Payroc extends it with an `errors` array. Each `errors[]` item has a
@@ -327,7 +326,7 @@ error standard.
 - **Using `before` and `after` together** — pick one pagination direction per request
 - **Displaying raw amounts** — `netAmount`, `sales`, `returns`, etc. are in the lowest denomination; always divide by 100 (or equivalent) before displaying dollar/pound amounts
 - **ID type confusion** — `achDepositId` is an integer; `merchantId` is a string — don't swap them
-- **Wrong environment** — UAT (`api.uat.payroc.com`) and production (`api.payroc.com`) use different base URLs and credentials. When reviewing a developer's request that returns 404, always check the base URL in the request first — a deposit ID that exists in UAT will 404 in production and vice versa.
+- **Wrong environment** — test and live use the same base URL (`api.payroc.com`) but different API keys. When reviewing a developer's request that returns 404, always check which API key the request uses first — Payroc sends test-key requests to its test environment, so a deposit ID from test data will 404 with a live key, and the reverse.
 
 ---
 
@@ -341,7 +340,7 @@ error standard.
 - [ ] Only one of `after` or `before` used per paginated request (not both)
 - [ ] Field names (`achDepositId`, `paymentDate`, `netAmount`, etc.) read from `references/api-schema.md` — not from training data
 - [ ] Monetary amounts divided by 100 before display (they are integers in lowest denomination)
-- [ ] UAT endpoints used during testing (`api.uat.payroc.com`, `identity.uat.payroc.com`)
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -356,7 +355,7 @@ Once all checklist items pass:
 > - **Retrieve deposit** (if built) — single deposit lookup by `achDepositId`.
 > - **List deposit fees** (if built) — fees for a deposit, filtered by date or deposit ID.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to production.
+> **Before going live:** swap the test API key for a live one. The hosts do not change.
 
 Offer next steps:
 - **View settlement batches** — retrieve batch-level settlement data

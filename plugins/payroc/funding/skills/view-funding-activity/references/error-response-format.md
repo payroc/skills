@@ -7,8 +7,14 @@ status codes an *individual* endpoint returns are listed in that endpoint's sect
 
 ## Shape: a standard envelope wrapping a Payroc-specific array
 
-Payroc serves errors as `Content-Type: application/problem+json`, in two layers that come from
-different places — keep them distinct:
+Payroc's API reference declares errors as `Content-Type: application/problem+json`; the test
+environment returned `application/json` (October 2026, on the earlier `.uat.` test hosts), so parse the body as JSON whichever arrives. Check the status
+first: a `403` whose body is plain text starting with `error code: 1010` (the test environment sent
+`Content-Type: text/plain; charset=UTF-8`) is not JSON and not a permissions error; Payroc's own `403` is JSON. The
+edge refused your client's `User-Agent`: in the test environment, Python `urllib`'s default was refused this way on the
+identity host and the API host (production was not tested). Set your own `User-Agent` on every
+request (`identity-call.md`, Client notes). Errors come in two layers that come from different
+places — keep them distinct:
 
 1. **The envelope is [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) Problem Details.**
    Top-level `type`, `title`, `status`, `detail`, and `instance` are the *standard* RFC members.
@@ -20,12 +26,13 @@ different places — keep them distinct:
      **A different field from the top-level RFC `detail`** despite the shared name; don't conflate.
    - **`message`** — the human-readable explanation (e.g. `"The 'country' field is required"`).
 
-`403` and `404` additionally carry a `resource` member (the resource type acted on); `403`, `404`,
-and some `409`s carry `instance`.
+`403` and `404` additionally carry a `resource` member (the resource type acted on); `403`
+and some `409`s carry `instance` (`404` does not).
 
 ## Verified shape
 
-Real `400` from UAT (`POST` with an empty body — fails validation, creates nothing):
+Real `400` from the test environment (`POST` with an empty body — fails validation, creates nothing;
+captured on the earlier `api.uat.payroc.com` test host, as `instance` shows; the API host is now `api.payroc.com`):
 
 ```json
 {
@@ -55,7 +62,7 @@ can actually return; don't invent new ones.
 | 400 | `#too-many-control-prongs` | Only one owner may be the control prong |
 | 400 | `#daily-discount-and-reward-pay-conflict` | Daily Discount cannot combine with RewardPayChoice |
 | 401 | `#not-authorized` | Identity could not be verified — re-authenticate |
-| 403 | `#forbidden` | API key lacks the required permission |
+| 403 | `#forbidden` | API key lacks the required permission (a plain-text `error code: 1010` body is the `User-Agent` block above, not this) |
 | 404 | `#not-found` | Unknown resource id |
 | 406 | `#not-acceptable` | Requested representation unsupported |
 | 409 | `#idempotency-key-in-use` | Key already used against a *different* request |

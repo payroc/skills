@@ -1,7 +1,7 @@
 # Apple Pay — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (Apple Pay session + payment request schemas). Last synced: 2026-07-23. This is the offline source of
+> (Apple Pay session + payment request schemas). Last synced: 2026-11-03. This is the offline source of
 > truth this skill emits from — read enum values and required-field sets from here, not from memory. To
 > refresh, re-fetch the source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -20,9 +20,8 @@ cross the wire to Payroc as named here.
 | Start an Apple Pay session (payments-path variant) | `POST /v1/payments/apple-pay/sessions` | **New** (added 2026-07-23); `processingTerminalId` is a body field — prefer this endpoint for new integrations |
 | Run a payment (sale / pre-auth) | `POST /v1/payments` | |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+REST API host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -103,7 +102,7 @@ variant above.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `processingTerminalId` | string | **required** — the UAT/prod terminal ID (was a path parameter in the old endpoint; now a body field). |
+| `processingTerminalId` | string | **required** — the test/prod terminal ID (was a path parameter in the old endpoint; now a body field). |
 | `appleDomainId` | string | **required** — the unique domain ID from the Payroc Self-Care Portal (Step 1). |
 | `appleValidationUrl` | string | **required** — the `validationURL` from Apple's `onvalidatemerchant` event, passed through verbatim. |
 
@@ -127,7 +126,7 @@ Required: `channel`, `processingTerminalId`, `order`, `paymentMethod`.
 | Field | Type | Notes |
 | --- | --- | --- |
 | `channel` | enum | **required** — `pos` \| `web` \| `moto`. Apple Pay in-browser → `web`. |
-| `processingTerminalId` | string | **required** — the UAT/prod terminal ID. |
+| `processingTerminalId` | string | **required** — the test/prod terminal ID. |
 | `order` | object | **required** — `paymentOrderRequest` (see below). |
 | `paymentMethod` | object | **required** — polymorphic; use the `digitalWallet` variant for Apple Pay (see below). |
 | `operator` | string | optional. |

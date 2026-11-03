@@ -6,8 +6,8 @@ the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding → pricing-intents paths + `writePricingIntent`, `pricingIntent5.0`, `pricingIntent5.2`, `baseUs5.2`, `PricingIntent52Processor`, `gatewayUs5.2`, `servicesUs5.2` schemas) | 2026-09-16 | payroc-verbatim (curated slice) |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (boarding → pricing-intents paths + `writePricingIntent`, `pricingIntent5.0`, `pricingIntent5.2`, `baseUs5.2`, `PricingIntent52Processor`, `gatewayUs5.2`, `servicesUs5.2` schemas) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content copied/curated directly. The pricing
 intent schemas are entirely Payroc-owned, so this skill has no `third-party-derived` references.
@@ -15,14 +15,14 @@ intent schemas are entirely Payroc-owned, so this skill has no `third-party-deri
 **Live correction (2026-06-16):** the OpenAPI `ErrorsItems` schema documents only `message` on each
 `errors[]` item, but the live API returns `parameter` + `detail` + `message` (and a top-level
 `instance`). Verified by `POST`ing an empty body to both `/pricing-intents` and `/merchant-platforms`
-on UAT. The error-schema section of `api-schema.md` reflects the live shape, not the spec.
+in the test environment. The error-schema section of `api-schema.md` reflects the live shape, not the spec.
 
 **Live correction (2026-06-19):** the OpenAPI spec marks `base.addressVerification`,
-`base.regulatoryAssistanceProgram`, and `base.merchantAdvantage` as nullable, but the live UAT API
+`base.regulatoryAssistanceProgram`, and `base.merchantAdvantage` as nullable, but the live test environment
 **rejects `null` for all three** (*"... must not be empty"*) — verified by `POST`ing each as
-`null`. Earlier guidance said to send `null` (never `0`); that was wrong against UAT. The SKILL,
+`null`. Earlier guidance said to send `null` (never `0`); that was wrong in the test environment. The SKILL,
 `api-schema.md`, examples, and evals now send a numeric value (`0` when not charged). Also confirmed
-the same run: a freshly created pricing intent is `active` immediately in UAT (no manual-approval
+the same run: a freshly created pricing intent is `active` immediately in the test environment (no manual-approval
 wait), and IDs are returned as plain integers (e.g. `5722`), not `PI-XXXX`.
 
 Related guide pages (not yet snapshotted; fetch if narrative copy is needed):

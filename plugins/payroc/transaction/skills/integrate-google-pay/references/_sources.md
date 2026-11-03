@@ -6,11 +6,11 @@ and in the file's header.
 
 | Local file | Source URL | Last synced | Provenance |
 | --- | --- | --- | --- |
-| `api-schema.md` | https://docs.payroc.com/openapi.yml (Create Payment / `paymentRequest` schemas) | 2026-06-01 | payroc-verbatim (curated slice) |
-| `google-pay.md` | https://docs.payroc.com/guides/take-payments/google-pay/google-pay.md | 2026-06-01 | payroc-verbatim |
+| `api-schema.md` | https://docs.payroc.com/openapi.yml (Create Payment / `paymentRequest` schemas) | 2026-11-03 | payroc-verbatim (curated slice); hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03); the docs guide page still lists UAT hosts |
+| `google-pay.md` | https://docs.payroc.com/guides/take-payments/google-pay/google-pay.md | 2026-11-03 | payroc-verbatim; hosts: one REST host for test and live keys per https://docs.payroc.com/api/authentication (2026-11-03); the docs guide page still lists UAT hosts |
 | `third-party/google-request-objects.md` | https://developers.google.com/pay/api/web/reference/request-objects | 2026-06-01 | third-party-derived |
 | `third-party/google-client.md` | https://developers.google.com/pay/api/web/reference/client | 2026-06-01 | third-party-derived |
-| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-09-16 | payroc-verbatim (curated slice) |
+| `identity-call.md` | https://docs.payroc.com/essentials/hosted-fields/authenticate-your-session.md (Step 1 only — Bearer token exchange) | 2026-11-03 | payroc-verbatim (curated slice) |
 
 Provenance legend: `payroc-verbatim` = Payroc-owned content (OpenAPI spec, Payroc narrative guide) copied or
 curated directly; `third-party-derived` = our own-words notes on a third party's (Google's) API surface —

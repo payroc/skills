@@ -1,7 +1,7 @@
 # Run a Card Sale — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Source: `https://docs.payroc.com/openapi.yml`
-> (payments schemas). Last synced: 2026-09-16. This is the offline source of truth this skill emits
+> (payments schemas). Last synced: 2026-11-03. This is the offline source of truth this skill emits
 > from — read enum values and required-field sets from here, not from memory. To refresh, re-fetch the
 > source and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -22,10 +22,9 @@ and the published API reference.
 | Reverse a payment | `POST /v1/payments/{paymentId}/reverse` |
 | Refund a payment (referenced) | `POST /v1/payments/{paymentId}/refund` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
-Identity (UAT): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Identity (test and live): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -43,23 +42,21 @@ Identity (production): `POST https://identity.payroc.com/authorize` with header 
 
 - `card` — raw card data or device-read card (ICC, swipe, contactless).
 - `secureToken` — a saved token from a prior tokenised payment.
-- `digitalWallet` — Apple Pay or Google Pay encrypted payload.
+- `digitalWallet` — Apple Pay or Google Pay encrypted payload, hex-encoded in `encryptedData`.
 - `singleUseToken` — a single-use token (e.g. from Hosted Fields).
 
 ### cardDetails.entryMethod (discriminator FIELD within `card` paymentMethod — not a nested key)
 
-`icc` | `keyed` | `swiped` | `swipedFallback` | `contactlessIcc` | `contactlessMsr`
+`raw` | `icc` | `keyed` | `swiped`
 
 Send it as `cardDetails.entryMethod: "<value>"`, then put the entry-method data in the matching
 object (`keyedData` for `keyed`, `iccData` for `icc`, etc.). Do **not** nest the fields under a
 key named after the enum value (e.g. `cardDetails.keyed { … }` is rejected — `entryMethod` is required).
 
+- `raw` — unencrypted payment data directly from the device.
 - `icc` — chip card inserted into a reader.
 - `keyed` — card number and expiry entered manually.
 - `swiped` — magnetic stripe read.
-- `swipedFallback` — magnetic stripe after chip read failure.
-- `contactlessIcc` — contactless chip (tap).
-- `contactlessMsr` — contactless magnetic stripe (tap, legacy).
 
 ### autoCapture (boolean — not an enum, but critical)
 - `true` (default) — sale: funds captured immediately when the payment is approved.
@@ -93,8 +90,11 @@ key named after the enum value (e.g. `cardDetails.keyed { … }` is rejected —
 ### customer.notificationLanguage
 `en` | `fr`
 
-### status values (returned in payment response, read-only)
-`pending` | `authorized` | `settled` | `declined` | `voided` | `refunded` | `partiallyRefunded`
+### transactionResult.status values (returned in payment response, read-only)
+`ready` | `pending` | `declined` | `complete` | `referral` | `pickup` | `reversal` | `admin` | `expired` | `accepted`
+
+### transactionResult.responseCode values (read-only)
+`A` approved | `D` declined | `E` received, processed later | `P` partial approval | `R` declined, customer to contact their bank | `C` declined, card reported lost or stolen
 
 ---
 
@@ -141,11 +141,11 @@ paymentMethod:
   type: card                # required discriminator
   cardDetails:              # required
     entryMethod: keyed      # required discriminator FIELD (not a nested key):
-                            #   icc | keyed | swiped | swipedFallback | contactlessIcc | contactlessMsr
+                            #   raw | icc | keyed | swiped
     cardholderName: ...     # cardholder name — sits on cardDetails, not inside the data object
     # Entry-method-specific DATA object. For keyed entry, use keyedData:
     keyedData:
-      dataFormat: plainText # required: plainText | encrypted (read api-schema for encrypted)
+      dataFormat: plainText # required: plainText | fullyEncrypted | partiallyEncrypted
       cardNumber: ...       # card number (PAN) — field is `cardNumber`, not `pan`
       expiryDate: ...       # MMYY format
       cvv: ...              # card security code
@@ -154,7 +154,7 @@ paymentMethod:
 
 ### paymentMethod — card variant (keyed, minimal)
 
-The `keyed` entry type is the most common for online/MOTO card-not-present sales:
+The `keyed` entry type is the usual one for online/MOTO card-not-present sales:
 
 ```json
 {
@@ -186,7 +186,7 @@ The `keyed` entry type is the most common for online/MOTO card-not-present sales
 ```json
 {
   "type": "singleUseToken",
-  "token": "sut_abcdef123456"
+  "token": "<single-use token: exactly 128 characters>"
 }
 ```
 
@@ -207,8 +207,9 @@ The `keyed` entry type is the most common for online/MOTO card-not-present sales
 
 #### Level 2/3/CEDP fields
 
-None of the fields below are structurally required by the API. Spec prose (not a `required:`
-constraint) marks them as needed to qualify a transaction for Level 2/Level 3/CEDP enhanced-data
+Apart from `subtotal`, which is required whenever you send a `breakdown`, and `quantity` and
+`unitPrice`, which every entry in `breakdown.items` needs, none of the fields below are structurally
+required by the API. Spec prose (not a `required:` constraint) marks them as needed to qualify a transaction for Level 2/Level 3/CEDP enhanced-data
 interchange rates — lower rates on B2B and purchasing-card transactions in exchange for richer
 line-item and tax detail. Send them when the merchant wants that rate benefit; omit them for a
 plain consumer sale.
@@ -238,14 +239,15 @@ plain consumer sale.
 | Field | Type | Notes |
 | --- | --- | --- |
 | `paymentId` | string | Unique gateway-assigned identifier. Save this — required for capture, refund, reverse |
-| `order` | object | Echo of submitted order details with final amounts |
-| `paymentMethod` | object | Processed payment method info (masked card details) |
-| `customer` | object | Echoed customer data |
-| `transactionStatus` | string | Status: see status enum above |
-| `breakdown` | object | Final transaction breakdown |
-| `dccOffer` | object | Dynamic currency conversion result (if applicable) |
-| `secureTokenId` | string | Token ID if tokenisation was requested (`credentialOnFile`) |
-| `links` | array | HATEOAS links for follow-on operations |
+| `processingTerminalId` | string | Terminal that processed the payment |
+| `operator` | string | Operator who ran the payment (if sent) |
+| `order` | object | Echo of submitted order details with final amounts (`orderId`, `amount`, `currency`, `breakdown`, …) |
+| `customer` | object | Echoed customer data (if sent) |
+| `card` | object | Masked card details: `type`, `entryMethod`, `cardNumber` (masked), `expiryDate`, `securityChecks`; `secureToken` if tokenisation was requested (`credentialOnFile`) |
+| `refunds` | array | Refunds against this payment (on a retrieved payment) |
+| `supportedOperations` | array | Follow-on operations this payment allows (for example `capture`, `fullyReverse`, `adjustTip`) |
+| `transactionResult` | object | The outcome: `status` (see values above), `responseCode`, `responseMessage`, `approvalCode`, `authorizedAmount`, `type` |
+| `customFields` | array | Echoed custom fields (if sent) |
 
 **Save `paymentId` immediately.** It is required for every follow-on operation (refund, reversal, capture, adjust).
 
@@ -308,4 +310,5 @@ plain consumer sale.
 
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
 
-Status codes for these endpoints: `400`, `401`, `403`, `404`, `409`, `500`.
+Status codes for these endpoints: `400`, `401`, `403`, `404` (retrieve), `406`, `409` and `415` (create),
+`500`.

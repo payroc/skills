@@ -1,7 +1,7 @@
 # View Settled Transactions — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/api/schema/reporting/settlement/list-batches.md`, `https://docs.payroc.com/api/schema/reporting/settlement/retrieve-batch.md`, `https://docs.payroc.com/api/schema/reporting/settlement/list-transactions.md`, `https://docs.payroc.com/api/schema/reporting/settlement/retrieve-transaction.md`
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum values and required-field sets from here, not from memory. To refresh, re-fetch the source URLs and regenerate this file (see [`_sources.md`](./_sources.md)).
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum values and required-field sets from here, not from memory. To refresh, re-fetch the source URLs and regenerate this file (see [`_sources.md`](./_sources.md)).
 
 The settled-transactions reporting surface is a read-only REST/JSON API. Every enum value and schema below comes from the official docs.
 
@@ -16,7 +16,7 @@ The settled-transactions reporting surface is a read-only REST/JSON API. Every e
 | List transactions in a batch | `GET /v1/transactions` |
 | Retrieve a single transaction | `GET /v1/transactions/{transactionId}` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 > **Note:** Transactions in the Reporting API are settled transactions. These are different from the payment objects in the Payments API (`GET /payments`). Settlement transactions represent settled ledger entries, not live payment state.
 
@@ -251,7 +251,7 @@ These are read/reporting (GET) endpoints, so the typical status set is `400` (in
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/transactions",
+  "instance": "https://api.payroc.com/v1/transactions",
   "errors": [
     { "parameter": "date", "detail": "Required field not populated", "message": "Either 'date' or 'batchId' must be provided" }
   ]

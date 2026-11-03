@@ -3,7 +3,7 @@
 > **Local snapshot — authoritative for this skill.** Sources:
 > `https://docs.payroc.com/api/schema/reporting/settlement/list-batches.md`
 > `https://docs.payroc.com/api/schema/reporting/settlement/retrieve-batch.md`
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits
 > from — read enum values, field names, and required-field sets from here, not from memory.
 > To refresh, re-fetch the source URLs and regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -20,9 +20,8 @@ currency denomination (e.g. cents for USD).
 | List batches | `GET /v1/batches` |
 | Retrieve a batch | `GET /v1/batches/{batchId}` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT/test): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`.
-Identity (production): `POST https://identity.payroc.com/authorize` with header `x-api-key`.
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
+Identity: `POST https://identity.payroc.com/authorize` with header `x-api-key`.
 
 ---
 
@@ -189,7 +188,7 @@ response — see fields above.
 | `200` | Success |
 | `400` | Validation error — check the `errors[]` array for the failing parameter |
 | `401` | Authentication failed — Bearer token missing, expired, or invalid |
-| `403` | Insufficient permissions — API key scope does not cover reporting |
+| `403` | Insufficient permissions — API key scope does not cover reporting; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | `404` | Batch not found (retrieve only) — `batchId` does not exist |
 | `406` | Not acceptable |
 | `500` | Server error — retry with exponential backoff |
@@ -212,5 +211,5 @@ These are read/reporting (GET) endpoints, so the typical status set is `400` (in
 - **Pagination is cursor-based** — use `after`/`before` with the cursor values from the `links` array; do not use offset pagination.
 - **`before` and `after` are mutually exclusive** — sending both causes a 400.
 - **No `Idempotency-Key` required** — these are GET requests; idempotency keys are only required for POST/PATCH.
-- **UAT data may be sparse** — periodic data wipes in the UAT environment mean batch records from earlier dates may not exist; use a recent date when testing.
-- **Retrieve may 404 for recently-seen batches** — the UAT environment wipes data periodically, so `GET /v1/batches/{batchId}` may return 404 even for a batch that existed earlier in the same session. This is expected UAT behaviour, not a production limitation.
+- **Test-environment data may be sparse** — periodic data wipes in the test environment mean batch records from earlier dates may not exist; use a recent date when testing.
+- **Retrieve may 404 for recently-seen batches** — the test environment wipes data periodically, so `GET /v1/batches/{batchId}` may return 404 even for a batch that existed earlier in the same session. This is expected test-environment behaviour, not a production limitation.

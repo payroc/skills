@@ -2,24 +2,18 @@
 name: create-pricing-intent
 description: >
   Guides developers through creating and managing pricing intents — reusable Merchant Processing
-  Agreement (MPA) fee templates — via the Payroc Boarding API (POST/GET/PUT/PATCH/DELETE
-  /v1/pricing-intents). Use this skill whenever the user wants to: create or reuse a pricing
-  template / fee schedule across many merchants; choose a pricing program (interchange plus,
-  interchange plus plus, tiered, flat rate, consumer choice / surcharge / cash discount, reward pay
-  choice); define processor, gateway, base, or ACH fees (transaction or discount rates, gateway
-  monthly/setup/per-transaction fees, annual, PCI non-compliance, or chargeback fees); build, fix
-  (including 400 validation errors), update, replace, retrieve, list, or delete a
-  /v1/pricing-intents request; or obtain a pricingIntentId to assign to a processing account during
-  boarding — even if they don't say "skill" or "pricing intent" explicitly (for example, they
-  describe reusing one fee structure for many merchants). A pricing intent is a fee *template* and
-  never takes, authorises, captures, or refunds money. Do NOT use this skill for taking,
-  authorising, or refunding payments or transactions — some gateways call that a "payment intent",
-  but Payroc handles it via its separate transactions/payments API — nor for boarding a merchant
-  end-to-end or adding processing accounts (use create-merchant-platform), nor for general merchant
-  or transaction management. If the user says "payment intent" but clearly wants a reusable fee
-  template, use this skill and confirm.
+  Agreement (MPA) fee templates — via the Payroc Boarding API (/v1/pricing-intents). Use to: create
+  or reuse a pricing template or fee schedule across merchants; choose a pricing program
+  (interchange plus, interchange plus plus, tiered, flat rate, consumer choice / surcharge / cash
+  discount, reward pay choice); define processor, gateway, base, or ACH fees (discount rates,
+  gateway fees, PCI non-compliance, chargeback); build, fix (400 errors), update, retrieve, list, or
+  delete a pricing intent; or get a pricingIntentId for a processing account. Do NOT use for taking,
+  authorising, or refunding payments (some gateways call that a "payment intent"), boarding a new
+  merchant (use create-merchant-platform), adding a processing account (use add-processing-account),
+  or general merchant or transaction management. If the user says "payment intent" but wants a
+  reusable fee template, use this skill and confirm.
 metadata:
-  version: "0.3.5"
+  version: "0.3.7"
   category: boarding
   status: draft
 ---
@@ -87,8 +81,7 @@ it against `references/api-schema.md` and ask only for what's missing.
 ## Quick reference
 
 ```
-Base URL (test):  https://api.uat.payroc.com/v1
-Base URL (prod):  https://api.payroc.com/v1
+Base URL:  https://api.payroc.com/v1    # same host for test and live; the API key decides which
 
 GET    /pricing-intents                     # list (paginated)
 POST   /pricing-intents                     # create            (Idempotency-Key required)
@@ -111,11 +104,7 @@ Content-Type:    application/json    (POST, PUT, PATCH)
 Tokens expire in ~1 hour. Exchange your API key before each session (or refresh proactively).
 
 ```bash
-# Test / sandbox
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: YOUR_API_KEY"
-
-# Production
+# Same host for test and live. The API key decides which.
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: YOUR_API_KEY"
 ```
@@ -184,7 +173,7 @@ Key rules:
   required `amount`), `regulatoryAssistanceProgram`, `merchantAdvantage`, `maintenance`, `minimum`,
   and `batch` — **every key must be present with a numeric value**, or you get a 400. The OpenAPI
   spec marks `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` as
-  nullable, but **the live UAT API rejects `null` for all three** (`"must not be empty"`, verified
+  nullable, but **the live API (test environment) rejects `null` for all three** (`"must not be empty"`, verified
   2026-06-19) — so send a number, and use `0` when the merchant isn't charged for one. Don't drop
   the key either; an omitted required key also fails validation. Optional fees (`pciNonCompliance`,
   `chargeback`, etc.) have server defaults — see the reference.
@@ -229,7 +218,7 @@ Minimal `interchangePlus` example:
 
 Minimal `flatRate` example — note the card `fees` use `standardCards` (there is **no**
 `mastercardVisaDiscover`), `amex` here only supports the `direct` variant, and the spec-nullable
-`base` fields are sent as `0` (UAT rejects `null`):
+`base` fields are sent as `0` (the test environment rejects `null`):
 
 ```json
 {
@@ -318,7 +307,7 @@ Persist `id` immediately. The `status` is `pendingReview` until Payroc reviews i
 `active` (approved) or `rejected`. You can only assign an intent to a merchant once it's `active`.
 
 **IDs are opaque.** The `PI-XXXX` form used in these examples is for readability only. Treat the
-`id` as an opaque string whose format is not guaranteed and varies by environment — in UAT it
+`id` as an opaque string whose format is not guaranteed and varies by environment — in the test environment it
 comes back as a plain integer (e.g. `5722`). Don't validate or parse it against a `PREFIX-XXXX`
 pattern.
 
@@ -417,14 +406,14 @@ explanation. Use `parameter` to map each error straight back to the field in you
 catalog.)
 
 > The published OpenAPI spec only documents `message` on each item, but the live API also returns
-> `parameter` and `detail` (verified against UAT, 2026-06-16). Read `parameter` — it's the fastest
+> `parameter` and `detail` (verified in the test environment, 2026-06-16). Read `parameter` — it's the fastest
 > way to find what to fix.
 
 | Status | Scenario | Action |
 |--------|----------|--------|
 | 400 | Validation error | Use each `errors[].parameter` to find the field, `message`/`detail` for why; fix the body and resubmit with a **fresh** idempotency key (the corrected body differs, so reusing the old key risks a 409 — see the note below) |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
-| 403 | Insufficient permissions | Check API key scope; `instance`/`resource` name what was attempted |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; `instance`/`resource` name what was attempted |
 | 404 | Pricing intent not found | Verify the `pricingIntentId`; use list to find it |
 | 406 | Not acceptable | Check `Content-Type` / `Accept` headers and body shape |
 | 409 | Conflict — idempotency key reused with a *changed* body | Don't reflexively re-POST with a new key; see the note below — you may already have created the intent |
@@ -466,7 +455,7 @@ inline `agreement` variant. See [`create-merchant-platform`](../create-merchant-
 
 - **PATCH is JSON Patch, not a partial object**: send `[{ "op": "...", "path": "...", "value": ... }]`, not `{ "gateway": { ... } }`
 - **PUT returns 204 with no body**: don't expect the updated record back — re-GET if you need it
-- **`base` fees need a number, not `null`**: `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` are required keys; despite being spec-nullable, UAT rejects `null` ("must not be empty") — send a numeric value (`0` when not charged), and never omit the key
+- **`base` fees need a number, not `null`**: `addressVerification`, `regulatoryAssistanceProgram`, and `merchantAdvantage` are required keys; despite being spec-nullable, the test environment rejects `null` ("must not be empty") — send a numeric value (`0` when not charged), and never omit the key
 - **Build a complete body, including when fixing a 400**: a corrected payload must still carry all required `base` keys and all four `gateway.fees` keys, or you just earn a fresh 400
 - **Amounts in cents**: every fee is an integer in cents; percentages are numbers (≤2 dp)
 - **`key` is required and is yours**: it's your own template identifier, separate from the Payroc `id`

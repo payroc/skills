@@ -1,7 +1,7 @@
 # Create Pricing Intent — Full API Schema Reference
 
 Curated slice of `https://docs.payroc.com/openapi.yml` (boarding → pricing intents). Server base
-URL is `https://api.payroc.com/v1` (production) or `https://api.uat.payroc.com/v1` (test), so every
+URL is `https://api.payroc.com/v1` for both test and live (the API key decides which), so every
 path below is relative to `/v1`.
 
 A pricing intent is a reusable Merchant Processing Agreement (MPA) **template**. Once approved, its
@@ -125,13 +125,13 @@ Fixed and recurring fees. All monetary values in cents.
 
 ```json
 {
-  "addressVerification": 10,            // REQUIRED — fee per AVS request (spec-nullable, but UAT rejects null; use 0 when not charged)
+  "addressVerification": 10,            // REQUIRED — fee per AVS request (spec-nullable, but the test environment rejects null; use 0 when not charged)
   "annualFee": {                        // REQUIRED
     "amount": 9900,                     // REQUIRED — annual fee in cents
     "billInMonth": "december"           // "june" | "december" (default "december")
   },
-  "regulatoryAssistanceProgram": 0,     // REQUIRED — annual program fee (spec-nullable, but UAT rejects null; use 0 when not charged)
-  "merchantAdvantage": 0,               // REQUIRED — monthly Payroc Advantage fee (spec-nullable, but UAT rejects null; use 0 when not charged)
+  "regulatoryAssistanceProgram": 0,     // REQUIRED — annual program fee (spec-nullable, but the test environment rejects null; use 0 when not charged)
+  "merchantAdvantage": 0,               // REQUIRED — monthly Payroc Advantage fee (spec-nullable, but the test environment rejects null; use 0 when not charged)
   "maintenance": 995,                   // REQUIRED — monthly maintenance fee
   "minimum": 2500,                      // REQUIRED — monthly minimum-fee shortfall charge
   "batch": 25,                          // REQUIRED — fee per batch
@@ -414,7 +414,7 @@ on retrieve/update/delete), `406` (content negotiation on create/update/patch), 
 create/patch — e.g. idempotency-key reuse with a different body), `500` (server — retry with
 backoff).
 
-Real `400` response from UAT (`POST /pricing-intents` with an empty body):
+Real `400` response captured in the test environment (`POST /pricing-intents` with an empty body; captured on the earlier `api.uat.payroc.com` test host, as `instance` shows; the API host is now `api.payroc.com`):
 
 ```json
 {
@@ -434,6 +434,6 @@ Real `400` response from UAT (`POST /pricing-intents` with an empty body):
 ```
 
 > **Spec vs. live:** the published OpenAPI `ErrorsItems` schema only lists `message`, but the live
-> API returns `parameter` and `detail` too — verified against UAT on 2026-06-16 for both
+> API returns `parameter` and `detail` too — verified in the test environment on 2026-06-16 for both
 > `/pricing-intents` and `/merchant-platforms`. Treat `parameter` + `detail` + `message` as the real
 > shape. (The `403` schema additionally returns `resource`.)

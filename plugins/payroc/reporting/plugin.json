@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "reporting",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Skills for reporting and analytics integration",
   "author": {
     "name": "Payroc"

@@ -1,7 +1,7 @@
 # Send Funds to a Merchant — API Schema Reference
 
 > **Local snapshot — authoritative for this skill.** Sources: `https://docs.payroc.com/guides/fund-merchants/send-funds-to-your-merchants.md`, `https://docs.payroc.com/api/schema/funding/funding-instructions/create.md`, `https://docs.payroc.com/api/schema/funding/funding-instructions/retrieve.md`, `https://docs.payroc.com/api/schema/funding/funding-instructions/list.md`, `https://docs.payroc.com/api/schema/funding/funding-instructions/update.md`, `https://docs.payroc.com/api/schema/funding/funding-instructions/delete.md`, `https://docs.payroc.com/api/schema/funding/funding-activity/retrieve-balance.md`.
-> Last synced: 2026-06-22. This is the offline source of truth — read enum values and schemas from here, not from memory.
+> Last synced: 2026-11-03. This is the offline source of truth — read enum values and schemas from here, not from memory.
 
 ---
 
@@ -16,8 +16,7 @@
 | Update funding instruction | `PUT /v1/funding-instructions/{instructionId}` |
 | Delete funding instruction | `DELETE /v1/funding-instructions/{instructionId}` |
 
-UAT host: `https://api.uat.payroc.com`
-Production host: `https://api.payroc.com`
+Host: `https://api.payroc.com` (same host for test and live; use a test API key for testing, because the key, not the URL, decides test or live)
 
 ---
 
@@ -95,7 +94,7 @@ Note: Do not use both `after` and `before` in the same request.
   "count": 1,
   "hasMore": false,
   "links": [
-    { "rel": "self", "method": "GET", "href": "https://api.uat.payroc.com/v1/funding-balance" }
+    { "rel": "self", "method": "GET", "href": "https://api.payroc.com/v1/funding-balance" }
   ],
   "data": [
     {
@@ -269,7 +268,7 @@ Example validation error on `POST /v1/funding-instructions`:
   "title": "Bad request",
   "status": 400,
   "detail": "One or more validation errors occurred, see error section for more info",
-  "instance": "https://api.uat.payroc.com/v1/funding-instructions",
+  "instance": "https://api.payroc.com/v1/funding-instructions",
   "errors": [
     {
       "parameter": "merchants",

@@ -4,7 +4,7 @@
 > (bank-transfer-payments and bank-transfer-refunds schemas);
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/referenced-refunds/bank.md`;
 > `https://docs.payroc.com/guides/take-payments/payments/refunds/unreferenced-refunds/bank.md`.
-> Last synced: 2026-09-18. This is the offline source of truth this skill emits from — read enum
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum
 > values and required-field sets from here, not from memory. To refresh, re-fetch the sources and
 > regenerate this file (see [`_sources.md`](./_sources.md)).
 
@@ -25,7 +25,7 @@
 | List refunds | `GET /v1/bank-transfer-refunds` |
 | Reverse a refund | `POST /v1/bank-transfer-refunds/{refundId}/reverse` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 ---
 
@@ -100,11 +100,11 @@ Returns `200` with the updated `bankTransferPayment`. On the original payment's 
 entry, `represented` flips to `true` once you've re-presented it — check that before
 re-presenting again.
 
-Errors: `400` (validation, incl. `idempotencyKeyMissing`), `401`, `403`, `404` (unknown
-`paymentId`), `406`, `409` (incl. `idempotentKeyInUse`), `415`, `500`.
+Errors: `400` (validation, incl. `#idempotency-key-missing`), `401`, `403`, `404` (unknown
+`paymentId`), `406`, `409` (incl. `#idempotency-key-in-use`), `415`, `500`.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/represent \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/represent \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json"
@@ -121,13 +121,13 @@ so it stops showing as outstanding:
 same response shape as [Retrieve a bank transfer payment](#endpoints).
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/close \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/close \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')"
 ```
 
-Errors this endpoint returns: `400` (validation, incl. `idempotencyKeyMissing`), `401`, `403`,
-`404` (unknown `paymentId`), `406`, `409` (incl. `idempotentKeyInUse`), `415`, `500`.
+Errors this endpoint returns: `400` (validation, incl. `#idempotency-key-missing`), `401`, `403`,
+`404` (unknown `paymentId`), `406`, `409` (incl. `#idempotency-key-in-use`), `415`, `500`.
 
 ---
 
@@ -371,11 +371,11 @@ Top-level fields:
 
 ```bash
 # Step 1 — retrieve the original payment
-curl https://api.uat.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y \
+curl https://api.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y \
   -H "Authorization: Bearer <access_token>"
 
 # Step 2 — issue the referenced refund
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/refund \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/M2MJOG6O2Y/refund \
   -H "Authorization: Bearer <access_token>" \
   -H "Idempotency-Key: f47ac10b-58cc-4372-a567-0e02b2c3d479" \
   -H "Content-Type: application/json" \
@@ -396,7 +396,7 @@ Expected response: HTTP 200 with a `bankTransferPayment` object. Which outcome y
 ## Example: Unreferenced Refund Request (ACH)
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds \
+curl -X POST https://api.payroc.com/v1/bank-transfer-refunds \
   -H "Authorization: Bearer <access_token>" \
   -H "Idempotency-Key: 8e03978e-40d5-43e8-bc93-6894a57f9324" \
   -H "Content-Type: application/json" \
@@ -435,7 +435,7 @@ Expected response: HTTP 201 with `bankTransferRefund` object; `transactionResult
 | 201 | Unreferenced refund created (returns `bankTransferRefund`) |
 | 400 | Validation error — check `errors[]` array. Also returned when the payment's status blocks a referenced refund: `Bank transfer with status COMPLETE can not be refunded` (ACH in a closed batch) or `... status VOID ...` (already reversed). The status name in the message is the gateway's internal one, uppercase, not the `transactionResult.status` enum value |
 | 401 | Authentication failed |
-| 403 | Permission denied (unreferenced refunds require feature enablement) |
+| 403 | Permission denied (unreferenced refunds require feature enablement); or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused (set a `User-Agent` on every request: `identity-call.md`, Client notes) |
 | 404 | Payment not found |
 | 406 | Not acceptable |
 | 409 | Conflict (idempotency key reused with different payload, or resource already exists) |

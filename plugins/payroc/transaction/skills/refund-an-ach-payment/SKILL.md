@@ -1,24 +1,19 @@
 ---
 name: refund-an-ach-payment
 description: >
-  Guides developers through returning funds for an ACH (bank transfer) payment via the
-  Payroc API. Use this skill when the user wants to refund an ACH payment, refund a bank
-  transfer payment, return money to a customer's bank account via ACH or bank transfer,
-  reverse or void a settled or open-batch bank transfer, issue a referenced refund (linked
-  to a paymentId) or an unreferenced refund (standalone, no paymentId) for a bank
-  transfer, process a PAD (Canadian pre-authorized debit) refund, work with the
-  /v1/bank-transfer-payments/{id}/refund endpoint, or work with the
-  /v1/bank-transfer-refunds endpoint. Also trigger when the developer asks about the
-  difference between ACH reversals and refunds, choosing the right refund method for a
-  bank transfer, NACHA return codes on a refund, tracking ACH refund status, re-presenting
-  a returned ACH payment to retry collection (work with the
-  /v1/bank-transfer-payments/{id}/represent endpoint), or closing a return after the customer
-  paid another way (work with the /v1/bank-transfer-payments/{id}/close endpoint). Does NOT
-  cover card payment refunds (credit card, debit card, or Visa/Mastercard/Amex refunds —
-  use the refund-a-card-payment skill for those), taking new ACH payments, accepting bank
-  transfer payments, verifying bank accounts, or viewing ACH deposit reports.
+  Guides developers through returning funds for an ACH (bank transfer) payment via the Payroc API.
+  Use this skill to refund an ACH or bank transfer payment, return money to a customer's bank
+  account, reverse or void a settled or open-batch bank transfer, issue a referenced refund (linked
+  to a paymentId) or an unreferenced refund (standalone, no paymentId), process a PAD (Canadian pre-authorized debit) refund, or
+  work with the /v1/bank-transfer-payments/{id}/refund or /v1/bank-transfer-refunds endpoint. Also
+  for the difference between ACH reversals and refunds and choosing the right method, NACHA return
+  codes on a refund, tracking ACH refund status, re-presenting a returned ACH payment to retry
+  collection (/v1/bank-transfer-payments/{id}/represent), or closing a return after the customer
+  paid another way (/v1/bank-transfer-payments/{id}/close). Does NOT cover card payment refunds (use
+  refund-a-card-payment), taking new ACH payments, verifying bank accounts, or viewing ACH deposit
+  reports.
 metadata:
-  version: "0.7.3"
+  version: "0.7.5"
   category: transaction
   status: draft
 ---
@@ -45,7 +40,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 ## ACH terminal requirement
 
 > **This requires an ACH-capable terminal.** ACH refunds need a terminal provisioned for ACH —
-> this applies in both UAT and production. All guidance in this skill is derived from the
+> this applies in both the test environment and production. All guidance in this skill is derived from the
 > published Payroc OpenAPI specification and narrative documentation.
 
 ---
@@ -67,37 +62,37 @@ On first invocation, announce to the developer:
 ```text
 # Referenced refund (PAD only once settled; for ACH, open batch only — converts to a reversal)
 # Body requires amount + description
-POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/refund
+POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/refund
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Unreferenced refund (no paymentId needed; the ONLY path for a settled ACH payment)
-POST https://api.uat.payroc.com/v1/bank-transfer-refunds
+POST https://api.payroc.com/v1/bank-transfer-refunds
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Reversal (payment still in open batch)
-POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse
+POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Reverse a refund (undo a previously issued unreferenced refund)
-POST https://api.uat.payroc.com/v1/bank-transfer-refunds/{refundId}/reverse
+POST https://api.payroc.com/v1/bank-transfer-refunds/{refundId}/reverse
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Re-present a return (retry collecting the ACH payment — request body optional)
-POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent
+POST https://api.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
 
 # Close a return (customer paid another way — no request body)
-POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close
+POST https://api.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 ```
@@ -186,7 +181,7 @@ These are needed to **run and test** the integration — not to write the code. 
 2. **Processing terminal ID** — required for unreferenced refunds and for listing/searching payments.
 3. **`paymentId`** — required for referenced refunds and reversals. Comes from the original payment creation response.
 4. **Unreferenced refund enablement** — only certain merchant accounts can send unreferenced refunds. Confirm with the Payroc Integrations team before building this path.
-5. **UAT environment** — provisioned by the Payroc Integrations team.
+5. **Test environment** — a test API key (create one in the Developer Portal) and a test terminal, provisioned by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Wire the code to read credentials from environment variables (e.g. `PAYROC_API_KEY`, `PAYROC_TERMINAL_ID`) and continue building.
 
@@ -203,11 +198,7 @@ Either the developer has the required credentials and IDs, or they know what's o
 Exchange your API key for a Bearer token:
 
 ```bash
-# UAT / test
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: $PAYROC_API_KEY"
-
-# Production
+# Same host for test and live; the API key decides which
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
@@ -253,11 +244,11 @@ Required for ACH, optional for PAD when the developer already holds the `payment
 
 ```bash
 # By payment ID
-GET https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}
+GET https://api.payroc.com/v1/bank-transfer-payments/{paymentId}
 Authorization: Bearer <access_token>
 
 # Or search by orderId / name / last4 digits
-GET https://api.uat.payroc.com/v1/bank-transfer-payments?processingTerminalId=1234001&orderId=OrderRef6543
+GET https://api.payroc.com/v1/bank-transfer-payments?processingTerminalId=1234001&orderId=OrderRef6543
 Authorization: Bearer <access_token>
 ```
 
@@ -272,7 +263,7 @@ Read three things off the response before going further:
 Always generate a fresh UUID v4 for `Idempotency-Key`. Do not reuse the key from the original payment.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/refund \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/refund \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -342,7 +333,7 @@ Did the API return HTTP 200? If so, read `transactionResult.type` and `status` t
 Use this when the payment is still in an open batch (not settled):
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json"
@@ -365,7 +356,7 @@ Does the API return HTTP 200? If not, the payment may have already settled. For 
 If you have already issued an unreferenced refund and need to reverse it, use the reverse-a-refund endpoint:
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds/{refundId}/reverse \
+curl -X POST https://api.payroc.com/v1/bank-transfer-refunds/{refundId}/reverse \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json"
@@ -390,7 +381,7 @@ There are two ways to resolve it — ask the developer which applies:
 resolved now):
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json"
@@ -403,7 +394,7 @@ updated `paymentMethod` if the customer gave you new bank details (see
 **Close** (the customer resolved the return by paying another way — e.g. a card):
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/close \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')"
 ```
@@ -421,14 +412,14 @@ ACH refunds and reversals are not instant. To track final outcome:
 
 **Poll referenced refund:**
 ```bash
-GET https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}
+GET https://api.payroc.com/v1/bank-transfer-payments/{paymentId}
 Authorization: Bearer <access_token>
 ```
 For referenced refunds the source of truth is the `refunds[]` array on the payment response — not the parent `transactionResult.status`. Each entry in `refunds[]` has its own `status` field. Find the refund by its ID and read `refunds[n].status` to determine completion.
 
 **Poll unreferenced refund:**
 ```bash
-GET https://api.uat.payroc.com/v1/bank-transfer-refunds/{refundId}
+GET https://api.payroc.com/v1/bank-transfer-refunds/{refundId}
 Authorization: Bearer <access_token>
 ```
 Check `transactionResult.status` on the returned `bankTransferRefund` object.
@@ -450,7 +441,7 @@ Terminal statuses (stop polling when you see any of these — read `references/a
 
 ## Step 6 — Unreferenced refund path
 
-> **Prerequisite:** Only certain merchant accounts can send unreferenced refunds. Confirm enablement with the Payroc Integrations team before building this path. A `403` response indicates the terminal is not enabled.
+> **Prerequisite:** Only certain merchant accounts can send unreferenced refunds. Confirm enablement with the Payroc Integrations team before building this path. A `403` response indicates the terminal is not enabled (unless the body is the plain-text `error code: 1010`: then your client's `User-Agent` was refused; see the error table).
 
 > **Read `references/api-schema.md` before emitting any field name or enum value in the request body.** The `type`, `secCode`, and `accountType` values must come from the reference — not from training-data guesses.
 
@@ -461,7 +452,7 @@ Terminal statuses (stop polling when you see any of these — read `references/a
 Use `refundMethod.type: "ach"` with `routingNumber` (9-digit ABA number), `accountType`, and `secCode`:
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds \
+curl -X POST https://api.payroc.com/v1/bank-transfer-refunds \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -493,7 +484,7 @@ curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds \
 Use `refundMethod.type: "pad"` instead of `"ach"`. PAD uses different bank account fields: **`transitNumber`** (5-digit branch transit) and **`institutionNumber`** (3-digit bank institution code) instead of `routingNumber`. There is no `secCode` field for PAD. Read `references/api-schema.md` for the full PAD variant schema before emitting any field names.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds \
+curl -X POST https://api.payroc.com/v1/bank-transfer-refunds \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -551,7 +542,7 @@ Save `refundId` for tracking (see Step 5).
 If the customer's bank account has been tokenized by Payroc (via the secure-token service), you can use the token as the `refundMethod` instead of raw account details. Read `references/api-schema.md` for the full `secureToken` variant schema before emitting any field names.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-refunds \
+curl -X POST https://api.payroc.com/v1/bank-transfer-refunds \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -582,7 +573,7 @@ Key fields for the `secureToken` variant (read `references/api-schema.md` for th
 
 ### Checkpoint
 
-Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`? If not, work through the error taxonomy. A 403 means the terminal is not enabled for unreferenced refunds.
+Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`? If not, work through the error taxonomy. A 403 means the terminal is not enabled for unreferenced refunds (unless the body is the plain-text `error code: 1010`: then your client's `User-Agent` was refused; see the error table).
 
 ---
 
@@ -590,7 +581,7 @@ Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| `401` on any request | Token missing, expired, or API key wrong | Re-exchange token; verify `x-api-key` header value is the correct UAT key |
+| `401` on any request | Token missing, expired, or API key wrong | Re-exchange token; verify `x-api-key` header value is the correct test key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | `400` — `Bank transfer with status COMPLETE can not be refunded` | Referenced refund called on an ACH payment in a closed batch. That endpoint can't refund it | Use the unreferenced refund, `POST /v1/bank-transfer-refunds` (Step 6). Retrying the referenced endpoint will never succeed. The message quotes the gateway's internal status name in uppercase, which is not the `transactionResult.status` enum value — expect `COMPLETE` in the message and `complete` in the payment |
 | `400` — `Bank transfer with status VOID can not be refunded` | Same gate, different state: the payment was already reversed | Check `transactionResult.status` before refunding. A payment auto-converted to a reversal cannot then be refunded |
 | `400` — missing `amount` or `description` on a referenced refund | Empty or partial request body | Both fields are required. `'description' must not be blank` and `'amount' must be greater than 0` come back together on an empty body |
@@ -600,9 +591,9 @@ Does the API return HTTP 201 with `transactionResult.type: "unreferencedRefund"`
 | `400` — validation error on PAD `refundMethod` | Sent `routingNumber` instead of PAD fields | For PAD (`type: "pad"`), use `transitNumber` + `institutionNumber` — not `routingNumber` (which is ACH-specific) |
 | `400` — `amount` not an integer | Sending `49.99` instead of `4999` | Convert to lowest denomination (cents); amounts must be integers |
 | `400` — validation error on `order.description` | Field missing from unreferenced refund body | `order.description` is **required** for unreferenced refunds — unlike many payment APIs where description is optional |
-| `403` — permission denied on unreferenced refund | Terminal not enabled for unreferenced refunds | Contact Payroc Integrations team to enable the feature for this merchant account |
+| `403` — permission denied on unreferenced refund | Terminal not enabled for unreferenced refunds; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact Payroc Integrations team to enable the feature for this merchant account |
 | `404` — payment not found | `paymentId` wrong, or payment doesn't exist on this terminal | Verify the `paymentId` from the original payment creation response; check that terminal matches |
-| `409` — idempotency key conflict | Same key reused with different payload | Generate a fresh UUID for each distinct operation |
+| `409` — idempotency key conflict | Same key reused with different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for each distinct operation |
 | `409` — resource already exists / refund already issued | Payment already fully refunded | Check `payment.refunds[]` before submitting; do not re-issue if already complete |
 | `transactionResult.status: "returned"` | Customer's bank rejected the ACH return (NACHA return code) | Closed/invalid account. Resolve outside ACH (check, wire, or credit). |
 | Initial status `"pending"` but no update after days | ACH processing delay or NACHA return | Poll `GET /v1/bank-transfer-payments/{paymentId}` or `GET /v1/bank-transfer-refunds/{refundId}`; check for `"returned"` status |
@@ -640,7 +631,7 @@ Errors use the **RFC 7807 problem-details format as the envelope**: top-level `t
 - [ ] Response handling does not treat `transactionResult.type: "payment"` or a positive `authorizedAmount` as a failure — that is the auto-converted reversal
 - [ ] For unreferenced refunds: merchant account confirmed as enabled for unreferenced refunds
 - [ ] ACH async handling: code does not assume `"pending"` status means failure; polling or webhook logic implemented
-- [ ] UAT endpoints used (`api.uat.payroc.com`) — not production endpoints during testing
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 

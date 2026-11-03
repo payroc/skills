@@ -6,7 +6,7 @@
 > `https://docs.payroc.com/api/schema/tokenization/secure-tokens/list.md`,
 > `https://docs.payroc.com/api/schema/tokenization/secure-tokens/delete.md`,
 > `https://docs.payroc.com/api/schema/tokenization/secure-tokens/update-account.md`.
-> Last synced: 2026-06-22. This is the offline source of truth this skill emits from — read enum values
+> Last synced: 2026-11-03. This is the offline source of truth this skill emits from — read enum values
 > and required-field sets from here, not from memory. To refresh, re-fetch the sources and regenerate
 > this file (see [`_sources.md`](./_sources.md)).
 
@@ -22,9 +22,8 @@
 | Delete a secure token | `DELETE /v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}` |
 | Update account details | `POST /v1/processing-terminals/{processingTerminalId}/secure-tokens/{secureTokenId}/update-account` |
 
-UAT host: `https://api.uat.payroc.com`  ·  Production host: `https://api.payroc.com`
-Identity (UAT): `POST https://identity.uat.payroc.com/authorize` with header `x-api-key`
-Identity (prod): `POST https://identity.payroc.com/authorize` with header `x-api-key`
+Host (test and live): `https://api.payroc.com`. Use a test API key for testing; the key, not the URL, decides test or live.
+Identity: `POST https://identity.payroc.com/authorize` with header `x-api-key`
 
 ---
 

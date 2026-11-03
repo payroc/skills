@@ -13,7 +13,7 @@ description: >
   reusable/secure token, or set up recurring billing — those require the
   save-a-payment-method skill.
 metadata:
-  version: "0.1.1"
+  version: "0.1.3"
   category: transaction
   status: draft
 ---
@@ -58,7 +58,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/single-use-tokens
+POST  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/single-use-tokens
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -91,7 +91,7 @@ recorded in [`references/_sources.md`](references/_sources.md).
 4. **Idempotency-Key on every POST.** The header value must be a UUID v4. This is required — omitting it causes a `400`. Generate a fresh UUID for each distinct request (do not reuse the same key across retries of a *different* submission; reuse it only when retrying the *same* failed request).
 5. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens from the identity service expire after 3,600 seconds (1 hour). For scripts that run longer than an hour, implement token refresh logic.
-7. **Validate before advancing** — don't proceed to the next step until the current step's checkpoint passes in UAT.
+7. **Validate before advancing** — don't proceed to the next step until the current step's checkpoint passes in the test environment.
 
 ---
 
@@ -124,15 +124,15 @@ Use the answers to determine which source variant to implement and which fields 
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT:
+These are needed to **run and test** the integration in the test environment:
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team.
-2. **Processing terminal ID** — the `processingTerminalId` used in the endpoint path. Provided by the Payroc Integrations team with UAT access.
-3. **UAT environment** — Payroc's test environment; terminals are provisioned manually.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — the `processingTerminalId` used in the endpoint path. Provided by the Payroc Integrations team with test access.
+3. **Test environment** — a test API key and test terminal; terminals are provisioned manually.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention. Otherwise propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write code to read from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal and API key to actually test this — contact the Payroc Integrations team. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal). I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -145,8 +145,7 @@ Either credentials are confirmed, or the developer knows what's outstanding and 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; the API key decides which)
 
 Header: `x-api-key: <api-key>`
 
@@ -156,7 +155,7 @@ Implement a token-generation helper in the developer's language. Store the API k
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment.
 
 ---
 
@@ -240,7 +239,7 @@ Generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* submissio
 
 ```bash
 curl -X POST \
-  "https://api.uat.payroc.com/v1/processing-terminals/${PAYROC_TERMINAL_ID}/single-use-tokens" \
+  "https://api.payroc.com/v1/processing-terminals/${PAYROC_TERMINAL_ID}/single-use-tokens" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -286,15 +285,15 @@ Does the API return HTTP 201 with a `token` string and `expiresAt` timestamp? If
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate Bearer token; verify `x-api-key` header value is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | 400 — validation error mentioning `channel` or `source.type` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value |
 | 400 — validation error on `entryMethod` or `dataFormat` | Enum value guessed, not read from reference | Read `references/api-schema.md` for exact card entry method enum values |
 | 400 — missing `Idempotency-Key` | Header absent | Add `Idempotency-Key: <UUID v4>` to the POST; it is required |
 | 400 — missing required fields (ACH/PAD) | `secCode`, `routingNumber`, `transitNumber`, or `institutionNumber` absent | Read `references/api-schema.md` for the full required-field set for each source type |
 | 400 — `expiryDate` format error | Expiry sent as `MM/YY` or `YYYY-MM` instead of `MMYY` | Use 4-digit `MMYY` format (e.g. `1230` for December 2030) |
-| 403 — Forbidden | API key lacks permission for this operation | Contact the Payroc Integrations team to confirm the API key's assigned permissions; ensure you're using the UAT key against the UAT host |
+| 403 — Forbidden | API key lacks permission for this operation; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise contact the Payroc Integrations team to confirm the API key's assigned permissions; check you are using the key you meant to (test or live) |
 | 406 — Not Acceptable | `Accept` header set to an unsupported media type | Remove the `Accept` header or set it to `application/json` |
-| 409 — Idempotency-Key conflict | Same UUID reused across different (non-retry) requests | Generate a fresh UUID for each distinct tokenization request |
+| 409 — Idempotency-Key conflict | Same UUID reused across different (non-retry) requests | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for each distinct tokenization request |
 | 415 — Unsupported Media Type | `Content-Type` is missing or not `application/json` | Add `Content-Type: application/json` to the POST request headers |
 | Token rejected at payment step | Token already used or expired (>30 min) | Create a fresh single-use token and retry the payment immediately |
 | 500 | Server-side error | Retry with exponential back-off; surface `errors[]` if present |

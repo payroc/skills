@@ -280,7 +280,7 @@ and appended to the Merchant Processing Agreement — empty if none were request
 }
 ```
 
-> **`ach` and `cardAcceptance` shapes corrected 2026-06-19 (verified against UAT).** Earlier
+> **`ach` and `cardAcceptance` shapes corrected 2026-06-19 (verified in the test environment).** Earlier
 > revisions showed `ach` with `naicsCode`, `transactionTypes: ["web","ppd"]`, and
 > `monthlyTransactionLimit`/`monthlyTransactionVolume` — all rejected by the live API. The real
 > `ach` object uses `naics`, the `transactionTypes` enum above, and requires
@@ -288,7 +288,7 @@ and appended to the Merchant Processing Agreement — empty if none were request
 > `cardAcceptance` uses a `cardsAccepted` enum array (not per-brand booleans / `specialtyCards`).
 > Three cross-rules: (1) the ACH constraint is **bi-directional** — if `processing.ach` is
 > present the `pricing` must include `processor.ach`, AND if the pricing intent carries
-> `processor.ach` fees then `processing.ach` must be declared on the account (UAT error:
+> `processor.ach` fees then `processing.ach` must be declared on the account (test environment error:
 > `"'Processing Ach' cannot be null when 'Pricing Processor Ach' is populated."`);
 > (2) the default `cardsAccepted` includes `amexOptBlue`, and if `amexOptBlue` is accepted the
 > pricing must carry Amex OptBlue fees (and vice versa);
@@ -599,9 +599,9 @@ A minimal end-to-end request body for a sole-proprietor retail merchant:
 
 Errors use the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`) extended with a Payroc `errors[]` array. See `references/error-response-format.md` for the envelope shape and the canonical error `type` catalog; read `errors[].parameter` to map each failure to your request body.
 
-Status codes this endpoint returns: `400` (validation, incl. `idempotencyKeyMissing`), `401`
-(auth/expired token), `403` (permissions), `409` (conflict — `resourceAlreadyExists`,
-`idempotencyKeyInUse`, `taxIdInUse`), `500` (server — retry with backoff).
+Status codes this endpoint returns: `400` (validation, incl. `#idempotency-key-missing`), `401`
+(auth/expired token), `403` (permissions), `409` (conflict — `#idempotency-key-in-use`,
+`#tax-id-in-use`, `#national-id-in-use`), `500` (server — retry with backoff).
 
 **Addendum and processor validation.** Four `400` scenarios are specific to `addendums`/`processor` —
 recognize these rather than treating them as an opaque failure:

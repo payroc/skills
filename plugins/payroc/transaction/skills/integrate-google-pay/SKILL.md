@@ -2,14 +2,14 @@
 name: integrate-google-pay
 description: >-
   Guide an ISV developer or merchant through integrating Google Pay with Payroc's
-  payments API from merchant setup through a first successful UAT test transaction.
+  payments API from merchant setup through a first successful test transaction.
   Use this skill whenever someone asks about adding Google Pay to their Payroc
   integration, implementing Google Pay on their checkout page, processing digital
   wallet payments via Google Pay, or getting Google Pay working with the Payroc
   gateway — even if they don't explicitly mention "integration" or ask for
   step-by-step guidance.
 metadata:
-  version: "0.4.1"
+  version: "0.4.3"
   category: integration
   status: draft
 ---
@@ -36,7 +36,7 @@ Before announcing anything or starting the flow, confirm this skill is current:
 On first invocation, announce to the developer:
 
 > **Payroc Google Pay Integration**
-> I'll guide you from merchant setup through a successful UAT test transaction.
+> I'll guide you from merchant setup through a successful test transaction.
 > This covers Google Pay as a payment method on your checkout page — using the Google Pay JS API to present the payment sheet and the Payroc Payments API to process the encrypted payment data.
 >
 > **How Google Pay works with Payroc (four parts):**
@@ -49,7 +49,7 @@ On first invocation, announce to the developer:
 >
 > **Google Pay vs Hosted Fields / HPP:** Google Pay is a separate payment flow — it does not use the Hosted Fields JS library or the HPP form. It is a complement to those integrations, not a replacement.
 >
-> **Registration required for production:** Google Pay requires you to register your integration with Google before going live. UAT testing works without registration.
+> **Registration required for production:** Google Pay requires you to register your integration with Google before going live. Testing works without registration.
 
 *[If an MCP connection-check tool is available, run it here and surface the result before continuing.]*
 
@@ -59,18 +59,19 @@ On first invocation, announce to the developer:
 
 ```text
 # Identity service (Bearer token — server-side only)
-POST https://identity.uat.payroc.com/authorize
+# Same hosts for test and live: the API key decides which
+POST https://identity.payroc.com/authorize
 x-api-key: <api-key>
 
 # Google Pay JS library (client-side — load in the browser)
 https://pay.google.com/gp/p/js/pay.js
 
 # Payments API (server-side — process the hex-encoded Google Pay token)
-POST https://api.uat.payroc.com/v1/payments
+POST https://api.payroc.com/v1/payments
 Authorization:  Bearer <token>
 Content-Type:   application/json
 
-# Production base URLs (swap when going live — see Step 4 and Completion)
+# Same URLs for test and live; going live swaps the API key (see Step 4 and Completion)
 #   identity.payroc.com/authorize   |   api.payroc.com/v1/payments
 ```
 
@@ -107,7 +108,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 
 1. **Inspect before asking** — read the codebase before asking anything; use what you find to skip obvious questions and ask targeted ones.
 2. **Ask before coding** — gather unknowns through questions before writing implementation code.
-3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in UAT.
+3. **Validate before advancing** — don't move to the next step until the developer confirms the current step's checkpoint passes in the test environment.
 4. **Read the references, don't guess — and pick the right reference for the question.** There are *three* sources for this integration, not two. Using the wrong one for a question is how memorised-but-wrong values leak through.
    - **Payroc API schemas, field names, enums, required fields → `references/api-schema.md`.** Anything that crosses the wire to *Payroc's* API. Field values that accept specific strings (`channel`, `paymentMethod.type`, `paymentMethod.serviceProvider`, currency, country, and any other enum-style parameter) come from the schema reference, not from training data. Even a plausible-sounding string that isn't in the reference will cause API errors.
    - **Composition, Payroc-specific gateway values (`gateway`, `gatewayMerchantId` derivation), hex-encoding requirement → `references/google-pay.md`.** "What `gateway` constant does Payroc want?" and "how do I derive `gatewayMerchantId`?" are narrative-copy questions, not schema or Google questions.
@@ -149,10 +150,10 @@ Google Pay is a **complement** to a card-entry method, not a replacement — mos
 
 **Question 2 — Google Merchant ID:**
 
-Google Pay for production requires a Google Merchant ID (assigned by Google when you register your integration). For UAT testing you can use a test merchant ID.
+Google Pay for production requires a Google Merchant ID (assigned by Google when you register your integration). For testing you can use a test merchant ID.
 
 - **Google Merchant ID available** → note it; it's used in the Google Pay JS configuration
-- **Not yet registered with Google** → UAT testing can proceed with a test ID; registration is required before going live
+- **Not yet registered with Google** → testing can proceed with a test ID; registration is required before going live
 
 **Wait for the developer's answers before continuing.**
 
@@ -162,13 +163,13 @@ Google Pay for production requires a Google Merchant ID (assigned by Google when
 
 These are needed to **run and test** Google Pay — not to write the code. If the developer already has them, great. If not, don't stop: wire the code to read each value from an environment variable and keep building. The developer can supply the real values before they test.
 
-1. **API key** — used to obtain a Bearer token from Payroc's identity service. Same credential used for Hosted Fields; the Payroc Integrations team provisions it.
-2. **Processing terminal ID** — a UAT terminal ID provisioned by the Payroc Integrations team. Also used to derive the `gatewayMerchantId` (terminal ID minus the last three characters).
-3. **Google Merchant ID** — for UAT, a test value can be used, so this never blocks development. For production, obtained by registering with Google (see Step 4); the code can read it from a variable like `GOOGLE_MERCHANT_ID`.
+1. **API key** — used to obtain a Bearer token from Payroc's identity service. Same credential used for Hosted Fields. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — a test terminal ID provisioned by the Payroc Integrations team. Also used to derive the `gatewayMerchantId` (terminal ID minus the last three characters).
+3. **Google Merchant ID** — for testing, a test value can be used, so this never blocks development. For production, obtained by registering with Google (see Step 4); the code can read it from a variable like `GOOGLE_MERCHANT_ID`.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose names like `PAYROC_API_KEY`, `PAYROC_TERMINAL_ID`, and `GOOGLE_MERCHANT_ID`. Write the code to read those values from the environment, then tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key, terminal ID, and Google Merchant ID from `<VAR names>`. To run or test in UAT you'll need a Payroc UAT terminal and API key (contact the Payroc Integrations team); a test Google Merchant ID is fine for UAT, and a real one (from the Google Pay Business Console) is needed for production (Step 4). I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key, terminal ID, and Google Merchant ID from `<VAR names>`. To run or test you'll need a Payroc test terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal); a test Google Merchant ID is fine for testing, and a real one (from the Google Pay Business Console) is needed for production (Step 4). I can keep building in the meantime.
 
 Offer to help them obtain what's missing, and continue with development if they want to.
 
@@ -227,7 +228,7 @@ These are *Payroc-specific* values, not Google values — they live inside `toke
 Implement the client-side integration (only after reading the references above):
 
 1. Load the Google Pay JS library: `https://pay.google.com/gp/p/js/pay.js`
-2. Create a `PaymentsClient` with the appropriate environment (`TEST` for UAT, `PRODUCTION` for live) — confirm the environment constant against the Google client notes.
+2. Create a `PaymentsClient` with the appropriate environment (`TEST` for testing, `PRODUCTION` for live) — confirm the environment constant against the Google client notes.
 3. Call the readiness-check method (`isReadyToPay` per the Google client notes) with the supported payment methods before rendering the button.
 4. Render the Google Pay button using `createButton` (per the Google client notes) — only when the readiness check returns `true`.
 5. On button click, call `loadPaymentData` with the full `PaymentDataRequest`.
@@ -274,7 +275,7 @@ When `loadPaymentData` resolves, the `paymentData` object contains encrypted pay
 
 ### Checkpoint
 
-Does the payments API return HTTP 201 in UAT? Does the checkout page show a payment confirmation?
+Does the payments API return HTTP 201 in the test environment? Does the checkout page show a payment confirmation?
 
 ---
 
@@ -287,7 +288,7 @@ Before going live, your integration must be registered with Google:
 3. Switch the `PaymentsClient` environment from `TEST` to `PRODUCTION`
 4. Contact the Payroc Integrations team (`integrationsupport@payroc.com`) to confirm that live Google Pay processing is enabled for the terminal
 
-This step is not required for UAT testing.
+This step is not required for testing.
 
 ---
 
@@ -298,9 +299,9 @@ public-URL reachability requirement and you don't need a tunnel (ngrok, Dev Tunn
 
 - The Google Pay button requires a **secure context**. Browsers treat `http://localhost` as secure, so
   local development works without HTTPS; any other host must be served over HTTPS for the button to render.
-- Use the `TEST` environment on the `PaymentsClient` for UAT — Google returns test payment data that Payroc's
-  UAT terminal accepts. No Google Business Console registration is needed to test in `TEST`.
-- Production requires Business Console registration (Step 4) plus the production base URLs and the
+- Use the `TEST` environment on the `PaymentsClient` for testing — Google returns test payment data that Payroc's
+  test terminal accepts. No Google Business Console registration is needed to test in `TEST`.
+- Production requires Business Console registration (Step 4) plus a live Payroc API key and the
   `PRODUCTION` environment — but **not** per-domain verification files (that is an Apple Pay concern, not
   Google Pay).
 
@@ -313,7 +314,7 @@ public-URL reachability requirement and you don't need a tunnel (ngrok, Dev Tunn
 | Google Pay button never renders | `isReadyToPay` returned false | Check that supported networks and auth methods match what the test environment allows; in `TEST` environment any device should work |
 | `loadPaymentData` throws or rejects | `PaymentDataRequest` misconfigured | Check browser console for Google Pay error details; verify `gateway`, `gatewayMerchantId`, and `merchantId` fields match what the docs require |
 | Payment sheet shows but fails on confirmation | `gatewayMerchantId` incorrect | Confirm derivation: terminal ID minus last 3 characters — read `references/google-pay.md` to verify the formula |
-| Payment API 401 | Bearer token expired or wrong API key | Re-fetch Bearer token; verify the `x-api-key` value |
+| Payment API 401 | Bearer token expired or wrong API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) | Re-fetch Bearer token; verify the `x-api-key` value |
 | Payment API 400 | `encryptedData` not in hex format, or missing required fields | Re-read the `encryptedData` format requirement from `references/google-pay.md` / `references/api-schema.md`; confirm the hex conversion logic |
 | Payment API processes but result is unexpected | Wrong `serviceProvider` value | Must be `"google"` (lowercase); check for case errors |
 | Production button works in TEST but not PRODUCTION | Not registered with Google or live processing not enabled | Complete Google Pay Business Console registration; contact Payroc Integrations team |
@@ -335,7 +336,7 @@ public-URL reachability requirement and you don't need a tunnel (ngrok, Dev Tunn
 - [ ] Server-side success branch keys on `responseCode === 'A'` (per `references/api-schema.md`), treats `ready` and `pending` as authorized and `D`/`R`/`C` as declines — not a guessed `transactionResult.status` subset
 - [ ] Google Pay button only rendered when `isReadyToPay` returns `true`
 - [ ] Encrypted payment data converted to hex format before sending to Payroc API
-- [ ] Payment API returns HTTP 201 in UAT with a test Google Pay transaction
+- [ ] Payment API returns HTTP 201 in the test environment with a test Google Pay transaction
 - [ ] (Production) Google Pay Business Console registration complete and `merchantId` updated
 - [ ] (Production) Payroc Integrations team confirmed live processing enabled
 
@@ -364,9 +365,9 @@ Once HTTP 201 is confirmed and all checklist items pass:
 > - **Google Pay button** — rendered conditionally; presents the Google Pay payment sheet when clicked.
 > - **Gateway configuration** — the gateway constant and `gatewayMerchantId` value were read from the Payroc Google Pay narrative copy; routes requests through Payroc.
 > - **Payment processing** — encrypted payment data hex-encoded and posted to the Payroc payments endpoint.
-> - **Validated in UAT** — end-to-end Google Pay transaction confirmed.
+> - **Validated in the test environment** — end-to-end Google Pay transaction confirmed.
 >
-> **Before going live:** complete Google Pay Business Console registration, update `merchantId` with the production value, switch `PaymentsClient` to `PRODUCTION` environment, swap UAT payment API URL for production, and confirm live processing is enabled with the Payroc Integrations team.
+> **Before going live:** complete Google Pay Business Console registration, update `merchantId` with the production value, switch `PaymentsClient` to `PRODUCTION` environment, swap the test API key for a live one and point the terminal ID at the production terminal (the payments API host stays `api.payroc.com`), and confirm live processing is enabled with the Payroc Integrations team.
 
 Offer next steps:
 

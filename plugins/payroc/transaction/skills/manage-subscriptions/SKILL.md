@@ -13,7 +13,7 @@ description: >
   set-up-a-payment-plan instead), one-time card sales or refunds, saving or tokenizing a payment
   method, event webhook subscriptions, or payment links.
 metadata:
-  version: "0.4.3"
+  version: "0.4.5"
   category: transaction
   status: draft
 ---
@@ -52,20 +52,20 @@ workflow narrative, read `references/repeat-payments-guide.md`.
 
 ```text
 # Payment plans
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
-PATCH  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
-DELETE https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+PATCH  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
+DELETE https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}
 
 # Subscriptions
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
-GET    https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
-PATCH  https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate
-POST   https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions
+GET    https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
+PATCH  https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate
+POST   https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay
 
 Standard headers (POST / PATCH):
   Authorization:   Bearer <token>
@@ -110,7 +110,7 @@ These are local snapshots. Source URLs and last-synced dates are in
 5. **Merchant-assigned IDs.** Both `paymentPlanId` and `subscriptionId` are assigned by the
    merchant, not by Payroc. Choose meaningful, unique values.
 6. **Validate before advancing.** Don't move to the next step until the current step's checkpoint
-   passes in UAT.
+   passes in the test environment.
 
 ---
 
@@ -140,7 +140,7 @@ Use what you find to pre-fill obvious answers, then ask:
 
 ## Prerequisites
 
-These are needed to run and test in UAT — not to write code. Wire the code to read them from
+These are needed to run and test in the test environment — not to write code. Wire the code to read them from
 environment variables and keep building even if they aren't available yet.
 
 | Item | Notes |
@@ -150,8 +150,8 @@ environment variables and keep building even if they aren't available yet.
 | Secure token | The customer's stored payment method token. Obtain it via the Secure Tokens API first. |
 
 If any item is missing, warn and continue:
-> ⚠️ I've wired this to read your credentials from environment variables. You'll need a Payroc UAT
-> terminal and API key to test — contact the Payroc Integrations team to get them.
+> ⚠️ I've wired this to read your credentials from environment variables. You'll need a Payroc test
+> terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal) to test.
 
 ---
 
@@ -163,11 +163,7 @@ Exchange your API key for a Bearer token using the Payroc Identity Service. Toke
 3600 seconds (1 hour) — exchange once per session, not once per request.
 
 ```bash
-# UAT / test
-curl -X POST https://identity.uat.payroc.com/authorize \
-  -H "x-api-key: $PAYROC_API_KEY"
-
-# Production
+# Same host for test and live; the API key decides which
 curl -X POST https://identity.payroc.com/authorize \
   -H "x-api-key: $PAYROC_API_KEY"
 ```
@@ -177,7 +173,7 @@ Response contains `access_token`, `expires_in` (3600), and `token_type` ("Bearer
 
 ### Checkpoint
 Can the auth helper produce a Bearer token without error? If not, verify the `x-api-key` header
-and confirm the API key is correct for the UAT environment.
+and confirm the API key is correct for the test environment.
 
 ---
 
@@ -188,7 +184,7 @@ and confirm the API key is correct for the UAT environment.
 > and not from the inline example below. The inline example uses placeholder comments; the
 > reference file is authoritative. Read it first, then return here.
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
 
 ```
 Authorization:   Bearer <token>
@@ -245,7 +241,7 @@ that ID already exists — retrieve it with GET or choose a different ID.
 > inline example below uses a comment placeholder for `type` — read the reference, confirm the
 > exact value, then fill it in.
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
 
 ```
 Authorization:   Bearer <token>
@@ -306,7 +302,7 @@ work through the error taxonomy below.
 > enum values for RFC 6902 JSON Patch, and (2) any plan-level PATCH restrictions. Read both before
 > writing any code.
 
-`PATCH https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
+`PATCH https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
 
 ```
 Authorization:   Bearer <token>
@@ -338,7 +334,7 @@ Response (200 OK) returns the updated plan.
 
 ### Delete a payment plan
 
-`DELETE https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
+`DELETE https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
 
 ```
 Authorization: Bearer <token>
@@ -359,12 +355,12 @@ Response (200 OK or 204 No Content).
 ### Retrieve or list payment plans
 
 **Retrieve a single plan:**
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans/{paymentPlanId}`
 
 Returns the full plan object.
 
 **List payment plans:**
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/payment-plans`
 
 Supports pagination: `limit` (default 10), `before`/`after` cursors; `hasMore` indicates additional
 pages. Read `references/api-schema.md` for any available filter parameters.
@@ -377,7 +373,7 @@ pages. Read `references/api-schema.md` for any available filter parameters.
 > it: (1) the valid `op` enum values for RFC 6902 JSON Patch, and (2) the PATCH restrictions
 > table listing fields that cannot be modified or deleted. Read both before writing any code.
 
-`PATCH https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
+`PATCH https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
 
 ```
 Authorization:   Bearer <token>
@@ -403,7 +399,7 @@ The body is an **RFC 6902 JSON Patch array** — not a PUT body. Use `op` values
 
 ### Deactivate a subscription
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/deactivate`
 
 ```
 Authorization: Bearer <token>
@@ -421,7 +417,7 @@ Response (200 OK) returns the updated subscription with `currentState.status: "c
 
 ### Reactivate a subscription
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/reactivate`
 
 ```
 Authorization: Bearer <token>
@@ -453,7 +449,7 @@ updated `nextDueDate`.
 
 You can collect only when a payment is due. The plan's `frequency` sets how often that is, for example weekly or monthly. If the payment for the current period has already been collected, the gateway rejects the request, so don't retry a rejected collection within the same period.
 
-`POST https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
+`POST https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}/pay`
 
 ```
 Authorization:   Bearer <token>
@@ -479,12 +475,12 @@ updated `currentState.paidInvoices`, and `currentState.nextDueDate`.
 ### Retrieve or list subscriptions
 
 **Retrieve a single subscription:**
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions/{subscriptionId}`
 
 Returns the full subscription object including `currentState`.
 
 **List subscriptions:**
-`GET https://api.uat.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
+`GET https://api.payroc.com/v1/processing-terminals/{processingTerminalId}/subscriptions`
 
 > Read `references/api-schema.md` for list filter enum values (`frequency`, `status`) before
 > writing query parameter code. Use only documented values.
@@ -499,13 +495,13 @@ indicates additional pages.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or wrong API key | Re-generate token; verify `x-api-key` header |
-| 400 — `idempotencyKeyMissing` | Missing `Idempotency-Key` header | Add `Idempotency-Key: <uuid-v4>` to every POST and PATCH — except the deactivate and reactivate endpoints and DELETE (see Core Principle #2) |
+| 401 on any request | Token missing, expired, or wrong API key | Re-generate token; verify `x-api-key` header, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
+| 400 — `#idempotency-key-missing` | Missing `Idempotency-Key` header | Add `Idempotency-Key: <uuid-v4>` to every POST and PATCH — except the deactivate and reactivate endpoints and DELETE (see Core Principle #2) |
 | 400 — field validation error | Required field missing or wrong format | Read `errors[].parameter` to identify the failing field; fix and resubmit with a fresh idempotency key (the corrected body needs a new key) |
 | 400 — invalid enum value | Enum value not from the spec | Read `references/api-schema.md` and use the documented value exactly |
 | 400 — `recurringOrder` missing | `type: automatic` plan has no `recurringOrder` | Add `recurringOrder.amount` to the plan; automatic collection requires a defined amount |
-| 409 — `resourceAlreadyExists` | `paymentPlanId` or `subscriptionId` already in use | Retrieve the existing resource; or choose a different ID for a new one |
-| 409 — idempotency conflict | Same key reused for a different payload | Generate a fresh UUID v4 for each distinct operation |
+| 409 `#resource-already-exists` | `paymentPlanId` or `subscriptionId` already in use | Retrieve the existing resource (the `instance` field may point to it); or choose a different ID for a new one |
+| 409 `#idempotency-key-in-use` | Same key reused for a different payload | Check whether the earlier request already succeeded before sending again with a fresh UUID v4 |
 | 404 | Wrong `processingTerminalId`, `paymentPlanId`, or `subscriptionId` | Verify the path parameters against creation responses |
 | 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
 | Subscription `status: cancelled`, no payments collected | Subscription was deactivated | Reactivate via the reactivate endpoint |
@@ -547,7 +543,7 @@ cross-skill standard.
 - [ ] Amounts expressed in the lowest currency denomination (cents for USD, pence for GBP)
 - [ ] `startDate` in `YYYY-MM-DD` format, and the current day or later (gateway date: UTC in winter, IST in summer)
 - [ ] Manual collections are triggered only when a payment is due, at most once per `frequency` period
-- [ ] UAT endpoints used (`api.uat.payroc.com`) during testing — not production
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -560,11 +556,10 @@ Once all checklist items pass:
 > - **Payment plan** — [name, frequency, type (automatic/manual), amount]
 > - **Subscription** — [subscriptionId, linked to plan, startDate]
 > - **Lifecycle operations** (list what was built)
-> - **Validated in UAT** — confirmed with Payroc API
+> - **Validated in the test environment** — confirmed with Payroc API
 >
-> **Before going live:** swap `api.uat.payroc.com` → `api.payroc.com` and
-> `identity.uat.payroc.com` → `identity.payroc.com`. Point credentials to production
-> terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the
+> production terminal.
 
 Offer next steps:
 - **Webhook notifications** — receive server-side events when payments succeed or fail

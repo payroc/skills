@@ -3,18 +3,17 @@ name: run-a-card-sale
 description: >
   Guides developers through running a card sale (immediate-capture payment) via the Payroc Payments
   API (POST /v1/payments). Use this skill when the user wants to process a card payment, charge a
-  credit or debit card, run a card transaction or card sale, take a card payment, collect a card
-  payment, run an immediate-capture payment, implement a direct-API card payment (server-to-server),
-  accept a card payment online or in-store, process a MOTO payment, use a card token or
-  single-use token to charge a customer, or work with the /v1/payments endpoint for a sale. Also
-  use when the user asks about card payment channels (pos/web/moto), card entry methods, what fields
-  are required for a card payment request, how to get a paymentId from a sale, or how to submit a
-  card payment and handle the response — even if they don't use the word "skill" or "payments API"
-  explicitly. Do NOT use for pre-authorization (autoCapture: false), refunds, reversals,
-  ACH/bank-transfer payments, 3-D Secure authentication, or Hosted Fields / Hosted Payment Pages
-  (embedded UI card input) — those are separate skills.
+  credit or debit card, run a card sale or transaction, take or collect a card payment, implement a
+  direct-API card payment (server-to-server), accept a card payment online or in-store, process a
+  MOTO payment, or use a card token or single-use token to charge a customer. Also use when the
+  user asks about card payment channels (pos/web/moto), card entry methods, what fields are
+  required for a card payment request, how to get a paymentId from a sale, or how to submit a card
+  payment and handle the response — even without the words "skill" or "payments API". Do NOT use
+  for pre-authorization (autoCapture: false), refunds, reversals, ACH/bank-transfer payments, 3-D
+  Secure authentication, or Hosted Fields / Hosted Payment Pages (embedded UI card input) — those
+  are separate skills.
 metadata:
-  version: "0.2.0"
+  version: "0.2.2"
   category: transaction
   status: draft
 ---
@@ -49,10 +48,10 @@ On first invocation, announce to the developer:
 >
 > **This skill vs. related skills:**
 > - **Card sale (this skill)** — immediate capture; funds taken now.
-> - **Pre-authorization** — funds held, captured separately. Different skill.
-> - **Refund a card payment** — return funds to the customer. Different skill.
-> - **3-D Secure** — additional online authentication layer. Different skill.
-> - **Save a payment method** — tokenise a card for future use. Different skill.
+> - **Pre-authorization** — funds held, captured separately. Use the `run-a-pre-authorization` skill.
+> - **Refund a card payment** — return funds to the customer. Use the `refund-a-card-payment` skill.
+> - **3-D Secure** — additional online authentication layer. Use the `run-a-sale-with-3ds` skill.
+> - **Save a payment method** — tokenise a card for future use. Use the `save-a-payment-method` skill.
 
 *[If an MCP connection-check tool is available, run it here and surface the result before continuing.]*
 
@@ -61,7 +60,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST  https://api.uat.payroc.com/v1/payments
+POST  https://api.payroc.com/v1/payments
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -95,7 +94,7 @@ recorded in [`references/_sources.md`](references/_sources.md).
 5. **Never hardcode credentials.** API keys, terminal IDs, and card numbers must come from environment variables or a secrets manager.
 6. **Bearer token expiry.** Tokens from the identity service expire after 3,600 seconds (1 hour). For short scripts this is fine; for long-running services, implement token refresh logic.
 7. **Save `paymentId` immediately.** The `paymentId` in the response is the key for all follow-on operations. Capture it from the response before anything else.
-8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 9. **Diagnose before proceeding** — if a step fails, pause and work through the error taxonomy before continuing.
 
 ---
@@ -130,15 +129,15 @@ Use the answers to scope the implementation. If the developer's use case is ambi
 
 ## Prerequisites
 
-These are needed to **run and test** the integration in UAT — not to write the code. If the developer already has them, proceed. If not, don't block — write the code to read values from environment variables and keep building.
+These are needed to **run and test** the integration in the test environment — not to write the code. If the developer already has them, proceed. If not, don't block — write the code to read values from environment variables and keep building.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team.
-2. **Processing terminal ID** — the `processingTerminalId` sent in every payment request. The developer should have this from their UAT setup.
-3. **UAT environment** — Payroc's test environment. There is no self-serve signup; UAT terminals are provisioned manually by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
+2. **Processing terminal ID** — the `processingTerminalId` sent in every payment request. The developer should have this from their test setup.
+3. **Test environment** — a test API key and test terminal. Test terminals are provisioned manually by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Scan the codebase for an existing env-var convention and match it; otherwise propose `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write the code to read credentials from those variables, then tell the developer plainly:
 
-> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc UAT terminal and API key to actually run or test this — contact the Payroc Integrations team to get them. I can keep building in the meantime.
+> ⚠️ I've wired this to read your API key and terminal ID from `<VAR names>`. You'll need a Payroc test terminal (contact the Payroc Integrations team) and a test API key (create one in the Developer Portal) to actually run or test this. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -151,8 +150,7 @@ Either the credentials are confirmed, or the developer knows what's outstanding 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
 Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+- `POST https://identity.payroc.com/authorize` (same host for test and live; the API key decides which)
 
 Header: `x-api-key: <api-key>`
 
@@ -164,13 +162,13 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the test environment.
 
 ---
 
 ## Step 2 — Build the payment request
 
-Endpoint: `POST https://api.uat.payroc.com/v1/payments`
+Endpoint: `POST https://api.payroc.com/v1/payments`
 
 Required headers:
 ```
@@ -202,7 +200,7 @@ Based on intake:
 
 - `orderId` must be unique per merchant — use your internal order reference.
 - `amount` is in the **lowest currency denomination**: `5000` = $50.00 USD / £50.00 GBP.
-- `currency` is an ISO 4217 code. Read valid values from `references/api-schema.md`.
+- `currency` is an ISO 4217 three-letter code, for example `USD`.
 
 If the developer needs itemised amounts (tips, taxes, surcharge), add a `breakdown` object. Read the breakdown schema from `references/api-schema.md` before writing any `tip.type`, `tax.type`, or `healthcareExpenses[].type` enum values.
 
@@ -255,17 +253,17 @@ If the developer needs itemised amounts (tips, taxes, surcharge), add a `breakdo
 {
   "type": "digitalWallet",
   "serviceProvider": "apple",
-  "token": "<wallet-encrypted-payload>"
+  "encryptedData": "<wallet-encrypted-payload>"
 }
 ```
 
-> `serviceProvider` is required for `digitalWallet`. Read valid values from `references/api-schema.md` (`apple` or `google`). The token value is the encrypted payment data returned by the wallet SDK — do not modify it.
+> `serviceProvider` is required for `digitalWallet`. Read valid values from `references/api-schema.md` (`apple` or `google`). The `encryptedData` value is the encrypted payment data returned by the wallet SDK, converted to hexadecimal. Do not alter its contents: hex-encode it and send the result. For the full wallet flow, use the `integrate-apple-pay` or `integrate-google-pay` skill.
 
-For POS card-present flows (`icc`, `swiped`, `contactlessIcc`), the entry-method sub-object contains device-specific fields — read the schema in `references/api-schema.md` for the correct structure.
+For POS card-present flows (`icc`, `swiped`), the entry-method sub-object contains device-specific fields — read the schema in `references/api-schema.md` for the correct structure.
 
 ### 2d. autoCapture and processAsSale
 
-Omit `autoCapture` (or set it to `true`) for a sale — this is the default and means funds are captured immediately on approval. Setting it to `false` creates a pre-authorization — that is a different skill.
+Omit `autoCapture` (or set it to `true`) for a sale — this is the default and means funds are captured immediately on approval. Setting it to `false` creates a pre-authorization — use the `run-a-pre-authorization` skill for that.
 
 For **immediate settlement** (funds moved to the merchant account at once rather than batching at end-of-day), set `processAsSale: true` at the root level. This is an optional field and defaults to `false`. Most integrations do not need it, but it is available if the merchant's account is configured for real-time settlement.
 
@@ -303,7 +301,7 @@ For **immediate settlement** (funds moved to the merchant account at once rather
 Always generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* failed request, reuse the same key — the API returns the original response instead of creating a duplicate charge. On a genuinely new payment attempt, generate a new UUID.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/payments \
+curl -X POST https://api.payroc.com/v1/payments \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -318,41 +316,56 @@ Does the API return HTTP 201 with a `paymentId`? If not, work through the error 
 
 ## Step 4 — Handle the response
 
-**201 Created** — payment accepted and sale captured:
+**201 Created** — the request was processed. Read `transactionResult` to find out whether the card was charged:
 
 ```json
 {
-  "paymentId": "PAY-XXXX",
+  "paymentId": "M2MJOG6O2Y",
+  "processingTerminalId": "1234001",
   "order": {
     "orderId": "ORD-20260622-001",
     "amount": 5000,
     "currency": "USD"
   },
-  "transactionStatus": "authorized",
-  "paymentMethod": {
-    "type": "card",
-    "cardDetails": {
-      "last4": "1111",
-      "cardType": "visa"
-    }
+  "card": {
+    "type": "MasterCard",
+    "entryMethod": "keyed",
+    "cardNumber": "453985******7062",
+    "expiryDate": "1230"
   },
-  "links": [ ... ]
+  "supportedOperations": ["fullyReverse", "partiallyReverse", "adjustTip"],
+  "transactionResult": {
+    "type": "sale",
+    "status": "ready",
+    "approvalCode": "OK3",
+    "authorizedAmount": 5000,
+    "currency": "USD",
+    "responseCode": "A",
+    "responseMessage": "OK3"
+  }
 }
 ```
 
-**Save `paymentId` immediately.** It is required for refund, reversal, adjustment, and capture. Treat it as an opaque string — do not parse or validate its format. In UAT the ID may be a plain integer; in production the format may differ.
+**Save `paymentId` immediately.** It is required for refund, reversal, adjustment, and capture. Treat it as an opaque string — do not parse or validate its format.
 
-The `transactionStatus` on a successful sale is typically `authorized` (approved by the issuer). Settlement state is tracked separately — query the payment later or use webhooks to detect settlement.
+There is no `transactionStatus` field. The outcome is `transactionResult.status`; `transactionResult.responseCode` is the processor's code (`A` approved, `D` declined, `R` refer to issuer, `C` pick up card, `P` partial approval, `E` processed later).
 
-**Important: HTTP 201 does not guarantee approval.** The API returns 201 even when the issuer declines the card. Always check `transactionStatus` in the response body before treating the payment as successful:
+**Important: HTTP 201 does not guarantee approval.** The API returns 201 even when the issuer declines the card. Always check `transactionResult.status` before treating the payment as successful:
 
-| `transactionStatus` | Meaning | Action |
+| `transactionResult.status` | Meaning | Action |
 | --- | --- | --- |
-| `authorized` | Issuer approved; funds captured | Proceed — payment is complete |
-| `declined` | Issuer declined | Show a declined message; do not retry automatically; ask the customer to try a different card |
-| `pending` | Authorization pending (rare) | Poll the payment status or wait for a webhook |
+| `ready` | Approved; added to the open batch | Proceed — the sale is complete. If you sent `order.acceptPartialAmount: true`, first check for `responseCode` `P`: `transactionResult.authorizedAmount` is then lower than the amount you asked for, so collect the rest or reverse the payment before fulfilling |
+| `complete` | Successful; the funds have moved to the merchant's bank account | Treat as paid. Usually seen when you retrieve a payment later; handle it on the create response too, because `processAsSale: true` settles the payment at once |
+| `pending` | Approved, but funds are not collected until the payment is captured (pre-authorizations) | Capture it, or treat it as a pre-authorization |
+| `declined` | The issuer declined the card | Show a declined message; do not retry automatically; ask the customer to try a different card |
+| `referral` | The issuer declined and asks the customer to contact their bank | Treat as declined |
+| `pickup` | The issuer reports the card lost or stolen | Treat as declined; do not retry |
+| `accepted` | In progress with the processor; the result is not confirmed yet | Do not fulfil yet; retrieve the payment later (`GET /payments/{paymentId}`) |
+| `admin` | Under review: Payroc flagged an issue | Do not fulfil; check the payment later |
 
-Never assume a 201 response means the card was charged — always inspect `transactionStatus`.
+`reversal` and `expired` appear when you retrieve a payment later: the payment was reversed, or a `pending` payment expired.
+
+Never assume a 201 response means the card was charged — always inspect `transactionResult.status`.
 
 ---
 
@@ -363,12 +376,12 @@ Errors follow [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807) and incl
 | Status | Scenario | Action |
 | --- | --- | --- |
 | 400 validation | Field issues | Fix each field in `errors[].parameter`; resubmit with a fresh idempotency key (the corrected body needs a new key) |
-| 400 `idempotencyKeyMissing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
+| 400 `#idempotency-key-missing` | Missing header | Add `Idempotency-Key: <uuid-v4>` to the request |
 | 401 | Token expired or invalid | Re-authenticate and get a fresh bearer token |
-| 403 | Insufficient permissions | Check API key scope; contact Payroc support |
-| 409 `idempotencyKeyInUse` | Key reused with different payload | Generate a new UUID for the new payment attempt |
+| 403 | Insufficient permissions; or, with the plain-text body `error code: 1010`, your client's `User-Agent` was refused | For `error code: 1010`, set a `User-Agent` on every request (`references/identity-call.md`, Client notes). Otherwise check API key scope; contact Payroc support |
+| 409 `#idempotency-key-in-use` | Key reused with different payload | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a new UUID for the new payment attempt |
 | 415 | Wrong Content-Type | Set `Content-Type: application/json` |
-| 500 | Server error | Retry with exponential backoff; surface `errors` array if present |
+| 500 | Server error | Retry with exponential backoff; surface `errors` array if present. A malformed body (for example `{}`) also returns `500`, so check the request before retrying |
 
 **Reading validation errors** — the response uses the **RFC 7807 problem-details envelope** (`type`, `title`, `status`, `detail`, `instance`); Payroc **extends** it with an `errors` array. Each `errors[]` item has:
 - `parameter` — the JSON path of the failing field (e.g. `paymentMethod.type`, `order.currency`)
@@ -383,16 +396,16 @@ Use `parameter` to identify which field failed and fix it before resubmitting. S
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct test API key, or an older test key issued for the `.uat.` hosts (see `references/identity-call.md`) |
 | 400 — `channel` validation error | Invalid channel value | Read `references/api-schema.md` and use `pos`, `web`, or `moto` exactly |
 | 400 — `paymentMethod.type` rejected | Wrong or misspelled type value | Read `references/api-schema.md`; use `card`, `secureToken`, `singleUseToken`, or `digitalWallet` exactly |
 | 400 — card entry method rejected | Wrong entry-method key in `cardDetails` | Read `references/api-schema.md` for the valid entry-method discriminator values |
-| 400 — `amount` wrong | Passing major units (e.g. 50 instead of 5000) | Convert to minor units (cents/pence): $50.00 = 5000 |
+| `amount` sent in major units (e.g. 50 instead of 5000) | No error: the payment is accepted and charges $0.50 instead of $50.00 | Send minor units (cents/pence): $50.00 = 5000 |
 | 400 — missing `orderId` | `order.orderId` not provided | Add a unique `orderId` to the `order` object |
-| 400 — `idempotencyKeyMissing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` header to every POST |
-| 409 — duplicate idempotency key | Same UUID reused for a different payment | Generate a fresh UUID for each distinct payment |
+| 400 — `#idempotency-key-missing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` header to every POST |
+| 409 — duplicate idempotency key | Same UUID reused for a different payment | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for each distinct payment |
 | 415 — unsupported media type | `Content-Type` header missing or wrong | Set `Content-Type: application/json` |
-| Card declined (transactionStatus reflects decline) | Issuer declined | Show the customer a declined message; do not retry automatically — ask the customer to try a different card |
+| Card declined (`transactionResult.status` is `declined`, `referral` or `pickup`) | Issuer declined | Show the customer a declined message; do not retry automatically — ask the customer to try a different card |
 
 ---
 
@@ -402,10 +415,10 @@ Use `parameter` to identify which field failed and fix it before resubmitting. S
 - **Missing idempotency key**: All POST requests require `Idempotency-Key: <UUID v4>` or you get a 400.
 - **Reusing a key for a different payment**: Each unique payment attempt needs its own UUID. Only reuse the same key when retrying the exact same failed request.
 - **Wrong enum casing**: Enum values are camelCase — `pos` is correct, `POS` is not. `singleUseToken` is correct, `single_use_token` is not. Read from `references/api-schema.md`, do not guess.
-- **Hardcoded card numbers**: Never include raw card numbers in source code. Use test card numbers from the Payroc UAT documentation during development; production code should accept card details through a secure input mechanism.
+- **Hardcoded card numbers**: Never include raw card numbers in source code. Use test card numbers from the Payroc test documentation during development; production code should accept card details through a secure input mechanism.
 - **Not saving `paymentId`**: The response `paymentId` is your only reference for refunds, reversals, and adjustments. Persist it immediately.
-- **Using production endpoint during testing**: Use `api.uat.payroc.com` for UAT and `identity.uat.payroc.com` for token exchange during development and testing.
-- **`expiryDate` format is `MMYY`, not `YYMM`**: The Payroc API takes `MMYY` — month first, then year — matching the card scheme convention printed on the card itself. December 2026 is `1226`, not `2612`. Don't confuse this with the bulk token-import CSV's `cardExpiry` column, which does accept multiple formats (including `YYMM`) — that's a different field on a different transport. Getting this wrong on the live API passes schema validation (the `pattern` only checks for 4 digits) but is declined downstream, so the failure is silent rather than a clear 400.
+- **Using a live API key during testing**: Use a test API key during development and testing. The hosts (`api.payroc.com` and `identity.payroc.com`) are the same for test and live, so the key decides which you are using.
+- **`expiryDate` format is `MMYY`, not `YYMM`**: The Payroc API takes `MMYY` — month first, then year — matching the card scheme convention printed on the card itself. December 2026 is `1226`, not `2612`. Don't confuse this with the bulk token-import CSV's `cardExpiry` column, which does accept multiple formats (including `YYMM`) — that's a different field on a different transport. Getting this wrong on the live API passes schema validation (the `pattern` only checks for 4 digits) but is declined downstream, so the failure is silent rather than a clear 400. The test environment does not check the expiry date at all (a sale with `2904` is approved there), so testing there will not catch this.
 
 ---
 
@@ -420,16 +433,16 @@ Read `references/api-schema.md` for:
 
 ## Completion
 
-Once a 201 response with a `paymentId` is received and the developer can verify the transaction in UAT:
+Once a 201 response with a `paymentId` is received and the developer can verify the transaction in the test environment:
 
 > **Integration complete.** Here's what you've built:
 >
 > - **Authentication** — Bearer token generation from the Payroc identity service; credentials in env vars.
 > - **Card sale** — [summarise: channel, payment method type, currency/amount].
 > - **Response handling** — `paymentId` captured and stored for follow-on operations.
-> - **Validated in UAT** — end-to-end flow confirmed.
+> - **Validated in the test environment** — end-to-end flow confirmed.
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key. Remove any hardcoded test card numbers.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal. Remove any hardcoded test card numbers.
 
 Offer next steps:
 - **Refund a payment** — return funds to a customer using the `paymentId`

@@ -2,18 +2,17 @@
 name: take-an-ach-payment
 description: >
   Guide a developer through accepting ACH (Automated Clearing House) or PAD (Pre-Authorized Debit)
-  bank transfer payments via the Payroc API (POST /v1/bank-transfer-payments). Use this skill when
-  the user wants to accept ACH payments, collect bank transfer payments, process direct debit
-  payments, charge a customer's bank account (checking or savings), implement bank account billing,
-  process eCheck payments, set up recurring ACH charges, or tokenize bank account details for
-  future charges. As part of building the integration, also covers: reversing (voiding) a payment
-  before settlement, re-presenting a returned ACH transaction (NSF / closed account retry), and
-  refunding as one step of the overall payment flow. Does NOT cover: refunding or reversing an ACH
-  payment as the primary goal (use refund-an-ach-payment for that), viewing ACH deposit reports,
-  verifying bank accounts, card payments, or single-use card tokens. Also covers single-use bank
-  account tokens (`singleUseToken` type) obtained from a Hosted Fields session.
+  bank transfer payments via the Payroc API (POST /v1/bank-transfer-payments). Use this skill to
+  accept ACH payments, collect bank transfer payments, process direct debit or eCheck payments,
+  charge a customer's bank account (checking or savings), implement bank account billing, set up
+  recurring ACH charges, or tokenize bank account details for future charges. Also covers, as steps
+  of the integration: reversing (voiding) a payment before settlement, re-presenting a returned ACH
+  transaction (NSF / closed account retry), refunding within that flow, and single-use bank account
+  tokens (`singleUseToken` type) from a Hosted Fields session. Does NOT cover: refunding, reversing,
+  re-presenting or closing a returned ACH payment as the primary goal (use refund-an-ach-payment),
+  viewing ACH deposit reports, verifying bank accounts, card payments, or single-use card tokens.
 metadata:
-  version: "0.4.3"
+  version: "0.4.5"
   category: transaction
   status: draft
 ---
@@ -51,8 +50,8 @@ On first invocation, announce to the developer:
 >
 > **What to know upfront:**
 > - ACH payments are asynchronous — `status` is initially `pending` and settles later
-> - PAD representment is currently unavailable in the Payroc UAT environment
-> - ACH re-presentment has limited testability in UAT — document this in production code
+> - PAD representment is currently unavailable in the Payroc test environment
+> - ACH re-presentment has limited testability in the test environment — document this in production code
 > - Account numbers and routing numbers are always masked in API responses (last 4 digits only)
 
 > **eCheck note:** In the Payroc API, eCheck is implemented as ACH — there is no separate eCheck product or additional micro-deposit verification step. A developer expecting a bank-verification handshake before the first charge (common in other payment platforms) should be informed that Payroc ACH proceeds directly to the transaction.
@@ -64,7 +63,7 @@ On first invocation, announce to the developer:
 ## Quick reference
 
 ```text
-POST https://api.uat.payroc.com/v1/bank-transfer-payments
+POST https://api.payroc.com/v1/bank-transfer-payments
 Authorization:   Bearer <token>
 Idempotency-Key: <uuid-v4>
 Content-Type:    application/json
@@ -98,7 +97,7 @@ recorded in [`references/_sources.md`](references/_sources.md) — regenerate fr
 5. **Idempotency-Key on every POST.** Must be a UUID v4. Required — omitting it causes a 400. Generate a fresh UUID for each distinct operation.
 6. **Never hardcode credentials.** API keys and terminal IDs must come from environment variables or a secrets manager, never source code.
 7. **Bearer token expiry.** Tokens expire after 3,600 seconds (1 hour). For long-running services, implement token refresh logic.
-8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in UAT.
+8. **Validate before advancing** — don't move to the next step until the current step's checkpoint passes in the test environment.
 
 ---
 
@@ -124,15 +123,15 @@ Use the answers to scope the implementation. If the use case is ambiguous, ask o
 
 ## Prerequisites
 
-These are needed to test the integration in UAT — not to write the code. If the developer already has them, proceed. If not, wire the code to read each from an environment variable and keep building.
+These are needed to test the integration in the test environment — not to write the code. If the developer already has them, proceed. If not, wire the code to read each from an environment variable and keep building.
 
-1. **API key** — used to generate Bearer tokens from the Payroc identity service. Provisioned by the Payroc Integrations team.
+1. **API key** — used to generate Bearer tokens from the Payroc identity service. For testing, create a test API key in the Payroc Developer Portal (https://developers.payroc.com).
 2. **Processing terminal ID** — included in the request body (`processingTerminalId`). ACH capability must be enabled on the terminal by Payroc.
-3. **UAT environment** — test environment. No self-serve signup; terminals are provisioned by the Payroc Integrations team.
+3. **Test environment** — Payroc's test environment. Terminals are provisioned by the Payroc Integrations team.
 
 **If anything is missing — warn, don't block.** Propose env var names like `PAYROC_API_KEY` and `PAYROC_TERMINAL_ID`. Write code to read from those variables, then tell the developer:
 
-> ⚠️ I've wired this to read credentials from `<VAR names>`. You'll need a Payroc UAT terminal with ACH enabled to test this — contact the Payroc Integrations team if you don't have one yet. I can keep building in the meantime.
+> ⚠️ I've wired this to read credentials from `<VAR names>`. You'll need a Payroc test terminal with ACH enabled to test this — contact the Payroc Integrations team if you don't have one yet. I can keep building in the meantime.
 
 ### Checkpoint
 
@@ -144,9 +143,7 @@ Either credentials are confirmed, or the developer knows what's outstanding, how
 
 > Read `references/identity-call.md` before emitting any auth code. Do not guess the endpoint URL, header name, or response shape — use only what the reference documents.
 
-Endpoints:
-- UAT/test: `POST https://identity.uat.payroc.com/authorize`
-- Production: `POST https://identity.payroc.com/authorize`
+Endpoint: `POST https://identity.payroc.com/authorize`. Use a test API key for testing; the key, not the URL, decides test or live.
 
 Header: `x-api-key: <api-key>`
 
@@ -158,7 +155,7 @@ Store the API key in an environment variable (e.g. `PAYROC_API_KEY`). Never inli
 
 ### Checkpoint
 
-Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is correct for the UAT environment.
+Can the helper generate a Bearer token without error? If not, check the `x-api-key` header and confirm the API key is a valid test key for the test environment.
 
 ---
 
@@ -166,7 +163,7 @@ Can the helper generate a Bearer token without error? If not, check the `x-api-k
 
 > **Read `references/api-schema.md` before writing the request body.** Enum values for `paymentMethod.type`, `accountType`, `secCode`, and all other discriminated fields are defined there. Do not emit them from training data.
 
-Endpoint: `POST https://api.uat.payroc.com/v1/bank-transfer-payments`
+Endpoint: `POST https://api.payroc.com/v1/bank-transfer-payments`
 
 Required headers:
 ```
@@ -312,7 +309,7 @@ Does the request body include all required fields? Cross-check against `referenc
 Generate a fresh UUID v4 for `Idempotency-Key`. On retry of the *same* failed request, reuse the same key. On a genuinely new submission, generate a new UUID.
 
 ```bash
-curl -X POST https://api.uat.payroc.com/v1/bank-transfer-payments \
+curl -X POST https://api.payroc.com/v1/bank-transfer-payments \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Idempotency-Key: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
   -H "Content-Type: application/json" \
@@ -382,7 +379,7 @@ HTTP 201 received with a `paymentId` in the response? If not, work through the e
 
 ### Retrieve a payment
 
-`GET https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}`
+`GET https://api.payroc.com/v1/bank-transfer-payments/{paymentId}`
 
 Headers: `Authorization: Bearer <token>`
 
@@ -392,7 +389,7 @@ Returns the full payment object including current `transactionResult.status`. Us
 
 ### List payments
 
-`GET https://api.uat.payroc.com/v1/bank-transfer-payments?processingTerminalId=<id>`
+`GET https://api.payroc.com/v1/bank-transfer-payments?processingTerminalId=<id>`
 
 `processingTerminalId` is **required**. Optional filters include `orderId`, `nameOnAccount`, `last4`, `type` (`ach`/`pad`), `status`, `dateFrom`, `dateTo`, `settlementState` (`unsettled`/`settled`), and `settlementDate`.
 
@@ -414,7 +411,7 @@ Pagination: cursor-based via `limit`, `after`, `before` query parameters.
 
 #### Reverse (void)
 
-`POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse`
+`POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/reverse`
 
 Headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`
 
@@ -426,7 +423,7 @@ No request body required. Removes the payment from the open batch — no funds a
 
 #### Refund a payment
 
-`POST https://api.uat.payroc.com/v1/bank-transfer-payments/{paymentId}/refund`
+`POST https://api.payroc.com/v1/bank-transfer-payments/{paymentId}/refund`
 
 Headers: `Authorization: Bearer <token>`, `Idempotency-Key: <UUID v4>`
 
@@ -448,7 +445,7 @@ the original `paymentId`. Retrieve the original payment first to get the return 
 
 Specifically: retrieve via `GET /v1/bank-transfer-payments/{originalPaymentId}`, then use `returns[0].paymentId` as the path parameter — each item in `returns[]` has its own `paymentId` field. Read `references/api-schema.md` for the full `returns[]` item shape.
 
-`POST https://api.uat.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent`
+`POST https://api.payroc.com/v1/bank-transfer-payments/{returnPaymentId}/represent`
 
 > **Path segment is `/represent` (verb) — not `/representment`, `/re-present`, or `/re-presentment`.** The narrative throughout this skill uses "re-presentment" as a noun, but the endpoint path uses the verb form `represent`. Typing `/representment` produces a 404.
 
@@ -471,7 +468,7 @@ Request body is optional. Omit to reuse the original bank details, or supply upd
 
 Payments can be re-presented a **maximum of two times**.
 
-**UAT note:** PAD representment is currently broken in the Payroc UAT environment. ACH representment availability in UAT may be limited. Document this in comments if writing production code that relies on it.
+**Test environment note:** PAD representment is currently broken in the Payroc test environment. ACH representment availability in the test environment may be limited. Document this in comments if writing production code that relies on it.
 
 ---
 
@@ -479,13 +476,13 @@ Payments can be re-presented a **maximum of two times**.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is the correct UAT API key |
+| 401 on any request | Token missing, expired, or API key wrong | Re-generate token; verify `x-api-key` header value is a valid test API key (or an older test key issued for the `.uat.` hosts; see `references/identity-call.md`) |
 | 400 — validation error on `type`, `accountType`, or `secCode` | Enum value not from the reference | Read `references/api-schema.md` and use the documented value exactly — note `secureToken` and `singleUseToken` are camelCase |
 | 400 — validation error on `currency` | Lowercase, 2-letter, or unknown currency code | Use a 3-letter uppercase ISO 4217 code: `"USD"`, `"CAD"` |
-| 400 — `idempotencyKeyMissing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` to every POST request |
+| 400 — `#idempotency-key-missing` | `Idempotency-Key` header absent | Add `Idempotency-Key: <UUID v4>` to every POST request |
 | 400 — missing required field | Required field absent from request body | Cross-check required fields in `references/api-schema.md` for the payment method type |
 | 400 — `secCode` missing for ACH | Forgot `secCode` on an `ach`-type payment | Add `secCode` — it is mandatory for ACH transactions |
-| 409 — duplicate `Idempotency-Key` | Same key reused across different operations | Generate a fresh UUID for every distinct operation |
+| 409 — duplicate `Idempotency-Key` | Same key reused across different operations | Check whether the earlier request with that key already succeeded (a timed-out request can still complete); if it did not, generate a fresh UUID for every distinct operation |
 | Payment `status: returned` | Bank returned the payment (NSF, closed account) | Investigate return reason; contact customer; use re-presentment if appropriate |
 | Re-present fails or wrong `paymentId` | Using original `paymentId` instead of return's `paymentId` | Retrieve the original payment; use `returns[0].paymentId` from the `returns[]` array (each return item has its own `paymentId` field) |
 | Refund returns an automatic reversal | Payment was in an open batch | The gateway voided it automatically; this is correct behaviour |
@@ -529,7 +526,7 @@ training data:
 - [ ] PAD payments use `transitNumber` + `institutionNumber` (not `routingNumber`)
 - [ ] `paymentId` captured from creation response and stored for subsequent operations
 - [ ] For re-presentment: the `paymentId` used is `returns[0].paymentId` from `returns[]`, not the original payment's `paymentId`
-- [ ] UAT endpoints used during testing (`api.uat.payroc.com`)
+- [ ] Test API key used during testing (same `api.payroc.com` host as production)
 
 ---
 
@@ -542,9 +539,9 @@ Once all checklist items pass:
 > - **Authentication** — Bearer token generation from the Payroc identity service; credentials in env vars.
 > - **ACH/PAD payment** — [summarise: payment type, SEC code, tokenization if enabled]
 > - **Post-payment operations** — [list what was built: retrieve, list, reverse, refund, re-present]
-> - **Validated in UAT** — end-to-end flow confirmed (note any UAT limitations encountered).
+> - **Validated in the test environment** — end-to-end flow confirmed (note any test-environment limitations encountered).
 >
-> **Before going live:** swap `api.uat.payroc.com` for `api.payroc.com` and `identity.uat.payroc.com` for `identity.payroc.com`. Point credentials to the production terminal and API key.
+> **Before going live:** swap the test API key for a live one and point the terminal ID at the production terminal.
 
 Offer next steps:
 - **Refund an ACH payment** — return funds to the customer's bank account after settlement

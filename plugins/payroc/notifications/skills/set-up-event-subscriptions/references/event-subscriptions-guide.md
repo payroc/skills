@@ -2,7 +2,7 @@
 
 > **Local snapshot — narrative guide.** Source: `https://docs.payroc.com/guides/board-merchants/event-subscriptions/create-an-event-subscription.md`
 > and `https://docs.payroc.com/guides/board-merchants/event-subscriptions.md`.
-> Last synced: 2026-06-22. Use for step-by-step setup context; use `api-schema.md` for all field names, enum values, and schemas.
+> Last synced: 2026-11-03. Use for step-by-step setup context; use `api-schema.md` for all field names, enum values, and schemas.
 
 ---
 
@@ -92,8 +92,8 @@ If the subscription reaches `failed` status (all delivery retries exhausted), yo
 
 ---
 
-## UAT Note
+## Test Environment Note
 
-**Event access in UAT is key-scoped, not universally blocked.** `GET`/`POST /v1/event-subscriptions` work fine (200/201) against a key that has event access enabled. If you get a 401 at the identity step or an access error on the call itself, you're most likely using a key without event access enabled rather than hitting a platform-wide UAT limitation — switch to an event-enabled key before assuming the feature is unavailable.
+**Event access in the test environment is key-scoped, not universally blocked.** `GET`/`POST /v1/event-subscriptions` work fine (200/201) against a key that has event access enabled. If you get a 401 at the identity step or an access error on the call itself, you're most likely using a key without event access enabled rather than hitting a platform-wide test environment limitation — switch to an event-enabled key before assuming the feature is unavailable.
 
 Workaround if you don't have an event-enabled key yet: test your webhook endpoint independently by sending a synthetic CloudEvents 1.0 payload matching the schemas in `references/api-schema.md`, then integrate live once an event-enabled key is available.

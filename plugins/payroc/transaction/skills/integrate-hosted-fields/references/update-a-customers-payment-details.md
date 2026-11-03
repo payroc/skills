@@ -1,5 +1,5 @@
 > **Local snapshot — authoritative for this skill.** Source: https://docs.payroc.com/essentials/hosted-fields/extend-your-integration/update-a-customers-payment-details.md
-> Last synced: 2026-06-01. Verbatim copy of the Payroc narrative guide. To refresh, re-fetch the source and regenerate this file (see _sources.md).
+> Last synced: 2026-11-03. Verbatim copy of the Payroc narrative guide, except that the REST API hosts were changed on 2026-11-03 to the one host used for test and live (the guide page still lists UAT hosts). To refresh, re-fetch the source and regenerate this file (see _sources.md).
 
 # Update a customer's payment details
 
@@ -52,8 +52,7 @@ To view the secure tokens associated with the processing terminal, send a GET re
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                  |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens)         |
 
 ### Request parameters
 
@@ -196,7 +195,6 @@ paths:
                 $ref: '#/components/schemas/500'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -1340,7 +1338,6 @@ paths:
                 $ref: '#/components/schemas/500'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -2246,8 +2243,7 @@ To generate a session token, send a POST request to our Processing Terminals end
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                                    |
 | :--------- | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/hosted-fields-sessions)         |
 
 ### Request parameters
 
@@ -2361,7 +2357,6 @@ paths:
               $ref: '#/components/schemas/hostedFieldsCreateSessionRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -2924,7 +2919,6 @@ paths:
               $ref: '#/components/schemas/hostedFieldsCreateSessionRequest'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -3363,8 +3357,7 @@ To send the single-use token to our gateway, send a POST request to our Secure T
 
 | Endpoint   | Prefix     | URL                                                                                                                                                                                                                                                  |
 | :--------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Test       | `api.uat.` | [https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.uat.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account) |
-| Production | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account)         |
+| Test/live  | `api.`     | [https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account](https://api.payroc.com/v1/processing-terminals/\{processingTerminalId}/secure-tokens/\{secureTokenId}/update-account)         |
 
 ### Request parameters
 
@@ -3490,7 +3483,6 @@ paths:
               $ref: '#/components/schemas/accountUpdate'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
@@ -4633,7 +4625,6 @@ paths:
               $ref: '#/components/schemas/accountUpdate'
 servers:
   - url: https://api.payroc.com/v1
-  - url: https://api.uat.payroc.com/v1
 components:
   schemas:
     '400':
